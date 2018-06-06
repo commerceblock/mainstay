@@ -2,34 +2,61 @@ package main
 
 import (
 	"log"
+	"context"
 	"ocean-attestation/conf"
 	"github.com/btcsuite/btcd/rpcclient"
-	"github.com/davecgh/go-spew/spew"
+	"os"
+	"os/signal"
+	"sync"
 )
 
-const TX_ID_0 	= "fa4e6d5c18a8b60999fa2f798ed94023b12f7e138647d9edcd0cf1d965a6dcba"
-const PK_0		= "21037dd3a0a572179f61ea625765759bacb353d0387db60a06ae1997b44422444b88ac"
-
+var txid0 string
+var pk0 string
 var mainClient *rpcclient.Client
 var oceanClient *rpcclient.Client
+var server *Server
 
 func initialise() {
+    args := os.Args[1:]
+    if (len(args) != 2) {
+    	log.Fatal("Invalid args - Provide txid0 and pk0")
+    }
+    txid0 = args[0]
+    pk0 = args[1]
+
 	mainClient 	= conf.GetRPC("main")
 	oceanClient = conf.GetRPC("ocean")
 }
 
 func main() {
 	initialise()
-
-	// Get the latest unspent and generate a new transaction
-	unspent, err := mainClient.ListUnspent()
-	if err != nil {
-		log.Fatal(err)
-	}
-	tx := unspent[0]
-	log.Printf("First utxo:\n%v", spew.Sdump(tx))
-	newTransaction(tx, mainClient)
-	
 	defer mainClient.Shutdown()
 	defer oceanClient.Shutdown()
+
+	wg := &sync.WaitGroup{}
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	server := NewServer(ctx, wg, mainClient, txid0, pk0)
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+    wg.Add(1)
+    go func() {
+		select {
+			case sig := <-c:
+	            log.Printf("Got %s signal. Aborting...\n", sig)
+	            cancel()
+	            wg.Done()
+			case <-ctx.Done():
+				signal.Stop(c)
+				cancel()
+				wg.Done()
+		}
+	}()
+
+    wg.Add(1)
+	go server.Run()
+	wg.Wait()
 }
