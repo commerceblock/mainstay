@@ -7,22 +7,21 @@ import (
     "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcutil"
-    "github.com/davecgh/go-spew/spew"
 )
 
-func newTransaction(tx btcjson.ListUnspentResult, client *rpcclient.Client) {
+func newTransaction(tx btcjson.ListUnspentResult, client *rpcclient.Client) (string, string){
     addr, err := client.GetNewAddress("")
     if err != nil {
         log.Fatal(err)
     }
-    log.Printf("Addr: %s\n", addr.String())
 
     hash, err := client.SendToAddress(addr, btcutil.Amount(tx.Amount * 100000000))
+
     if err != nil {
         log.Fatal(err)
     }
-    log.Printf("New txhash: \n%v", spew.Sdump(hash))
 
+    return hash.String(), addr.String()
 }
 
 // MIGHT USE THE FOLLOWING TO MANUALLY ADD FEES IN THE FUTURE

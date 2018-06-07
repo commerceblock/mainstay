@@ -3,6 +3,7 @@ package main
 import (
     "log"
     "context"
+    "flag"
     "ocean-attestation/conf"
     "github.com/btcsuite/btcd/rpcclient"
     "os"
@@ -10,19 +11,16 @@ import (
     "sync"
 )
 
-var txid0 string
-var pk0 string
-var mainClient *rpcclient.Client
-var oceanClient *rpcclient.Client
-var server *Server
+var (
+    txid0, pk0 *string
+    mainClient, oceanClient *rpcclient.Client
+    server *Server
+)
 
 func initialise() {
-    args := os.Args[1:]
-    if (len(args) != 2) {
-        log.Fatal("Invalid args - Provide txid0 and pk0")
-    }
-    txid0 = args[0]
-    pk0 = args[1]
+    txid0 = flag.String("tx", "looool", "Tx id for genesis attestation transaction")
+    pk0   = flag.String("pk", "", "Private key used for genesis attestation transaction")
+    flag.Parse()
 
     mainClient  = conf.GetRPC("main")
     oceanClient = conf.GetRPC("ocean")
@@ -37,7 +35,7 @@ func main() {
     ctx := context.Background()
     ctx, cancel := context.WithCancel(ctx)
 
-    server := NewServer(ctx, wg, mainClient, txid0, pk0)
+    server := NewServer(ctx, wg, mainClient, oceanClient, *txid0, *pk0)
 
     c := make(chan os.Signal)
     signal.Notify(c, os.Interrupt)

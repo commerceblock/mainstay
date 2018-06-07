@@ -7,22 +7,23 @@ import (
     "context"
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/btcjson"
-    "github.com/davecgh/go-spew/spew"
+    "github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 type Server struct {
     ctx         context.Context
     wg          *sync.WaitGroup
-    serverRpc   *rpcclient.Client
+    mainClient  *rpcclient.Client
+    ourClient   *rpcclient.Client
     txid0       string
     pk0         string
 }
 
-func NewServer(ctx context.Context, wg *sync.WaitGroup, rpc *rpcclient.Client, tx string, pk string) *Server{
+func NewServer(ctx context.Context, wg *sync.WaitGroup, rpcMain *rpcclient.Client, rpcOur *rpcclient.Client, tx string, pk string) *Server{
     if (len(tx) != 64) {
         log.Fatal("Incorrect txid size")
     }
-    return &Server{ctx, wg, rpc, tx, pk}
+    return &Server{ctx, wg, rpcMain, rpcOur, tx, pk}
 }
 
 func (s *Server) Run() {
@@ -33,40 +34,73 @@ func (s *Server) Run() {
             case <-s.ctx.Done():
                 log.Println("Shutting down server...")
                 return
+            // case receive confirmation request
+                //
             default:
                 s.doAttestation()
-                time.Sleep(time.Millisecond * 1000)
+                time.Sleep(time.Second * 30)
         }
     }
 }
 
+// Verify that an unspent vout is on the tip of the subchain attestations
+func (s *Server) verifyUnspentOnSubchain(txid string) bool {
+    if (txid == s.txid0) { // genesis transaction
+        return true
+    } else { //might be better to store subchain on init and no need to parse all transactions every time
+        txhash, err := chainhash.NewHashFromStr(txid)
+        if err != nil {
+            log.Fatal(err)
+        }
+
+        txraw, err := s.mainClient.GetRawTransaction(txhash)
+        if err != nil {
+            return false
+        }
+
+        prevtxid := txraw.MsgTx().TxIn[0].PreviousOutPoint.Hash.String()
+        return s.verifyUnspentOnSubchain(prevtxid)
+    }
+    return false
+}
+
+// Find the latest unspent vout that is on the tip of subchain attestations
 func (s *Server) findLastUnspent() (bool, btcjson.ListUnspentResult) {
-    // Get the latest unspent and generate a new transaction
-    unspent, err := s.serverRpc.ListUnspent()
+    unspent, err := s.mainClient.ListUnspent()
     if err != nil {
         log.Fatal(err)
     }
     if (len(unspent) > 0) {
-        tx := unspent[0]
-        if (tx.TxID == s.txid0) { // genesis transaction
-            log.Printf("found genesis transaction")
-            log.Printf("First utxo:\n%v", spew.Sdump(tx))
-            return true, tx
+        for _, vout := range unspent {
+            if (s.verifyUnspentOnSubchain(vout.TxID) && //theoretically there should only be one unspent vout,
+                vout.Amount > 50) { // scraping the fee change vouts for now
+                return true, vout
+            }
         }
     }
     return false, btcjson.ListUnspentResult{}
 }
 
-func (s *Server) doAttestation(){
-    log.Println("Doing attestation...")
+func (s *Server) doAttestation() {
+    log.Println("Attempting attestation...")
     success, tx := s.findLastUnspent()
     if (success) {
-        newTransaction(tx, s.serverRpc)
+        txid, addr := newTransaction(tx, s.mainClient)
+        log.Printf("Waiting for confirmation of:\ntxid: (%s)\naddr: (%s)\n", txid, addr)
 
-        for {
-            // wait for confirmation
-            time.Sleep(time.Millisecond * 1000)
-            return
+        txhash, err := chainhash.NewHashFromStr(txid)
+        for err==nil {
+            newTx, err := s.mainClient.GetTransaction(txhash)
+            if err != nil {
+                log.Fatal(err)
+            }
+            if (newTx.BlockHash == "") {
+                time.Sleep(time.Second * 10)
+            } else {
+                log.Printf("Attestation %s confirmed\n", txid)
+                return
+            }
         }
     }
+    log.Printf("Attestation unsuccessful")
 }
