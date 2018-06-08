@@ -38,7 +38,7 @@ func (s *Server) Run() {
                 //
             default:
                 s.doAttestation()
-                time.Sleep(time.Second * 30)
+                time.Sleep(time.Second * 5)
         }
     }
 }
@@ -81,26 +81,36 @@ func (s *Server) findLastUnspent() (bool, btcjson.ListUnspentResult) {
     return false, btcjson.ListUnspentResult{}
 }
 
-func (s *Server) doAttestation() {
-    log.Println("Attempting attestation...")
-    success, tx := s.findLastUnspent()
-    if (success) {
-        txid, addr := newTransaction(tx, s.mainClient)
-        log.Printf("Waiting for confirmation of:\ntxid: (%s)\naddr: (%s)\n", txid, addr)
+var latestTxid = ""
+var latestAddr = ""
+var awaitingConfirmation = false
 
-        txhash, err := chainhash.NewHashFromStr(txid)
-        for err==nil {
-            newTx, err := s.mainClient.GetTransaction(txhash)
-            if err != nil {
-                log.Fatal(err)
-            }
-            if (newTx.BlockHash == "") {
-                time.Sleep(time.Second * 10)
-            } else {
-                log.Printf("Attestation %s confirmed\n", txid)
-                return
-            }
+func (s *Server) doAttestation() {
+    if (awaitingConfirmation) {
+        log.Printf("Waiting for confirmation of:\ntxid: (%s)\naddr: (%s)\n", latestTxid, latestAddr)
+
+        txhash, err := chainhash.NewHashFromStr(latestTxid)
+        if err != nil {
+            log.Fatal(err)
+        }
+
+        newTx, err := s.mainClient.GetTransaction(txhash)
+        if err != nil {
+            log.Fatal(err)
+        }
+        if (newTx.BlockHash != "") {
+            awaitingConfirmation = false
+            log.Printf("Attestation %s confirmed\n", latestTxid)
+        }
+    } else {
+        log.Println("Attempting attestation...")
+        success, tx := s.findLastUnspent()
+        if (success) {
+            log.Printf("Attestation committed")
+            latestTxid, latestAddr = newTransaction(tx, s.mainClient)
+            awaitingConfirmation = true        
+        } else {
+            log.Printf("Attestation unsuccessful")
         }
     }
-    log.Printf("Attestation unsuccessful")
 }
