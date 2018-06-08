@@ -7,6 +7,7 @@ import (
     "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcutil"
+    "github.com/davecgh/go-spew/spew"
 )
 
 func newTransaction(tx btcjson.ListUnspentResult, client *rpcclient.Client) (string, string){
@@ -15,21 +16,14 @@ func newTransaction(tx btcjson.ListUnspentResult, client *rpcclient.Client) (str
         log.Fatal(err)
     }
 
-    hash, err := client.SendToAddress(addr, btcutil.Amount(tx.Amount * 100000000))
-
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    return hash.String(), addr.String()
-}
-
-// MIGHT USE THE FOLLOWING TO MANUALLY ADD FEES IN THE FUTURE
-/*
     inputs := []btcjson.TransactionInput{
                     {Txid: tx.TxID, Vout: tx.Vout},
                 }
-    amounts := map[btcutil.Address]btcutil.Amount{addr: btcutil.Amount(tx.Amount)}
+
+    // estimate fee ?
+    var fee btcutil.Amount = 1000 // in satoshi
+
+    amounts := map[btcutil.Address]btcutil.Amount{addr: btcutil.Amount(tx.Amount*100000000)-fee}
     msgtx, err := client.CreateRawTransaction(inputs, amounts, nil)
     if err != nil {
         log.Fatal(err)
@@ -42,13 +36,11 @@ func newTransaction(tx btcjson.ListUnspentResult, client *rpcclient.Client) (str
     }
     log.Printf("Signed tx:\n%v", spew.Sdump(signedmsgtx))
 
-    // TODO: add fees manually
-    // fundrawtransaction ?
-    //
-
-    txhash, err := client.SendRawTransaction(signedmsgtx, false)
+    hash, err := client.SendRawTransaction(signedmsgtx, false)
     if err != nil {
         log.Fatal(err)
     }
-    log.Printf("New tx hash %s\n", txhash.String())
-*/
+    log.Printf("New tx hash %s\n", hash.String())
+
+    return hash.String(), addr.String()
+}

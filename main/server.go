@@ -72,8 +72,7 @@ func (s *Server) findLastUnspent() (bool, btcjson.ListUnspentResult) {
     }
     if (len(unspent) > 0) {
         for _, vout := range unspent {
-            if (s.verifyUnspentOnSubchain(vout.TxID) && //theoretically there should only be one unspent vout,
-                vout.Amount > 50) { // scraping the fee change vouts for now
+            if (s.verifyUnspentOnSubchain(vout.TxID)) { //theoretically there should only be one unspent vout,
                 return true, vout
             }
         }
