@@ -10,7 +10,7 @@ import (
     "github.com/davecgh/go-spew/spew"
 )
 
-func newTransaction(tx btcjson.ListUnspentResult, client *rpcclient.Client) (string, string){
+func newTransaction(tx btcjson.ListUnspentResult, client *rpcclient.Client) (string){
     addr, err := client.GetNewAddress("")
     if err != nil {
         log.Fatal(err)
@@ -42,5 +42,5 @@ func newTransaction(tx btcjson.ListUnspentResult, client *rpcclient.Client) (str
     }
     log.Printf("New tx hash %s\n", hash.String())
 
-    return hash.String(), addr.String()
+    return hash.String()
 }
