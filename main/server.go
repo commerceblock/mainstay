@@ -30,7 +30,7 @@ func NewServer(ctx context.Context, wg *sync.WaitGroup, rpcMain *rpcclient.Clien
 
 func (s *Server) Run() {
     defer s.wg.Done()
-    
+
     s.getUnconfirmedTx()
 
     for {
@@ -105,7 +105,7 @@ func (s *Server) getUnconfirmedTx() {
 // Main attestation method. Two main functionalities
 // - If we are not waiting for any confirmations get the last unspent vout, verify that
 //  it is on the subchain and create/send a new transaction through the main client
-// - If transaction has been sent, wait for confirmation on the next generated block 
+// - If transaction has been sent, wait for confirmation on the next generated block
 func (s *Server) doAttestation() {
     if (s.awaitingConfirmation) {
         log.Printf("Waiting for confirmation of:\ntxid: (%s)\n", s.latestTxid)
@@ -127,9 +127,9 @@ func (s *Server) doAttestation() {
         log.Println("Attempting attestation...")
         success, tx := s.findLastUnspent()
         if (success) {
-            log.Printf("Attestation committed")
             s.latestTxid = newTransaction(tx, s.mainClient)
-            s.awaitingConfirmation = true        
+            s.awaitingConfirmation = true
+            log.Printf("Attestation committed")
         } else {
             log.Printf("Attestation unsuccessful")
         }
