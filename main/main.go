@@ -18,7 +18,7 @@ var (
 )
 
 func initialise() {
-    txid0 = flag.String("tx", "looool", "Tx id for genesis attestation transaction")
+    txid0 = flag.String("tx", "", "Tx id for genesis attestation transaction")
     pk0   = flag.String("pk", "", "Private key used for genesis attestation transaction")
     flag.Parse()
 
