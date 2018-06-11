@@ -9,7 +9,7 @@ import (
     "github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
-type Server struct {
+type AttestService struct {
     ctx             context.Context
     wg              *sync.WaitGroup
     mainClient      *rpcclient.Client
@@ -18,15 +18,15 @@ type Server struct {
     awaitingConfirmation bool
 }
 
-func NewServer(ctx context.Context, wg *sync.WaitGroup, rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, tx string, pk string) *Server{
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, tx string, pk string) *AttestService{
     if (len(tx) != 64) {
         log.Fatal("Incorrect txid size")
     }
     attest := NewAttestClient(rpcMain, rpcSide, pk, tx)
-    return &Server{ctx, wg, rpcMain, attest, "", false}
+    return &AttestService{ctx, wg, rpcMain, attest, "", false}
 }
 
-func (s *Server) Run() {
+func (s *AttestService) Run() {
     defer s.wg.Done()
 
     s.getUnconfirmedTx()
@@ -34,7 +34,7 @@ func (s *Server) Run() {
     for {
         select {
             case <-s.ctx.Done():
-                log.Println("Shutting down server...")
+                log.Println("Shutting down attestation service...")
                 return
             // case receive confirmation request
                 //
@@ -46,7 +46,7 @@ func (s *Server) Run() {
 }
 
 // Find any previously unconfirmed transactions and start attestation from there
-func (s *Server) getUnconfirmedTx() {
+func (s *AttestService) getUnconfirmedTx() {
     log.Println("Looking for unconfirmed transactions")
     mempool, err := s.mainClient.GetRawMempool()
     if err != nil {
@@ -67,7 +67,7 @@ func (s *Server) getUnconfirmedTx() {
 // - If we are not waiting for any confirmations get the last unspent vout, verify that
 //  it is on the subchain and create/send a new transaction through the main client
 // - If transaction has been sent, wait for confirmation on the next generated block
-func (s *Server) doAttestation() {
+func (s *AttestService) doAttestation() {
     if (s.awaitingConfirmation) {
         log.Printf("Waiting for confirmation of:\ntxid: (%s)\n", s.latestTxid)
 
