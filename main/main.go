@@ -37,23 +37,22 @@ func main() {
     ctx := context.Background()
     ctx, cancel := context.WithCancel(ctx)
 
-    confirm := NewConfirmationService(confirmHost, ctx, wg)
-    attest := NewAttestService(ctx, wg, mainClient, oceanClient, *txid0, *pk0)
+    requests := make(chan Request)
+    confirm := NewConfirmationService(ctx, wg, requests, confirmHost)
+    attest := NewAttestService(ctx, wg, requests, mainClient, oceanClient, *txid0, *pk0)
 
     c := make(chan os.Signal)
     signal.Notify(c, os.Interrupt)
 
     wg.Add(1)
     go func() {
+        defer cancel()
+        defer wg.Done()
         select {
             case sig := <-c:
                 log.Printf("Got %s signal. Aborting...\n", sig)
-                cancel()
-                wg.Done()
             case <-ctx.Done():
                 signal.Stop(c)
-                cancel()
-                wg.Done()
         }
     }()
 

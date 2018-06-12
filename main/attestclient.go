@@ -58,8 +58,6 @@ func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcj
     if err != nil {
         log.Fatal(err)
     }
-    log.Printf("New tx hash %s\n", txhash.String())
-
     return txhash.String()
 }
 
