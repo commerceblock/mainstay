@@ -1,3 +1,5 @@
+// Confirmation service routine
+
 package main
 
 import (

@@ -1,9 +1,12 @@
+// Attestation service routine
+
 package main
 
 import (
     "log"
     "sync"
     "context"
+    "time"
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
 )
@@ -15,7 +18,8 @@ type AttestService struct {
     attester        *AttestClient
     requests        chan Request
     latestTxid      string
-    awaitingConfirmation bool
+    isWaitingConfirm    bool
+    waitingStartTime    time.Time
 }
 
 func NewAttestService(ctx context.Context, wg *sync.WaitGroup, reqs chan Request, rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, tx string, pk string) *AttestService{
@@ -23,7 +27,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, reqs chan Request
         log.Fatal("Incorrect txid size")
     }
     attest := NewAttestClient(rpcMain, rpcSide, pk, tx)
-    return &AttestService{ctx, wg, rpcMain, attest, reqs, "", false}
+    return &AttestService{ctx, wg, rpcMain, attest, reqs, "", false, time.Now()}
 }
 
 func (s *AttestService) Run() {
@@ -68,7 +72,8 @@ func (s *AttestService) getUnconfirmedTx() {
     for _, hash := range mempool {
         if (s.attester.verifyTxOnSubchain(hash.String())) {
             s.latestTxid = hash.String()
-            s.awaitingConfirmation = true
+            s.isWaitingConfirm = true
+            s.waitingStartTime = time.Now()
             log.Printf("*attest* Still waiting for confirmation of:\ntxid: (%s)\n", s.latestTxid)
             break
         }
@@ -80,19 +85,24 @@ func (s *AttestService) getUnconfirmedTx() {
 //  it is on the subchain and create/send a new transaction through the main client
 // - If transaction has been sent, wait for confirmation on the next generated block
 func (s *AttestService) doAttestation() {
-    if (s.awaitingConfirmation) {
-        txhash, err := chainhash.NewHashFromStr(s.latestTxid)
-        if err != nil {
-            log.Fatal(err)
-        }
+    if (s.isWaitingConfirm) {
+        if (time.Since(s.waitingStartTime).Seconds() > 60) { // Only check for confirmation every 60 seconds
+            log.Printf("*attest* Waiting for confirmation of:\ntxid: (%s)\n", s.latestTxid)
+            txhash, err := chainhash.NewHashFromStr(s.latestTxid)
+            if err != nil {
+                log.Fatal(err)
+            }
 
-        newTx, err := s.mainClient.GetTransaction(txhash)
-        if err != nil {
-            log.Fatal(err)
-        }
-        if (newTx.BlockHash != "") {
-            s.awaitingConfirmation = false
-            log.Printf("*attest* Attestation %s confirmed\n", s.latestTxid)
+            newTx, err := s.mainClient.GetTransaction(txhash)
+            if err != nil {
+                log.Fatal(err)
+            }
+            if (newTx.BlockHash != "") {
+                s.isWaitingConfirm = false
+                log.Printf("*attest* Attestation %s confirmed\n", s.latestTxid)
+            } else {
+                s.waitingStartTime = time.Now()
+            }
         }
     } else {
         log.Println("*attest* Attempting attestation")
@@ -101,7 +111,8 @@ func (s *AttestService) doAttestation() {
             _ , paytoaddr := s.attester.getNextAttestationAddr()
             s.latestTxid = s.attester.sendAttestation(paytoaddr, txunspent)
             log.Printf("*attest* New tx hash %s\n", s.latestTxid)
-            s.awaitingConfirmation = true
+            s.isWaitingConfirm = true
+            s.waitingStartTime = time.Now()
             log.Printf("*attest* Attestation committed - Waiting for confirmation")
         } else {
             log.Printf("*attest* Attestation unsuccessful")

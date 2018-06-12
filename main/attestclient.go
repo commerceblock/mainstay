@@ -26,6 +26,7 @@ func NewAttestClient(rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, pk st
     return &AttestClient{rpcMain, rpcSide, pk, tx}
 }
 
+// Get next attestation address by tweaking initial private key with current sidechain block hash
 func (w *AttestClient) getNextAttestationAddr() (string, btcutil.Address) {
     addr, err := w.mainClient.GetNewAddress("")
     if err != nil {
@@ -35,6 +36,7 @@ func (w *AttestClient) getNextAttestationAddr() (string, btcutil.Address) {
     return "", addr
 }
 
+// Generate a new transaction paying to the tweaked address, add fees and send the transaction through the wallet client
 func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult) (string){
 
     inputs := []btcjson.TransactionInput{{Txid: txunspent.TxID, Vout: txunspent.Vout},}

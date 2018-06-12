@@ -1,3 +1,5 @@
+// Requests passed between attestation and confirmation services
+
 package main
 
 type Request struct {

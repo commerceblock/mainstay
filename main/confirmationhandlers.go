@@ -1,3 +1,5 @@
+// Http handlers for confirmations service requests
+
 package main
 
 import (
@@ -15,9 +17,10 @@ func Block(w http.ResponseWriter, r *http.Request, reqs chan Request) {
     blockid := mux.Vars(r)["blockId"]
     request := Request{Name: mux.CurrentRoute(r).GetName(), Id: blockid,}
 
-    reqs <- request
+    reqs <- request // put request in channel
 
-    response := <- reqs
+    response := <- reqs // wait for response from attestation service
+
     fmt.Fprintln(w, response.Attested)
 
     if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -28,9 +31,10 @@ func Block(w http.ResponseWriter, r *http.Request, reqs chan Request) {
 func BestBlock(w http.ResponseWriter, r *http.Request, reqs chan Request) {
     request := Request{Name: mux.CurrentRoute(r).GetName(),}
 
-    reqs <- request
+    reqs <- request // put request in channel
 
-    response := <- reqs
+    response := <- reqs // wait for response from attestation service
+
     fmt.Fprintln(w, response.Attested)
 
     if err := json.NewEncoder(w).Encode(response); err != nil {
