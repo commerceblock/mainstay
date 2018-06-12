@@ -5,19 +5,20 @@ import (
     "net/http"
     "sync"
     "context"
+    "time"
     "github.com/gorilla/mux"
 )
 
 type ConfirmationService struct {
-    host    string
     ctx     context.Context
     wg      *sync.WaitGroup
+    host    string
     router  *mux.Router
 }
 
-func NewConfirmationService(host string, ctx context.Context, wg *sync.WaitGroup) *ConfirmationService {
-    router := NewRouter()
-    return &ConfirmationService{host, ctx, wg, router}
+func NewConfirmationService(ctx context.Context, wg *sync.WaitGroup, reqs chan Request, host string) *ConfirmationService {
+    router := NewRouter(reqs)
+    return &ConfirmationService{ctx, wg, host, router}
 }
 
 func (c *ConfirmationService) Run() {
@@ -25,9 +26,8 @@ func (c *ConfirmationService) Run() {
 
     srv := &http.Server{
         Addr:   c.host,
-        //WriteTimeout: time.Second * 15,
-        //ReadTimeout:  time.Second * 15,
-        //IdleTimeout:  time.Second * 60,
+        WriteTimeout: time.Second * 15,
+        ReadTimeout:  time.Second * 15,
         Handler: c.router,
     }
 

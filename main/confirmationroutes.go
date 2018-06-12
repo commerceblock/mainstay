@@ -9,22 +9,10 @@ type Route struct {
     Name        string
     Method      string
     Pattern     string
-    HandlerFunc http.HandlerFunc
+    HandlerFunc func(http.ResponseWriter, *http.Request, chan Request)
 }
 
 type Routes []Route
-
-func NewRouter() *mux.Router {
-    router := mux.NewRouter().StrictSlash(true)
-    for _, route := range routes {
-        router.
-            Methods(route.Method).
-            Path(route.Pattern).
-            Name(route.Name).
-            Handler(route.HandlerFunc)
-    }
-    return router
-}
 
 var routes = Routes{
     Route{
@@ -39,4 +27,29 @@ var routes = Routes{
         "/block/{blockId}",
         Block,
     },
+    Route{
+        "BestBlock",
+        "GET",
+        "/bestblock/",
+        BestBlock,
+    },
+}
+
+func NewRouter(reqs chan Request) *mux.Router {
+    router := mux.NewRouter().StrictSlash(true)
+    for _, route := range routes {
+        handlerFunc := makeHandler(route.HandlerFunc, reqs)
+        router.
+            Methods(route.Method).
+            Path(route.Pattern).
+            Name(route.Name).
+            Handler(handlerFunc)
+    }
+    return router
+}
+
+func makeHandler(fn func (http.ResponseWriter, *http.Request, chan Request), reqs chan Request) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        fn(w, r, reqs)
+    }
 }
