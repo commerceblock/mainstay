@@ -21,24 +21,28 @@ type AttestClient struct {
 
 func NewAttestClient(rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, pk string, tx string) *AttestClient {
     if (len(pk) != 64) {
-        log.Fatal("Incorrect key size")
+        log.Fatal("*AttestClient* Incorrect key size")
     }
     return &AttestClient{rpcMain, rpcSide, pk, tx}
 }
 
 // Get next attestation address by tweaking initial private key with current sidechain block hash
-func (w *AttestClient) getNextAttestationAddr() (string, btcutil.Address) {
+func (w *AttestClient) getNextAttestationAddr() (chainhash.Hash, btcutil.Address) {
     addr, err := w.mainClient.GetNewAddress("")
     if err != nil {
         log.Fatal(err)
     }
 
-    return "", addr
+    hash, err := w.sideClient.GetBestBlockHash()
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    return *hash, addr
 }
 
 // Generate a new transaction paying to the tweaked address, add fees and send the transaction through the wallet client
-func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult) (string){
-
+func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult) (chainhash.Hash) {
     inputs := []btcjson.TransactionInput{{Txid: txunspent.TxID, Vout: txunspent.Vout},}
 
     amounts := map[btcutil.Address]btcutil.Amount{paytoaddr: btcutil.Amount(txunspent.Amount*100000000)}
@@ -49,7 +53,7 @@ func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcj
 
     fee := int64(FEE_PER_BYTE * msgtx.SerializeSize())
     msgtx.TxOut[0].Value -= fee
-    log.Printf("Tx fee %d", fee)
+    log.Printf("*AttestClient* Tx fee %d", fee)
 
     signedmsgtx, issigned, err := w.mainClient.SignRawTransaction(msgtx)
     if err != nil || !issigned {
@@ -60,25 +64,20 @@ func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcj
     if err != nil {
         log.Fatal(err)
     }
-    return txhash.String()
+    return *txhash
 }
 
 // Verify that an unspent vout is on the tip of the subchain attestations
-func (w *AttestClient) verifyTxOnSubchain(txid string) bool {
-    if (txid == w.txid0) { // genesis transaction
+func (w *AttestClient) verifyTxOnSubchain(txid chainhash.Hash) bool {
+    if (txid.String() == w.txid0) { // genesis transaction
         return true
     } else { //might be better to store subchain on init and no need to parse all transactions every time
-        txhash, err := chainhash.NewHashFromStr(txid)
-        if err != nil {
-            log.Fatal(err)
-        }
-
-        txraw, err := w.mainClient.GetRawTransaction(txhash)
+        txraw, err := w.mainClient.GetRawTransaction(&txid)
         if err != nil {
             return false
         }
 
-        prevtxid := txraw.MsgTx().TxIn[0].PreviousOutPoint.Hash.String()
+        prevtxid := txraw.MsgTx().TxIn[0].PreviousOutPoint.Hash
         return w.verifyTxOnSubchain(prevtxid)
     }
     return false
@@ -92,7 +91,11 @@ func (w *AttestClient) findLastUnspent() (bool, btcjson.ListUnspentResult) {
     }
     if (len(unspent) > 0) {
         for _, vout := range unspent {
-            if (w.verifyTxOnSubchain(vout.TxID)) { //theoretically only one unspent vout, but check anyway
+            txhash, err := chainhash.NewHashFromStr(vout.TxID)
+            if err != nil {
+                log.Fatal(err)
+            }
+            if (w.verifyTxOnSubchain(*txhash)) { //theoretically only one unspent vout, but check anyway
                 return true, vout
             }
         }

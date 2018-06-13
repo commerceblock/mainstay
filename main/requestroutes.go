@@ -1,4 +1,4 @@
-// Routing for http requests to confirmation service
+// Routing for http requests to request service
 package main
 
 import (

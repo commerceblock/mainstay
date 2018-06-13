@@ -1,4 +1,4 @@
-// Http handlers for confirmations service requests
+// Http handlers for service requests
 
 package main
 
@@ -10,7 +10,7 @@ import (
 )
 
 func Index(w http.ResponseWriter, r *http.Request, reqs chan Request) {
-    fmt.Fprintln(w, "Confirmation Service for Ocean Attestations!")
+    fmt.Fprintln(w, "Request Service for Ocean Attestations!")
 }
 
 func Block(w http.ResponseWriter, r *http.Request, reqs chan Request) {
@@ -20,8 +20,6 @@ func Block(w http.ResponseWriter, r *http.Request, reqs chan Request) {
     reqs <- request // put request in channel
 
     response := <- reqs // wait for response from attestation service
-
-    fmt.Fprintln(w, response.Attested)
 
     if err := json.NewEncoder(w).Encode(response); err != nil {
         panic(err)
@@ -34,8 +32,6 @@ func BestBlock(w http.ResponseWriter, r *http.Request, reqs chan Request) {
     reqs <- request // put request in channel
 
     response := <- reqs // wait for response from attestation service
-
-    fmt.Fprintln(w, response.Attested)
 
     if err := json.NewEncoder(w).Encode(response); err != nil {
         panic(err)

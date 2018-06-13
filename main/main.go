@@ -38,8 +38,8 @@ func main() {
     ctx, cancel := context.WithCancel(ctx)
 
     requests := make(chan Request)
-    confirm := NewConfirmationService(ctx, wg, requests, confirmHost)
-    attest := NewAttestService(ctx, wg, requests, mainClient, oceanClient, *txid0, *pk0)
+    requestService := NewRequestService(ctx, wg, requests, confirmHost)
+    attestService := NewAttestService(ctx, wg, requests, mainClient, oceanClient, *txid0, *pk0)
 
     c := make(chan os.Signal)
     signal.Notify(c, os.Interrupt)
@@ -57,8 +57,8 @@ func main() {
     }()
 
     wg.Add(1)
-    go confirm.Run()
+    go requestService.Run()
     wg.Add(1)
-    go attest.Run()
+    go attestService.Run()
     wg.Wait()
 }

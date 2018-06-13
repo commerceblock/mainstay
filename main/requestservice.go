@@ -1,4 +1,4 @@
-// Confirmation service routine
+// Request service routine
 
 package main
 
@@ -11,19 +11,19 @@ import (
     "github.com/gorilla/mux"
 )
 
-type ConfirmationService struct {
+type RequestService struct {
     ctx     context.Context
     wg      *sync.WaitGroup
     host    string
     router  *mux.Router
 }
 
-func NewConfirmationService(ctx context.Context, wg *sync.WaitGroup, reqs chan Request, host string) *ConfirmationService {
+func NewRequestService(ctx context.Context, wg *sync.WaitGroup, reqs chan Request, host string) *RequestService {
     router := NewRouter(reqs)
-    return &ConfirmationService{ctx, wg, host, router}
+    return &RequestService{ctx, wg, host, router}
 }
 
-func (c *ConfirmationService) Run() {
+func (c *RequestService) Run() {
     defer c.wg.Done()
 
     srv := &http.Server{
@@ -34,7 +34,7 @@ func (c *ConfirmationService) Run() {
     }
 
     c.wg.Add(1)
-    go func() { //Running server waiting for confirmation requests
+    go func() { //Running server waiting for requests
         defer c.wg.Done()
         if err := srv.ListenAndServe(); err != nil {
             log.Println(err)
@@ -46,7 +46,7 @@ func (c *ConfirmationService) Run() {
         defer c.wg.Done()
         select {
             case <-c.ctx.Done():
-                log.Println("Shutting down confirmation service...")
+                log.Println("Shutting down request service...")
                 srv.Shutdown(c.ctx)
                 return
         }
