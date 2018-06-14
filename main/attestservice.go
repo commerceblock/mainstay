@@ -11,35 +11,34 @@ import (
     "github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
-const genesis = "54e0d36bf404dc0a8cea4a080f8b485404c9001149cdd863e9350fa7f05fac53" //current testnet genesis
-
 type AttestService struct {
     ctx             context.Context
     wg              *sync.WaitGroup
     mainClient      *rpcclient.Client
     attester        *AttestClient
     server          *AttestServer
-    requests        chan Request
+    channel         *Channel
 }
 
 var latestTx *Attestation
 
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, reqs chan Request, rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, tx0 string, pk0 string) *AttestService{
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *Channel, rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, tx0 string, pk0 string) *AttestService{
     if (len(tx0) != 64) {
         log.Fatal("Incorrect txid size")
     }
     attester := NewAttestClient(rpcMain, rpcSide, pk0, tx0)
 
+    genesis, _ := rpcSide.GetBlockHash(0)
     latestTx = &Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
-    server := NewAttestServer(rpcSide, latestTx, tx0, genesis)
+    server := NewAttestServer(rpcSide, *latestTx, tx0, *genesis)
 
-    return &AttestService{ctx, wg, rpcMain, attester, server, reqs}
+    return &AttestService{ctx, wg, rpcMain, attester, server, channel}
 }
 
 func (s *AttestService) Run() {
     defer s.wg.Done()
 
-    s.getUnconfirmedTx()
+    s.attester.getUnconfirmedTx(latestTx)
 
     s.wg.Add(1)
     go func() { //Waiting for requests from the request service and pass to server for response
@@ -48,8 +47,8 @@ func (s *AttestService) Run() {
             select {
                 case <-s.ctx.Done():
                     return
-                case req := <-s.requests:
-                    s.requests <- s.server.Respond(req)
+                case req := <-s.channel.requests:
+                    s.channel.responses <- s.server.Respond(req)
             }
         }
     }()
@@ -61,23 +60,6 @@ func (s *AttestService) Run() {
                 return
             default:
                 s.doAttestation()
-        }
-    }
-}
-
-// Find any previously unconfirmed transactions and start attestation from there
-func (s *AttestService) getUnconfirmedTx() {
-    log.Println("*AttestService* Looking for unconfirmed transactions")
-    mempool, err := s.mainClient.GetRawMempool()
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    for _, hash := range mempool {
-        if (s.attester.verifyTxOnSubchain(*hash)) {
-            latestTx = &Attestation{*hash, chainhash.Hash{}, false, time.Now()}
-            log.Printf("*AttestService* Still waiting for confirmation of txid: (%s)\n", latestTx.txid)
-            break
         }
     }
 }
@@ -97,8 +79,8 @@ func (s *AttestService) doAttestation() {
             latestTx.latestTime = time.Now()
             if (newTx.BlockHash != "") {
                 latestTx.confirmed = true
-                s.server.AddConfirmed(*latestTx)
                 log.Printf("*AttestService* Attestation confirmed for txid: (%s)\n", latestTx.txid.String())
+                s.server.UpdateLatest(*latestTx)
             }
         }
     } else {

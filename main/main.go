@@ -37,9 +37,9 @@ func main() {
     ctx := context.Background()
     ctx, cancel := context.WithCancel(ctx)
 
-    requests := make(chan Request)
-    requestService := NewRequestService(ctx, wg, requests, confirmHost)
-    attestService := NewAttestService(ctx, wg, requests, mainClient, oceanClient, *txid0, *pk0)
+    channel := NewChannel()
+    requestService := NewRequestService(ctx, wg, channel, confirmHost)
+    attestService := NewAttestService(ctx, wg, channel, mainClient, oceanClient, *txid0, *pk0)
 
     c := make(chan os.Signal)
     signal.Notify(c, os.Interrupt)

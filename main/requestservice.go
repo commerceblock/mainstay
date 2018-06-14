@@ -18,8 +18,8 @@ type RequestService struct {
     router  *mux.Router
 }
 
-func NewRequestService(ctx context.Context, wg *sync.WaitGroup, reqs chan Request, host string) *RequestService {
-    router := NewRouter(reqs)
+func NewRequestService(ctx context.Context, wg *sync.WaitGroup, channel *Channel, host string) *RequestService {
+    router := NewRouter(channel)
     return &RequestService{ctx, wg, host, router}
 }
 

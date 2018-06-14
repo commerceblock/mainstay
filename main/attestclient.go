@@ -4,6 +4,7 @@ package main
 
 import (
     "log"
+    "time"
     "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcutil"
@@ -53,7 +54,6 @@ func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcj
 
     fee := int64(FEE_PER_BYTE * msgtx.SerializeSize())
     msgtx.TxOut[0].Value -= fee
-    log.Printf("*AttestClient* Tx fee %d", fee)
 
     signedmsgtx, issigned, err := w.mainClient.SignRawTransaction(msgtx)
     if err != nil || !issigned {
@@ -91,14 +91,28 @@ func (w *AttestClient) findLastUnspent() (bool, btcjson.ListUnspentResult) {
     }
     if (len(unspent) > 0) {
         for _, vout := range unspent {
-            txhash, err := chainhash.NewHashFromStr(vout.TxID)
-            if err != nil {
-                log.Fatal(err)
-            }
+            txhash, _ := chainhash.NewHashFromStr(vout.TxID)
             if (w.verifyTxOnSubchain(*txhash)) { //theoretically only one unspent vout, but check anyway
                 return true, vout
             }
         }
     }
     return false, btcjson.ListUnspentResult{}
+}
+
+// Find any previously unconfirmed transactions and start attestation from there
+func (w *AttestClient) getUnconfirmedTx(tx *Attestation) {
+    log.Println("*AttestClient* Looking for unconfirmed transactions")
+    mempool, err := w.mainClient.GetRawMempool()
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    for _, hash := range mempool {
+        if (w.verifyTxOnSubchain(*hash)) {
+            log.Printf("*AttestClient* Still waiting for confirmation of txid: (%s)\n", *hash)
+            *tx = Attestation{*hash, chainhash.Hash{}, false, time.Now()}
+            return
+        }
+    }
 }

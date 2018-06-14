@@ -1,4 +1,5 @@
 // Routing for http requests to request service
+
 package main
 
 import (
@@ -12,7 +13,7 @@ type Route struct {
     name        string
     method      string
     pattern     string
-    handlerFunc func(http.ResponseWriter, *http.Request, chan Request)
+    handlerFunc func(http.ResponseWriter, *http.Request, *Channel)
 }
 
 var routes = []Route{
@@ -34,12 +35,24 @@ var routes = []Route{
         "/bestblock/",
         BestBlock,
     },
+    Route{
+        "Transaction",
+        "GET",
+        "/transaction/{transactionId}",
+        Transaction,
+    },
+    Route{
+        "LatestAttestation",
+        "GET",
+        "/latestattestation/",
+        LatestAttestation,
+    },
 }
 
-func NewRouter(reqs chan Request) *mux.Router {
+func NewRouter(channel *Channel) *mux.Router {
     router := mux.NewRouter().StrictSlash(true)
     for _, route := range routes {
-        handlerFunc := makeHandler(route.handlerFunc, reqs) // pass channel to request handler
+        handlerFunc := makeHandler(route.handlerFunc, channel) // pass channel to request handler
         router.
             Methods(route.method).
             Path(route.pattern).
@@ -49,10 +62,10 @@ func NewRouter(reqs chan Request) *mux.Router {
     return router
 }
 
-func makeHandler(fn func (http.ResponseWriter, *http.Request, chan Request), reqs chan Request) http.HandlerFunc {
+func makeHandler(fn func (http.ResponseWriter, *http.Request, *Channel), channel *Channel) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         start := time.Now()
-        fn(w, r, reqs)
+        fn(w, r, channel)
         log.Printf("%s\t%s\t%s", r.Method, r.RequestURI, time.Since(start),)
     }
 }

@@ -9,29 +9,54 @@ import (
     "github.com/gorilla/mux"
 )
 
-func Index(w http.ResponseWriter, r *http.Request, reqs chan Request) {
+func Index(w http.ResponseWriter, r *http.Request, channel *Channel) {
     fmt.Fprintln(w, "Request Service for Ocean Attestations!")
 }
 
-func Block(w http.ResponseWriter, r *http.Request, reqs chan Request) {
+func Block(w http.ResponseWriter, r *http.Request, channel *Channel) {
     blockid := mux.Vars(r)["blockId"]
     request := Request{Name: mux.CurrentRoute(r).GetName(), Id: blockid,}
 
-    reqs <- request // put request in channel
+    channel.requests <- request // put request in channel
 
-    response := <- reqs // wait for response from attestation service
+    response := <- channel.responses // wait for response from attestation service
 
     if err := json.NewEncoder(w).Encode(response); err != nil {
         panic(err)
     }
 }
 
-func BestBlock(w http.ResponseWriter, r *http.Request, reqs chan Request) {
+func BestBlock(w http.ResponseWriter, r *http.Request, channel *Channel) {
     request := Request{Name: mux.CurrentRoute(r).GetName(),}
 
-    reqs <- request // put request in channel
+    channel.requests <- request // put request in channel
 
-    response := <- reqs // wait for response from attestation service
+    response := <- channel.responses // wait for response from attestation service
+
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        panic(err)
+    }
+}
+
+func Transaction(w http.ResponseWriter, r *http.Request, channel *Channel) {
+    transactionId := mux.Vars(r)["transactionId"]
+    request := Request{Name: mux.CurrentRoute(r).GetName(), Id: transactionId,}
+
+    channel.requests <- request // put request in channel
+
+    response := <- channel.responses // wait for response from attestation service
+
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        panic(err)
+    }
+}
+
+func LatestAttestation(w http.ResponseWriter, r *http.Request, channel *Channel) {
+    request := Request{Name: mux.CurrentRoute(r).GetName(),}
+
+    channel.requests <- request // put request in channel
+
+    response := <- channel.responses // wait for response from attestation service
 
     if err := json.NewEncoder(w).Encode(response); err != nil {
         panic(err)
