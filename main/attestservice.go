@@ -38,6 +38,8 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *Channel,
 func (s *AttestService) Run() {
     defer s.wg.Done()
 
+    log.Printf("*AttestService* genesis tx %s\n", s.attester.txid0)
+    log.Println("*AttestService* Looking for unconfirmed transactions")
     s.attester.getUnconfirmedTx(latestTx)
 
     s.wg.Add(1)

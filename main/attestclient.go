@@ -21,7 +21,7 @@ type AttestClient struct {
 }
 
 func NewAttestClient(rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, pk string, tx string) *AttestClient {
-    if (len(pk) != 64) {
+    if (false && len(pk) != 64 /*need to validate key properly*/) {
         log.Fatal("*AttestClient* Incorrect key size")
     }
     return &AttestClient{rpcMain, rpcSide, pk, tx}
@@ -102,15 +102,12 @@ func (w *AttestClient) findLastUnspent() (bool, btcjson.ListUnspentResult) {
 
 // Find any previously unconfirmed transactions and start attestation from there
 func (w *AttestClient) getUnconfirmedTx(tx *Attestation) {
-    log.Println("*AttestClient* Looking for unconfirmed transactions")
     mempool, err := w.mainClient.GetRawMempool()
     if err != nil {
         log.Fatal(err)
     }
-
     for _, hash := range mempool {
         if (w.verifyTxOnSubchain(*hash)) {
-            log.Printf("*AttestClient* Still waiting for confirmation of txid: (%s)\n", *hash)
             *tx = Attestation{*hash, chainhash.Hash{}, false, time.Now()}
             return
         }
