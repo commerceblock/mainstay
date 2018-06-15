@@ -47,6 +47,3 @@ sleep 2
 
 btcl generate 1
 sleep 2
-
-oceanl generate 10
-sleep 2

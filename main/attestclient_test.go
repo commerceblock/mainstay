@@ -4,51 +4,17 @@ package main
 
 import (
     "testing"
-    "ocean-attestation/conf"
-    "github.com/btcsuite/btcutil"
-    "github.com/btcsuite/btcd/chaincfg"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/stretchr/testify/assert"
 )
 
-var (
-    client *AttestClient
-    txs []string
-    oceanhashes []chainhash.Hash
-)
-
-var testConf = []byte(`
-{
-    "btc": {
-        "rpcurl": "localhost:18000",
-        "rpcuser": "user",
-        "rpcpass": "pass"
-    },
-    "ocean": {
-        "rpcurl": "localhost:18001",
-        "rpcuser": "user",
-        "rpcpass": "pass"
-    }
-}
-`)
-
-func testInit() {
-    btc  := conf.GetRPC("btc", testConf)
-    ocean := conf.GetRPC("ocean", testConf)
-
-    // Get first unspent as initial TX for attestation chain
-    unspent, _ := btc.ListUnspent()
-    tx0 := &unspent[0]
-    tx0hash := tx0.TxID
-    txs = append(txs, tx0.TxID)
-    tx0addr, _ := btcutil.DecodeAddress(tx0.Address, &chaincfg.RegressionNetParams)
-    tx0pk, _ := btc.DumpPrivKey(tx0addr)
-
-    client = NewAttestClient(btc, ocean, tx0pk.String(), tx0hash)
-}
-
 func TestAttestClient(t *testing.T) {
-    testInit()
+    // TEST INIT
+    var txs []string
+    var oceanhashes []chainhash.Hash
+    test := NewTest()
+    client := NewAttestClient(test.btc, test.ocean, test.tx0pk, test.tx0hash)
+    txs = append(txs, client.txid0)
 
     // Find unspent and verify is it the genesis transaction
     success, unspent := client.findLastUnspent()
