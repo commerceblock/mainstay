@@ -30,37 +30,37 @@ func TestAttestServer(t *testing.T) {
     // Update latest in server
     latest := &Attestation{txnew, sidehash, true, time.Now()}
     server.UpdateLatest(*latest)
-    assert.Equal(t, server.latest.confirmed, true)
-    assert.Equal(t, server.latest.txid, txnew)
-    assert.Equal(t, server.latest.clientHash, sidehash)
-    assert.Equal(t, server.latestHeight, int32(10))
+    assert.Equal(t, true, server.latest.confirmed)
+    assert.Equal(t, txnew, server.latest.txid)
+    assert.Equal(t, sidehash, server.latest.clientHash)
+    assert.Equal(t, int32(10), server.latestHeight)
 
     bestblockhash, _ := client.sideClient.GetBestBlockHash()
 
     // Test various requests
     req := Request{"BestBlock", ""}
     resp1, _ := server.Respond(req).(BestBlockResponse)
-    assert.Equal(t, resp1.Error, "")
-    assert.Equal(t, resp1.BlockHash, bestblockhash.String())
+    assert.Equal(t, "", resp1.Error)
+    assert.Equal(t, bestblockhash.String(), resp1.BlockHash)
 
     req = Request{"LatestAttestation", ""}
     resp2, _ := server.Respond(req).(LatestAttestationResponse)
-    assert.Equal(t, resp2.Error, "")
-    assert.Equal(t, resp2.TxHash, txnew.String())
+    assert.Equal(t, "", resp2.Error)
+    assert.Equal(t, txnew.String(), resp2.TxHash)
 
     req = Request{"Block", "1"}
     resp3, _ := server.Respond(req).(BlockResponse)
-    assert.Equal(t, resp3.Error, "")
-    assert.Equal(t, resp3.Attested, true)
+    assert.Equal(t, "", resp3.Error)
+    assert.Equal(t, true, resp3.Attested)
 
     req = Request{"Block", "11"}
     resp4, _ := server.Respond(req).(BlockResponse)
-    assert.Equal(t, resp4.Error, "")
-    assert.Equal(t, resp4.Attested, false)
+    assert.Equal(t, "", resp4.Error)
+    assert.Equal(t, false, resp4.Attested)
 
     req = Request{"WhenMoon", ""}
     resp5, _ := server.Respond(req).(Response)
-    assert.Equal(t, resp5.Error, "**AttestServer** Non supported request type")
+    assert.Equal(t, "**AttestServer** Non supported request type", resp5.Error)
 
     // Test requests for the attested best block and a new generated block
     client.sideClient.Generate(1)
@@ -68,13 +68,13 @@ func TestAttestServer(t *testing.T) {
 
     req = Request{"Block", bestblockhash.String()}
     resp6, _ := server.Respond(req).(BlockResponse)
-    assert.Equal(t, resp6.Error, "")
-    assert.Equal(t, resp6.Attested, true)
+    assert.Equal(t, "", resp6.Error)
+    assert.Equal(t, true, resp6.Attested)
 
     req = Request{"Block", bestblockhashnew.String()}
     resp7, _ := server.Respond(req).(BlockResponse)
-    assert.Equal(t, resp7.Error, "")
-    assert.Equal(t, resp7.Attested, false)
+    assert.Equal(t, "", resp7.Error)
+    assert.Equal(t, false, resp7.Attested)
 
     // Test requests for a tx in the best attested block and a tx in a newly generated block
     block, err1 := client.sideClient.GetBlockVerbose(bestblockhash)
@@ -90,11 +90,11 @@ func TestAttestServer(t *testing.T) {
 
     req = Request{"Transaction", txAttested}
     resp8, _ := server.Respond(req).(TransactionResponse)
-    assert.Equal(t, resp8.Error, "")
-    assert.Equal(t, resp8.Attested, true)
+    assert.Equal(t, "", resp8.Error)
+    assert.Equal(t, true, resp8.Attested)
 
     req = Request{"Transaction", txNotAttested}
     resp9, _ := server.Respond(req).(TransactionResponse)
-    assert.Equal(t, resp9.Error, "")
-    assert.Equal(t, resp9.Attested, false)
+    assert.Equal(t, "", resp9.Error)
+    assert.Equal(t, false, resp9.Attested)
 }

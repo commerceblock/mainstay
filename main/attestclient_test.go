@@ -21,7 +21,7 @@ func TestAttestClient(t *testing.T) {
     if (!success) {
         t.Fail()
     }
-    assert.Equal(t, unspent.TxID, txs[0])
+    assert.Equal(t, txs[0], unspent.TxID)
 
     // Do 10 attestations
     for i := 0; i < 10; i++ {
@@ -47,7 +47,7 @@ func TestAttestClient(t *testing.T) {
         if (!success) {
             t.Fail()
         }
-        assert.Equal(t, unspent.TxID, txnew.String()) // last unspent txnew is txnew vout
+        assert.Equal(t, txnew.String(), unspent.TxID) // last unspent txnew is txnew vout
     }
 
     assert.Equal(t, len(txs), 11)
@@ -62,7 +62,7 @@ func TestAttestClient(t *testing.T) {
             t.Fail()
         }
         // Test attestation transactions have a single vout
-        assert.Equal(t, len(txraw.MsgTx().TxOut), 1)
+        assert.Equal(t, 1, len(txraw.MsgTx().TxOut))
     }
 
     // TODO

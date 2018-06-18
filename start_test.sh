@@ -39,7 +39,7 @@ sleep 2
 oceand
 sleep 2
 
-btcl generate 101
+btcl generate 103
 sleep 2
 
 btcl sendtoaddress $(btcl getnewaddress) $(btcl getbalance) "" "" true

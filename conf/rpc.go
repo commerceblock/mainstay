@@ -1,6 +1,4 @@
-//
 // Client RPC connectivity and client related functionality
-//
 
 package conf
 
