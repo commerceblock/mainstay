@@ -28,7 +28,10 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *Channel,
     }
     attester := NewAttestClient(rpcMain, rpcSide, pk0, tx0)
 
-    genesis, _ := rpcSide.GetBlockHash(0)
+    genesis, err := rpcSide.GetBlockHash(0)
+    if err!=nil {
+        log.Fatal(err)
+    }
     latestTx = &Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
     server := NewAttestServer(rpcSide, *latestTx, tx0, *genesis)
 
@@ -83,6 +86,7 @@ func (s *AttestService) doAttestation() {
                 latestTx.confirmed = true
                 log.Printf("*AttestService* Attestation confirmed for txid: (%s)\n", latestTx.txid.String())
                 s.server.UpdateLatest(*latestTx)
+                log.Printf("**AttestServer** Updated latest attested height %d\n", s.server.latestHeight)
             }
         }
     } else {

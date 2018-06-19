@@ -37,11 +37,11 @@ func NewTest() *Test {
     // Run init test script that sets up bitcoin and ocean
     initPath := os.Getenv("GOPATH") + "/src/ocean-attestation/start_test.sh"
     cmd := exec.Command("/bin/sh", initPath)
-    output, err := cmd.Output()
+    _, err := cmd.Output()
     if err != nil {
         log.Fatal(err)
     }
-    log.Println(string(output))
+    //log.Println(string(output))
 
     btc  := conf.GetRPC("btc", testConf)
     ocean := conf.GetRPC("ocean", testConf)
