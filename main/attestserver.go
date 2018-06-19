@@ -31,7 +31,6 @@ func (s *AttestServer) UpdateLatest(tx Attestation) {
         log.Printf("**AttestServer** No client hash on confirmed tx - Happens on init, should fix soon")
     } else {
         s.latestHeight = latestheader.Height
-        log.Printf("**AttestServer** Updated latest attested height %d\n", s.latestHeight)
     }
 }
 

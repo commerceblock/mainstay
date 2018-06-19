@@ -10,14 +10,14 @@ import (
 var myConf = []byte(`
 {
     "main": {
-        "rpcurl": "localhost:8333",
-        "rpcuser": "bitcoinrpc",
-        "rpcpass": "bitcoinrpcpass"
+        "rpcurl": "localhost:18000",
+        "rpcuser": "user",
+        "rpcpass": "pass"
     },
     "ocean": {
-        "rpcurl": "localhost:18886",
-        "rpcuser": "bitcoinrpc",
-        "rpcpass": "acc1e7a299bc49449912e235b54dbce5"
+        "rpcurl": "localhost:18001",
+        "rpcuser": "user",
+        "rpcpass": "pass"
     }
 }
 `)
