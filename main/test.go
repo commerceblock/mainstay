@@ -7,6 +7,7 @@ import (
     "os"
     "log"
     "ocean-attestation/conf"
+    "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcutil"
     "github.com/btcsuite/btcd/chaincfg"
     "github.com/btcsuite/btcd/rpcclient"
@@ -48,7 +49,12 @@ func NewTest() *Test {
 
     // Get first unspent as initial TX for attestation chain
     unspent, _ := btc.ListUnspent()
-    tx0 := &unspent[0]
+    var tx0 btcjson.ListUnspentResult
+    for _, vout := range unspent {
+        if (vout.Amount > 50) { // skip regtest txs
+            tx0 = vout
+        }
+    }
     tx0hash := tx0.TxID
     tx0addr, _ := btcutil.DecodeAddress(tx0.Address, &chaincfg.RegressionNetParams)
     tx0pk, _ := btc.DumpPrivKey(tx0addr)

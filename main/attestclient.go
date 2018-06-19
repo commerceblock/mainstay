@@ -18,25 +18,31 @@ type AttestClient struct {
     sideClient  *rpcclient.Client
     pk0         string
     txid0       string
+    walletPriv  *btcutil.WIF
 }
 
 func NewAttestClient(rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, pk string, tx string) *AttestClient {
     if (false && len(pk) != 64 /*need to validate key properly*/) {
         log.Fatal("*AttestClient* Incorrect key size")
     }
-    return &AttestClient{rpcMain, rpcSide, pk, tx}
+    return &AttestClient{rpcMain, rpcSide, pk, tx, GetWalletPrivKey(pk)}
 }
 
 // Get next attestation address by tweaking initial private key with current sidechain block hash
 func (w *AttestClient) getNextAttestationAddr() (chainhash.Hash, btcutil.Address) {
-    addr, err := w.mainClient.GetNewAddress("")
+    hash, err := w.sideClient.GetBestBlockHash()
     if err != nil {
         log.Fatal(err)
     }
 
-    hash, err := w.sideClient.GetBestBlockHash()
-    if err != nil {
-        log.Fatal(err)
+    // Tweak priv key with the latest ocean hash
+    tweakedWalletPriv := TweakPrivKey(w.walletPriv, hash.CloneBytes())
+    addr := GetAddressFromPrivKey(tweakedWalletPriv)
+
+    // Import tweaked priv key to wallet
+    importErr := w.mainClient.ImportPrivKey(tweakedWalletPriv)
+    if importErr != nil {
+        log.Fatal(importErr)
     }
 
     return *hash, addr
