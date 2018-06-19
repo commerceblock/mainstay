@@ -66,6 +66,5 @@ func TestAttestClient(t *testing.T) {
     }
 
     // TODO
-    // key generation testing
     // find ocean hash from tx testing
 }
