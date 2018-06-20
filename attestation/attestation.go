@@ -9,7 +9,7 @@ import (
 
 type Attestation struct {
     txid            chainhash.Hash
-    clientHash      chainhash.Hash
+    attestedHash    chainhash.Hash
     confirmed       bool
     latestTime      time.Time
 }

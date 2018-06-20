@@ -34,7 +34,7 @@ func TestAttestServer(t *testing.T) {
     server.UpdateLatest(*latest)
     assert.Equal(t, true, server.latest.confirmed)
     assert.Equal(t, txnew, server.latest.txid)
-    assert.Equal(t, sidehash, server.latest.clientHash)
+    assert.Equal(t, sidehash, server.latest.attestedHash)
     assert.Equal(t, int32(10), server.latestHeight)
 
     bestblockhash, _ := client.sideClient.GetBestBlockHash()

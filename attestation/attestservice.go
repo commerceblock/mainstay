@@ -47,6 +47,10 @@ func (s *AttestService) Run() {
     log.Println("*AttestService* Looking for unconfirmed transactions")
     s.attester.getUnconfirmedTx(latestTx)
 
+    if (!latestTx.confirmed) {
+        log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestTx.txid.String(), latestTx.attestedHash.String())
+    }
+
     s.wg.Add(1)
     go func() { //Waiting for requests from the request service and pass to server for response
         defer s.wg.Done()
@@ -78,7 +82,7 @@ func (s *AttestService) Run() {
 func (s *AttestService) doAttestation() {
     if (!latestTx.confirmed) {
         if (time.Since(latestTx.latestTime).Seconds() > 60) { // Only check for confirmation every 60 seconds
-            log.Printf("*AttestService* Waiting for confirmation of txid: (%s)\n", latestTx.txid.String())
+            log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestTx.txid.String(), latestTx.attestedHash.String())
             newTx, err := s.mainClient.GetTransaction(&latestTx.txid)
             if err != nil {
                 log.Fatal(err)

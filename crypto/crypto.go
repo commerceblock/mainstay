@@ -70,3 +70,10 @@ func GetAddressFromPubKey(pubkey *btcec.PublicKey, chainCfg *chaincfg.Params) bt
     }
     return addr
 }
+
+func IsAddrTweakedFromHash(address string, hash []byte, walletPrivKey *btcutil.WIF, chainCfg *chaincfg.Params) bool {
+    tweakedPriv := TweakPrivKey(walletPrivKey, hash, chainCfg)
+    tweakedAddr := GetAddressFromPrivKey(tweakedPriv, chainCfg)
+
+    return address == tweakedAddr.String()
+}

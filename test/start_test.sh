@@ -1,8 +1,6 @@
 #!/bin/bash
 killall -9 bitcoind
-sleep 2
 killall -9 elementsd
-sleep 2
 
 rm -r ~/btc-datadir ; rm -r ~/ocean-datadir ;
 mkdir ~/btc-datadir ; mkdir ~/ocean-datadir ;
@@ -42,10 +40,13 @@ oceand
 sleep 5
 
 btcl generate 103
-sleep 3
+sleep 1
 
 btcl sendtoaddress $(btcl getnewaddress) $(btcl getbalance) "" "" true
-sleep 3
+sleep 1
 
 btcl generate 1
-sleep 3
+sleep 1
+
+btcl listunspent
+sleep 5

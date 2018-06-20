@@ -117,8 +117,46 @@ func (w *AttestClient) getUnconfirmedTx(tx *Attestation) {
     }
     for _, hash := range mempool {
         if (w.verifyTxOnSubchain(*hash)) {
-            *tx = Attestation{*hash, chainhash.Hash{}, false, time.Now()}
+            *tx = Attestation{*hash, w.getTxAttestedHash(*hash), false, time.Now()}
             return
         }
     }
+}
+
+// Find the attested hash from a transaction, by testing for all sidechain hashes
+func (w *AttestClient) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
+    // Get latest block and block height from sidechain
+    latesthash, err := w.sideClient.GetBestBlockHash()
+    if err != nil {
+        log.Fatal(err)
+    }
+    latestheader, err := w.sideClient.GetBlockHeaderVerbose(latesthash)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Get address from transaction
+    tx, err := w.mainClient.GetTransaction(&txid)
+    if err != nil {
+        log.Fatal(err)
+    }
+    addr := tx.Details[0].Address
+
+    // Check first if the attestation came from the latest block
+    if (crypto.IsAddrTweakedFromHash(addr, latesthash.CloneBytes(), w.walletPriv, w.mainChainCfg)) {
+        return *latesthash
+    }
+
+    // Iterate backwards through all sidechain hashes to find the block hash that was attested
+    for h := latestheader.Height - 1; h >= 0; h-- {
+        hash, err := w.sideClient.GetBlockHash(int64(h))
+        if err != nil {
+            log.Fatal(err)
+        }
+        if (crypto.IsAddrTweakedFromHash(addr, hash.CloneBytes(), w.walletPriv, w.mainChainCfg)) {
+            return *hash
+        }
+    }
+
+    return chainhash.Hash{}
 }
