@@ -34,11 +34,11 @@ func getCfg(name string, conf []byte) ClientCfg {
 func (conf ClientCfg) getValue(key string) string {
     val, ok := conf[key]
     if !ok {
-        log.Fatal("%s not found in conf file", key)
+        log.Fatalf("%s not found in conf file", key)
     }
     str, ok := val.(string)
     if !ok {
-        log.Fatal("%s not string in conf file", key)
+        log.Fatalf("%s not string in conf file", key)
     }
     return str
 }
