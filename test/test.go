@@ -18,18 +18,21 @@ var testConf = []byte(`
     "btc": {
         "rpcurl": "localhost:18000",
         "rpcuser": "user",
-        "rpcpass": "pass"
+        "rpcpass": "pass",
+        "chain": "regtest"
     },
     "ocean": {
         "rpcurl": "localhost:18001",
         "rpcuser": "user",
-        "rpcpass": "pass"
+        "rpcpass": "pass",
+        "chain": "main"
     }
 }
 `)
 
 type Test struct {
     Btc, Ocean  *rpcclient.Client
+    BtcConfig   *chaincfg.Params
     Tx0pk       string
     Tx0hash     string
 }
@@ -46,6 +49,7 @@ func NewTest() *Test {
 
     btc  := conf.GetRPC("btc", testConf)
     ocean := conf.GetRPC("ocean", testConf)
+    chaincfg := conf.GetChainCfgParams("btc", testConf)
 
     // Get first unspent as initial TX for attestation chain
     unspent, _ := btc.ListUnspent()
@@ -56,8 +60,8 @@ func NewTest() *Test {
         }
     }
     tx0hash := tx0.TxID
-    tx0addr, _ := btcutil.DecodeAddress(tx0.Address, &chaincfg.RegressionNetParams)
+    tx0addr, _ := btcutil.DecodeAddress(tx0.Address, chaincfg)
     tx0pk, _ := btc.DumpPrivKey(tx0addr)
 
-    return &Test{btc, ocean, tx0pk.String(), tx0hash}
+    return &Test{btc, ocean, chaincfg, tx0pk.String(), tx0hash}
 }

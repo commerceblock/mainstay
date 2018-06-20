@@ -16,8 +16,8 @@ func TestCrypto(t *testing.T) {
     privKey := GetWalletPrivKey(test.Tx0pk)
 
     // Tweak private key and generate a new pay to pub key hash address
-    tweakedPrivKey := TweakPrivKey(privKey, tweak.CloneBytes())
-    addr := GetAddressFromPrivKey(tweakedPrivKey)
+    tweakedPrivKey := TweakPrivKey(privKey, tweak.CloneBytes(), test.BtcConfig)
+    addr := GetAddressFromPrivKey(tweakedPrivKey, test.BtcConfig)
 
     // Validate tweaked private key
     importErr := test.Btc.ImportPrivKey(tweakedPrivKey)
@@ -35,7 +35,7 @@ func TestCrypto(t *testing.T) {
     // Test that tweaking the pubkey instead produces the same address
     pubkey := privKey.PrivKey.PubKey()
     tweakedPubKey := TweakPubKey(pubkey, tweak.CloneBytes())
-    tweakedPubKeyAddr := GetAddressFromPubKey(tweakedPubKey)
+    tweakedPubKeyAddr := GetAddressFromPubKey(tweakedPubKey, test.BtcConfig)
 
     assert.Equal(t, addr.String(), tweakedPubKeyAddr.String())
 }

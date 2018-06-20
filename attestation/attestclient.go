@@ -10,6 +10,7 @@ import (
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcutil"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
+    "github.com/btcsuite/btcd/chaincfg"
 )
 
 const FEE_PER_BYTE = 20 // satoshis
@@ -17,16 +18,17 @@ const FEE_PER_BYTE = 20 // satoshis
 type AttestClient struct {
     mainClient  *rpcclient.Client
     sideClient  *rpcclient.Client
+    mainChainCfg *chaincfg.Params
     pk0         string
     txid0       string
     walletPriv  *btcutil.WIF
 }
 
-func NewAttestClient(rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, pk string, tx string) *AttestClient {
+func NewAttestClient(rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, cfgMain *chaincfg.Params, pk string, tx string) *AttestClient {
     if (false && len(pk) != 64 /*need to validate key properly*/) {
         log.Fatal("*AttestClient* Incorrect key size")
     }
-    return &AttestClient{rpcMain, rpcSide, pk, tx, crypto.GetWalletPrivKey(pk)}
+    return &AttestClient{rpcMain, rpcSide, cfgMain, pk, tx, crypto.GetWalletPrivKey(pk)}
 }
 
 // Get next attestation address by tweaking initial private key with current sidechain block hash
@@ -37,8 +39,8 @@ func (w *AttestClient) getNextAttestationAddr() (chainhash.Hash, btcutil.Address
     }
 
     // Tweak priv key with the latest ocean hash
-    tweakedWalletPriv := crypto.TweakPrivKey(w.walletPriv, hash.CloneBytes())
-    addr := crypto.GetAddressFromPrivKey(tweakedWalletPriv)
+    tweakedWalletPriv := crypto.TweakPrivKey(w.walletPriv, hash.CloneBytes(), w.mainChainCfg)
+    addr := crypto.GetAddressFromPrivKey(tweakedWalletPriv, w.mainChainCfg)
 
     // Import tweaked priv key to wallet
     importErr := w.mainClient.ImportPrivKey(tweakedWalletPriv)

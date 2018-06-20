@@ -14,7 +14,7 @@ func TestAttestClient(t *testing.T) {
     var txs []string
     var oceanhashes []chainhash.Hash
     test := test.NewTest()
-    client := NewAttestClient(test.Btc, test.Ocean, test.Tx0pk, test.Tx0hash)
+    client := NewAttestClient(test.Btc, test.Ocean, test.BtcConfig, test.Tx0pk, test.Tx0hash)
     txs = append(txs, client.txid0)
 
     // Find unspent and verify is it the genesis transaction

@@ -1,7 +1,4 @@
-//
-// Handle reading conf files and parsing
-// configuration options
-//
+// Handle reading conf files and parsing configuration options
 
 package conf
 
@@ -9,7 +6,6 @@ import (
     "bytes"
     "encoding/json"
     "log"
-    "github.com/btcsuite/btcd/chaincfg"
 )
 
 type ClientCfg map[string]interface{}
@@ -41,10 +37,4 @@ func (conf ClientCfg) getValue(key string) string {
         log.Fatalf("%s not string in conf file", key)
     }
     return str
-}
-
-func GetChainCfgParams() *chaincfg.Params {
-    // TO FIX THIS DEPENDING ON CONFIG
-
-    return &chaincfg.RegressionNetParams
 }
