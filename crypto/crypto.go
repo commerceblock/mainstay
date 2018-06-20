@@ -6,9 +6,9 @@ import (
     "crypto/ecdsa"
     "math/big"
     "log"
-    "ocean-attestation/conf"
     "github.com/btcsuite/btcutil"
     "github.com/btcsuite/btcd/btcec"
+    "github.com/btcsuite/btcd/chaincfg"
 )
 
 // Get private key wallet readable format from a string encoded private key
@@ -21,7 +21,7 @@ func GetWalletPrivKey(privKey string) *btcutil.WIF {
 }
 
 // Tweak a private key by adding the tweak to it's integer representation
-func TweakPrivKey(walletPrivKey *btcutil.WIF, tweak []byte) *btcutil.WIF {
+func TweakPrivKey(walletPrivKey *btcutil.WIF, tweak []byte, chainCfg *chaincfg.Params) *btcutil.WIF {
     // Convert private key and tweak to big Int
     keyVal := new(big.Int).SetBytes(walletPrivKey.PrivKey.Serialize())
     twkVal := new(big.Int).SetBytes(tweak)
@@ -38,7 +38,7 @@ func TweakPrivKey(walletPrivKey *btcutil.WIF, tweak []byte) *btcutil.WIF {
     resPrivKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), resVal.Bytes())
 
     // Return priv key in wallet readable format
-    resWalletPrivKey, err := btcutil.NewWIF(resPrivKey, conf.GetChainCfgParams(), walletPrivKey.CompressPubKey)
+    resWalletPrivKey, err := btcutil.NewWIF(resPrivKey, chainCfg, walletPrivKey.CompressPubKey)
     if err!=nil {
         log.Fatal(err)
     }
@@ -46,8 +46,8 @@ func TweakPrivKey(walletPrivKey *btcutil.WIF, tweak []byte) *btcutil.WIF {
 }
 
 // Get pay to pub key hash address from a private key
-func GetAddressFromPrivKey(walletPrivKey *btcutil.WIF) btcutil.Address {
-    return GetAddressFromPubKey(walletPrivKey.PrivKey.PubKey())
+func GetAddressFromPrivKey(walletPrivKey *btcutil.WIF, chainCfg *chaincfg.Params) btcutil.Address {
+    return GetAddressFromPubKey(walletPrivKey.PrivKey.PubKey(), chainCfg)
 }
 
 // Tweak a pub key by adding the elliptic curve representation of the tweak to the pub key
@@ -62,9 +62,9 @@ func TweakPubKey(pubKey *btcec.PublicKey, tweak []byte) *btcec.PublicKey {
 }
 
 // Get pay to pub key hash address from a pub key
-func GetAddressFromPubKey(pubkey *btcec.PublicKey) btcutil.Address {
+func GetAddressFromPubKey(pubkey *btcec.PublicKey, chainCfg *chaincfg.Params) btcutil.Address {
     pubKeyHash := btcutil.Hash160(pubkey.SerializeCompressed()) // get pub key hash
-    addr, err := btcutil.NewAddressPubKeyHash(pubKeyHash, conf.GetChainCfgParams()) // encode to address
+    addr, err := btcutil.NewAddressPubKeyHash(pubKeyHash, chainCfg) // encode to address
     if err!=nil {
         log.Fatal(err)
     }

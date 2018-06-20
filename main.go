@@ -9,6 +9,7 @@ import (
     "ocean-attestation/attestation"
     "ocean-attestation/models"
     "github.com/btcsuite/btcd/rpcclient"
+    "github.com/btcsuite/btcd/chaincfg"
     "os"
     "os/signal"
     "sync"
@@ -18,6 +19,7 @@ var (
     txid0, pk0 *string
     confirmHost string
     mainClient, oceanClient *rpcclient.Client
+    mainChainCfg            *chaincfg.Params
 )
 
 func initialise() {
@@ -29,6 +31,7 @@ func initialise() {
 
     mainClient  = conf.GetRPC("main")
     oceanClient = conf.GetRPC("ocean")
+    mainChainCfg = conf.GetChainCfgParams("main")
 }
 
 func main() {
@@ -42,7 +45,7 @@ func main() {
 
     channel := models.NewChannel()
     requestService := requestapi.NewRequestService(ctx, wg, channel, confirmHost)
-    attestService := attestation.NewAttestService(ctx, wg, channel, mainClient, oceanClient, *txid0, *pk0)
+    attestService := attestation.NewAttestService(ctx, wg, channel, mainClient, oceanClient, mainChainCfg, *txid0, *pk0)
 
     c := make(chan os.Signal)
     signal.Notify(c, os.Interrupt)

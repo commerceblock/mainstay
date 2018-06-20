@@ -9,6 +9,7 @@ import (
     "time"
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
+    "github.com/btcsuite/btcd/chaincfg"
     "ocean-attestation/models"
 )
 
@@ -23,11 +24,11 @@ type AttestService struct {
 
 var latestTx *Attestation
 
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, tx0 string, pk0 string) *AttestService{
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, cfgMain *chaincfg.Params, tx0 string, pk0 string) *AttestService{
     if (len(tx0) != 64) {
         log.Fatal("Incorrect txid size")
     }
-    attester := NewAttestClient(rpcMain, rpcSide, pk0, tx0)
+    attester := NewAttestClient(rpcMain, rpcSide, cfgMain, pk0, tx0)
 
     genesis, err := rpcSide.GetBlockHash(0)
     if err!=nil {
