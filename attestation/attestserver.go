@@ -27,7 +27,7 @@ func NewAttestServer(rpcSide *rpcclient.Client, latest Attestation, tx0 string, 
 // Keep the latest attested transaction for handling requests
 func (s *AttestServer) UpdateLatest(tx Attestation) {
     s.latest = tx
-    latestheader, err := s.sideClient.GetBlockHeaderVerbose(&s.latest.clientHash)
+    latestheader, err := s.sideClient.GetBlockHeaderVerbose(&s.latest.attestedHash)
     if err != nil {
         log.Printf("**AttestServer** No client hash on confirmed tx - Happens on init, should fix soon")
     } else {

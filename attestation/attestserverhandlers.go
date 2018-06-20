@@ -58,7 +58,7 @@ func (s *AttestServer) TransactionResponse(req models.Request) models.Transactio
 }
 
 func (s *AttestServer) BestBlockResponse(req models.Request) models.BestBlockResponse {
-    return models.BestBlockResponse{models.Response{req, ""}, s.latest.clientHash.String()}
+    return models.BestBlockResponse{models.Response{req, ""}, s.latest.attestedHash.String()}
 }
 
 func (s *AttestServer) LatestAttestation(req models.Request) models.LatestAttestationResponse {

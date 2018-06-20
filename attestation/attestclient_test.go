@@ -12,7 +12,6 @@ import (
 func TestAttestClient(t *testing.T) {
     // TEST INIT
     var txs []string
-    var oceanhashes []chainhash.Hash
     test := test.NewTest()
     client := NewAttestClient(test.Btc, test.Ocean, test.BtcConfig, test.Tx0pk, test.Tx0hash)
     txs = append(txs, client.txid0)
@@ -29,18 +28,20 @@ func TestAttestClient(t *testing.T) {
         // Generate attestation transaction with the unspent vout
         oceanhash, addr := client.getNextAttestationAddr()
         txnew := client.sendAttestation(addr, unspent)
-        oceanhashes = append(oceanhashes, oceanhash)
+        client.sideClient.Generate(5)
 
         // Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
         var unconfirmed *Attestation = &Attestation{}
         client.getUnconfirmedTx(unconfirmed)    // new tx is unconfirmed
         assert.Equal(t, txnew, unconfirmed.txid)
+        assert.Equal(t, oceanhash, unconfirmed.attestedHash)
 
         // Verify no more unconfirmed transactions after new block generation
         client.mainClient.Generate(1)
         unconfirmed = &Attestation{}
         client.getUnconfirmedTx(unconfirmed)
         assert.Equal(t, chainhash.Hash{}, unconfirmed.txid) // new tx no longer unconfirmed
+        assert.Equal(t, chainhash.Hash{}, unconfirmed.attestedHash)
         txs = append(txs, txnew.String())
 
         // Now check that the new unspent is the vout from the transaction just submitted
@@ -65,7 +66,4 @@ func TestAttestClient(t *testing.T) {
         // Test attestation transactions have a single vout
         assert.Equal(t, 1, len(txraw.MsgTx().TxOut))
     }
-
-    // TODO
-    // find ocean hash from tx testing
 }

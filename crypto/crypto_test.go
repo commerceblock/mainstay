@@ -18,6 +18,7 @@ func TestCrypto(t *testing.T) {
     // Tweak private key and generate a new pay to pub key hash address
     tweakedPrivKey := TweakPrivKey(privKey, tweak.CloneBytes(), test.BtcConfig)
     addr := GetAddressFromPrivKey(tweakedPrivKey, test.BtcConfig)
+    assert.Equal(t, true, IsAddrTweakedFromHash(addr.String(), tweak.CloneBytes(), privKey, test.BtcConfig))
 
     // Validate tweaked private key
     importErr := test.Btc.ImportPrivKey(tweakedPrivKey)
