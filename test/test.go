@@ -6,12 +6,14 @@ import (
     "os/exec"
     "os"
     "log"
-    "ocean-attestation/conf"
     "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcutil"
     "github.com/btcsuite/btcd/chaincfg"
     "github.com/btcsuite/btcd/rpcclient"
+    "ocean-attestation/conf"
 )
+
+const INIT_PATH = "/src/ocean-attestation/test/test-init.sh"
 
 var testConf = []byte(`
 {
@@ -37,15 +39,17 @@ type Test struct {
     Tx0hash     string
 }
 
-func NewTest() *Test {
+func NewTest(logOutput bool) *Test {
     // Run init test script that sets up bitcoin and ocean
-    initPath := os.Getenv("GOPATH") + "/src/ocean-attestation/test/start_test.sh"
+    initPath := os.Getenv("GOPATH") + INIT_PATH
     cmd := exec.Command("/bin/sh", initPath)
-    _, err := cmd.Output()
+    output, err := cmd.Output()
     if err != nil {
         log.Fatal(err)
     }
-    //log.Println(string(output))
+    if (logOutput) {
+        log.Println(string(output))
+    }
 
     btc  := conf.GetRPC("btc", testConf)
     ocean := conf.GetRPC("ocean", testConf)

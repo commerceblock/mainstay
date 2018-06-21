@@ -12,7 +12,7 @@ import (
 func TestAttestClient(t *testing.T) {
     // TEST INIT
     var txs []string
-    test := test.NewTest()
+    test := test.NewTest(false)
     client := NewAttestClient(test.Btc, test.Ocean, test.BtcConfig, test.Tx0pk, test.Tx0hash)
     txs = append(txs, client.txid0)
 

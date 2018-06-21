@@ -10,9 +10,11 @@ import (
     "github.com/btcsuite/btcd/chaincfg"
 )
 
+const CONF_PATH = "/src/ocean-attestation/conf/conf.json"
+
 // Get default conf from local file
 func getDefaultConf() []byte {
-    conf, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/ocean-attestation/conf/conf.json")
+    conf, err := ioutil.ReadFile(os.Getenv("GOPATH") + CONF_PATH)
     if err != nil {
         log.Fatal(err)
     }
@@ -53,7 +55,6 @@ func GetChainCfgParams(name string, customConf ...[]byte) *chaincfg.Params {
     cfg := getCfg(name, conf)
 
     chain := cfg.getValue("chain")
-
     if chain == "regtest" {
         return &chaincfg.RegressionNetParams
     } else if chain == "testnet" {
