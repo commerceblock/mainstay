@@ -42,6 +42,8 @@ func (s *AttestServer) Respond(req models.Request) interface{} {
         return s.BlockResponse(req)
     case "BestBlock":
         return s.BestBlockResponse(req)
+    case "BestBlockHeight":
+        return s.BestBlockHeightResponse(req)
     case "LatestAttestation":
         return s.LatestAttestation(req)
     case "Transaction":

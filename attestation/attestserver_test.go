@@ -45,6 +45,11 @@ func TestAttestServer(t *testing.T) {
     assert.Equal(t, "", resp1.Error)
     assert.Equal(t, bestblockhash.String(), resp1.BlockHash)
 
+    req = models.Request{"BestBlockHeight", ""}
+    resp1b, _ := server.Respond(req).(models.BestBlockHeightResponse)
+    assert.Equal(t, "", resp1b.Error)
+    assert.Equal(t, int32(10), resp1b.BlockHeight)
+
     req = models.Request{"LatestAttestation", ""}
     resp2, _ := server.Respond(req).(models.LatestAttestationResponse)
     assert.Equal(t, "", resp2.Error)

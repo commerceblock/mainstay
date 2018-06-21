@@ -19,6 +19,10 @@ type BestBlockResponse struct {
     Response
     BlockHash   string    `json:"blockhash"`
 }
+type BestBlockHeightResponse struct {
+    Response
+    BlockHeight int32    `json:"blockheight"`
+}
 type TransactionResponse struct {
     Response
     Attested    bool    `json:"attested"`

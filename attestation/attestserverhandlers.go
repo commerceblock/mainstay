@@ -61,6 +61,10 @@ func (s *AttestServer) BestBlockResponse(req models.Request) models.BestBlockRes
     return models.BestBlockResponse{models.Response{req, ""}, s.latest.attestedHash.String()}
 }
 
+func (s *AttestServer) BestBlockHeightResponse(req models.Request) models.BestBlockHeightResponse {
+    return models.BestBlockHeightResponse{models.Response{req, ""}, s.latestHeight}
+}
+
 func (s *AttestServer) LatestAttestation(req models.Request) models.LatestAttestationResponse {
     return models.LatestAttestationResponse{models.Response{req, ""}, s.latest.txid.String()}
 }

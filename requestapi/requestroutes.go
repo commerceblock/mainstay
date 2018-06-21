@@ -37,6 +37,12 @@ var routes = []Route{
         BestBlock,
     },
     Route{
+        "BestBlockHeight",
+        "GET",
+        "/bestblockheight/",
+        BestBlockHeight,
+    },
+    Route{
         "Transaction",
         "GET",
         "/transaction/{transactionId}",

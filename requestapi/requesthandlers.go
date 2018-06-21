@@ -39,6 +39,18 @@ func BestBlock(w http.ResponseWriter, r *http.Request, channel *models.Channel) 
     }
 }
 
+func BestBlockHeight(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
+    request := models.Request{Name: mux.CurrentRoute(r).GetName(),}
+
+    channel.Requests <- request // put request in channel
+
+    response := <- channel.Responses // wait for response from attestation service
+
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        panic(err)
+    }
+}
+
 func Transaction(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
     transactionId := mux.Vars(r)["transactionId"]
     request := models.Request{Name: mux.CurrentRoute(r).GetName(), Id: transactionId,}
