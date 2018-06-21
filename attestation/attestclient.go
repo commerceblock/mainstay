@@ -5,23 +5,23 @@ package attestation
 import (
     "log"
     "time"
-    "ocean-attestation/crypto"
     "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcutil"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcd/chaincfg"
+    "ocean-attestation/crypto"
 )
 
 const FEE_PER_BYTE = 20 // satoshis
 
 type AttestClient struct {
-    mainClient  *rpcclient.Client
-    sideClient  *rpcclient.Client
-    mainChainCfg *chaincfg.Params
-    pk0         string
-    txid0       string
-    walletPriv  *btcutil.WIF
+    mainClient      *rpcclient.Client
+    sideClient      *rpcclient.Client
+    mainChainCfg    *chaincfg.Params
+    pk0             string
+    txid0           string
+    walletPriv      *btcutil.WIF
 }
 
 func NewAttestClient(rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, cfgMain *chaincfg.Params, pk string, tx string) *AttestClient {

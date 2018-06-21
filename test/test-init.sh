@@ -49,4 +49,4 @@ btcl generate 1
 sleep 1
 
 btcl listunspent
-sleep 5
+sleep 10

@@ -10,7 +10,7 @@ import (
 
 func TestCrypto(t *testing.T) {
     // TEST INIT
-    test := test.NewTest()
+    test := test.NewTest(false)
 
     tweak, _ := test.Ocean.GetBestBlockHash()
     privKey := GetWalletPrivKey(test.Tx0pk)

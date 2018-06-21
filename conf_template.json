@@ -1,0 +1,14 @@
+{
+    "main": {
+        "rpcurl": "127.0.0.1:18000",
+        "rpcuser": "USERNAME",
+        "rpcpass": "PASSWORD",
+        "chain": "regtest"
+    },
+    "ocean": {
+        "rpcurl": "127.0.0.1:19000",
+        "rpcuser": "USERNAME",
+        "rpcpass": "PASSWORD",
+        "chain": "main"
+    }
+}
