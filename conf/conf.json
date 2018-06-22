@@ -6,9 +6,9 @@
         "chain": "regtest"
     },
     "ocean": {
-        "rpcurl": "localhost:18001",
-        "rpcuser": "user",
-        "rpcpass": "pass",
+        "rpcurl": "localhost:18010",
+        "rpcuser": "bitcoinrpc",
+        "rpcpass": "acc1e7a299bc49449912e235b54dbce5",
         "chain": "main"
     }
 }

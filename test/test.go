@@ -13,7 +13,8 @@ import (
     "ocean-attestation/conf"
 )
 
-const INIT_PATH = "/src/ocean-attestation/test/test-init.sh"
+const DEMO_INIT_PATH = "/src/ocean-attestation/test/demo-init.sh"
+const TEST_INIT_PATH = "/src/ocean-attestation/test/test-init.sh"
 
 var testConf = []byte(`
 {
@@ -24,9 +25,9 @@ var testConf = []byte(`
         "chain": "regtest"
     },
     "ocean": {
-        "rpcurl": "localhost:18001",
-        "rpcuser": "user",
-        "rpcpass": "pass",
+        "rpcurl": "localhost:18010",
+        "rpcuser": "bitcoinrpc",
+        "rpcpass": "acc1e7a299bc49449912e235b54dbce5",
         "chain": "main"
     }
 }
@@ -39,9 +40,15 @@ type Test struct {
     Tx0hash     string
 }
 
-func NewTest(logOutput bool) *Test {
+func NewTest(logOutput bool, isDemo bool) *Test {
     // Run init test script that sets up bitcoin and ocean
-    initPath := os.Getenv("GOPATH") + INIT_PATH
+    var initPath string
+    if (isDemo) { // for running the demon in regtest mode along with ocean demo
+        initPath = os.Getenv("GOPATH") + DEMO_INIT_PATH
+    } else { // for running unit tests
+        initPath = os.Getenv("GOPATH") + TEST_INIT_PATH
+    }
+
     cmd := exec.Command("/bin/sh", initPath)
     output, err := cmd.Output()
     if err != nil {

@@ -14,7 +14,7 @@ import (
 
 func TestAttestServer(t *testing.T) {
     // TEST INIT
-    test := test.NewTest(false)
+    test := test.NewTest(false, false)
     genesis, _ := test.Ocean.GetBlockHash(0)
     latestTx := &Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
     server := NewAttestServer(test.Ocean, *latestTx, test.Tx0hash, *genesis)

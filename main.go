@@ -3,17 +3,18 @@ package main
 import (
 	"context"
 	"flag"
+    "os"
+    "os/signal"
+    "sync"
+    "log"
+    "time"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/rpcclient"
-	"log"
 	"ocean-attestation/attestation"
 	"ocean-attestation/conf"
 	"ocean-attestation/models"
 	"ocean-attestation/requestapi"
 	"ocean-attestation/test"
-	"os"
-	"os/signal"
-	"sync"
 )
 
 const API_HOST = "127.0.0.1:8080"
@@ -24,16 +25,16 @@ var (
 	genesisTX, genesisPK    string
 	mainClient, oceanClient *rpcclient.Client
 	mainChainCfg            *chaincfg.Params
-	isTest                  bool
+	isRegtest               bool
 )
 
 func parseFlags() {
-	flag.BoolVar(&isTest, "test", false, "Use test wallet configuration instead of user wallet")
+	flag.BoolVar(&isRegtest, "regtest", false, "Use regtest wallet configuration instead of user wallet")
 	flag.StringVar(&genesisTX, "tx", "", "Tx id for genesis attestation transaction")
 	flag.StringVar(&genesisPK, "pk", "", "Private key used for genesis attestation transaction")
 	flag.Parse()
 
-	if (genesisTX == "" || genesisPK == "") && !isTest {
+	if (genesisTX == "" || genesisPK == "") && !isRegtest {
 		flag.PrintDefaults()
 		log.Fatalf("Provide both -tx and -pk arguments. To use test configuration set the -test flag.")
 	}
@@ -41,14 +42,14 @@ func parseFlags() {
 
 func init() {
 	parseFlags()
-	if isTest { // Use configuration applied in unit tests
-		test := test.NewTest(true)
+	if isRegtest { // Use configuration applied in unit tests
+		test := test.NewTest(true, true)
 		mainClient = test.Btc
 		oceanClient = test.Ocean
 		mainChainCfg = test.BtcConfig
         genesisTX = test.Tx0hash
         genesisPK = test.Tx0pk
-        log.Printf("Running test mode with -tx=%s and -pk=%s\n", genesisTX, genesisPK)
+        log.Printf("Running regtest mode with -tx=%s and -pk=%s\n", genesisTX, genesisPK)
 	} else {
 		mainClient = conf.GetRPC(MAIN_NAME)
 		oceanClient = conf.GetRPC(OCEAN_NAME)
@@ -82,6 +83,25 @@ func main() {
 			signal.Stop(c)
 		}
 	}()
+
+    if isRegtest { // In regtest demo mode generate main client blocks automatically
+        wg.Add(1)
+        go func() {
+            waitTime := time.Now()
+            defer wg.Done()
+            for {
+                select {
+                    case <-ctx.Done():
+                        return
+                    default:
+                        if time.Since(waitTime).Seconds() > 300 {
+                            mainClient.Generate(1)
+                            waitTime = time.Now()
+                        }
+                }
+            }
+        }()
+    }
 
 	wg.Add(1)
 	go requestService.Run()
