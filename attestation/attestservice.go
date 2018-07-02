@@ -13,6 +13,8 @@ import (
     "ocean-attestation/models"
 )
 
+const ATTEST_WAIT_TIME = 60 // seconds
+
 type AttestService struct {
     ctx             context.Context
     wg              *sync.WaitGroup
@@ -74,8 +76,8 @@ func (s *AttestService) Run() {
 // - Wait for confirmation of the attestation on the next main client block and
 //  update information on the latest attestation when confirmation is received
 func (s *AttestService) doAttestation() {
-    if (!latestTx.confirmed) {
-        if (time.Since(latestTx.latestTime).Seconds() > 60) { // Only check for confirmation every 60 seconds
+    if (!latestTx.confirmed) { // wait for confirmation
+        if (time.Since(latestTx.latestTime).Seconds() > ATTEST_WAIT_TIME) { // Only check for confirmation every 60 seconds
             log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestTx.txid.String(), latestTx.attestedHash.String())
             newTx, err := s.mainClient.GetTransaction(&latestTx.txid)
             if err != nil {
@@ -91,7 +93,7 @@ func (s *AttestService) doAttestation() {
         }
     } else {
         unconfirmed, unconfirmedTx := s.attester.getUnconfirmedTx()
-        if unconfirmed {
+        if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
             *latestTx = unconfirmedTx
             log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestTx.txid.String(), latestTx.attestedHash.String())
         } else {
@@ -99,6 +101,11 @@ func (s *AttestService) doAttestation() {
             success, txunspent := s.attester.findLastUnspent()
             if (success) {
                 hash, paytoaddr := s.attester.getNextAttestationAddr()
+                if (hash == latestTx.attestedHash) { // skip attestation if same client hash
+                    log.Printf("*AttestService* Skipping attestation - Client hash already attested")
+                    time.Sleep(5*time.Second) // avoid flooding client with requests
+                    return
+                }
                 txid := s.attester.sendAttestation(paytoaddr, txunspent)
                 latestTx = &Attestation{txid, hash, false, time.Now()}
                 log.Printf("*AttestService* Attestation committed for txid: (%s)\n", txid)
