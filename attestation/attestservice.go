@@ -43,14 +43,6 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
 func (s *AttestService) Run() {
     defer s.wg.Done()
 
-    log.Printf("*AttestService* genesis tx %s\n", s.attester.txid0)
-    log.Println("*AttestService* Looking for unconfirmed transactions")
-    s.attester.getUnconfirmedTx(latestTx)
-
-    if (!latestTx.confirmed) {
-        log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestTx.txid.String(), latestTx.attestedHash.String())
-    }
-
     s.wg.Add(1)
     go func() { //Waiting for requests from the request service and pass to server for response
         defer s.wg.Done()
@@ -75,10 +67,12 @@ func (s *AttestService) Run() {
     }
 }
 
-// Main attestation method. Two main functionalities
-// - If we are not waiting for any confirmations get the last unspent vout, verify that
-//  it is on the subchain and create/send a new transaction through the main client
-// - If transaction has been sent, wait for confirmation on the next generated block
+// Main attestation method. Three different states:
+// - Check for unconfirmed transactions in the mempool of the main client
+// - Attempt to do an attestation by searching for the last unspent and generating
+//  a new TX where this unspent is the vin and the latest client hash is attested
+// - Wait for confirmation of the attestation on the next main client block and
+//  update information on the latest attestation when confirmation is received
 func (s *AttestService) doAttestation() {
     if (!latestTx.confirmed) {
         if (time.Since(latestTx.latestTime).Seconds() > 60) { // Only check for confirmation every 60 seconds
@@ -96,15 +90,21 @@ func (s *AttestService) doAttestation() {
             }
         }
     } else {
-        log.Println("*AttestService* Attempting attestation")
-        success, txunspent := s.attester.findLastUnspent()
-        if (success) {
-            hash, paytoaddr := s.attester.getNextAttestationAddr()
-            txid := s.attester.sendAttestation(paytoaddr, txunspent)
-            latestTx = &Attestation{txid, hash, false, time.Now()}
-            log.Printf("*AttestService* Attestation committed for txid: (%s)\n", txid)
+        unconfirmed, unconfirmedTx := s.attester.getUnconfirmedTx()
+        if unconfirmed {
+            *latestTx = unconfirmedTx
+            log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestTx.txid.String(), latestTx.attestedHash.String())
         } else {
-            log.Printf("*AttestService* Attestation unsuccessful")
+            log.Println("*AttestService* Attempting attestation")
+            success, txunspent := s.attester.findLastUnspent()
+            if (success) {
+                hash, paytoaddr := s.attester.getNextAttestationAddr()
+                txid := s.attester.sendAttestation(paytoaddr, txunspent)
+                latestTx = &Attestation{txid, hash, false, time.Now()}
+                log.Printf("*AttestService* Attestation committed for txid: (%s)\n", txid)
+            } else {
+                log.Fatal("*AttestService* Attestation unsuccessful - No valid unspent found")
+            }
         }
     }
 }

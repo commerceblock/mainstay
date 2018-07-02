@@ -32,14 +32,17 @@ func TestAttestClient(t *testing.T) {
 
         // Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
         var unconfirmed *Attestation = &Attestation{}
-        client.getUnconfirmedTx(unconfirmed)    // new tx is unconfirmed
+        unconf, unconftx := client.getUnconfirmedTx()    // new tx is unconfirmed
+        *unconfirmed = unconftx
+        assert.Equal(t, true, unconf)
         assert.Equal(t, txnew, unconfirmed.txid)
         assert.Equal(t, oceanhash, unconfirmed.attestedHash)
 
         // Verify no more unconfirmed transactions after new block generation
         client.mainClient.Generate(1)
-        unconfirmed = &Attestation{}
-        client.getUnconfirmedTx(unconfirmed)
+        unconfRe, unconftxRe := client.getUnconfirmedTx()
+        *unconfirmed = unconftxRe
+        assert.Equal(t, false, unconfRe)
         assert.Equal(t, chainhash.Hash{}, unconfirmed.txid) // new tx no longer unconfirmed
         assert.Equal(t, chainhash.Hash{}, unconfirmed.attestedHash)
         txs = append(txs, txnew.String())

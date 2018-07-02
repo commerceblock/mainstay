@@ -110,17 +110,17 @@ func (w *AttestClient) findLastUnspent() (bool, btcjson.ListUnspentResult) {
 }
 
 // Find any previously unconfirmed transactions and start attestation from there
-func (w *AttestClient) getUnconfirmedTx(tx *Attestation) {
+func (w *AttestClient) getUnconfirmedTx() (bool, Attestation) {
     mempool, err := w.mainClient.GetRawMempool()
     if err != nil {
         log.Fatal(err)
     }
     for _, hash := range mempool {
         if (w.verifyTxOnSubchain(*hash)) {
-            *tx = Attestation{*hash, w.getTxAttestedHash(*hash), false, time.Now()}
-            return
+            return true, Attestation{*hash, w.getTxAttestedHash(*hash), false, time.Now()}
         }
     }
+    return false, Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
 }
 
 // Find the attested hash from a transaction, by testing for all sidechain hashes

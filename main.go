@@ -62,8 +62,7 @@ func main() {
 	defer oceanClient.Shutdown()
 
 	wg := &sync.WaitGroup{}
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	channel := models.NewChannel()
 	requestService := requestapi.NewRequestService(ctx, wg, channel, API_HOST)
