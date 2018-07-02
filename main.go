@@ -36,7 +36,7 @@ func parseFlags() {
 
 	if (genesisTX == "" || genesisPK == "") && !isRegtest {
 		flag.PrintDefaults()
-		log.Fatalf("Provide both -tx and -pk arguments. To use test configuration set the -test flag.")
+		log.Fatalf("Provide both -tx and -pk arguments. To use test configuration set the -regtest flag.")
 	}
 }
 
@@ -93,7 +93,7 @@ func main() {
                     case <-ctx.Done():
                         return
                     default:
-                        if time.Since(waitTime).Seconds() > 300 {
+                        if time.Since(waitTime).Seconds() > 60 {
                             mainClient.Generate(1)
                             waitTime = time.Now()
                         }

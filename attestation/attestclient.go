@@ -13,8 +13,6 @@ import (
     "ocean-attestation/crypto"
 )
 
-const FEE_PER_BYTE = 20 // satoshis
-
 type AttestClient struct {
     mainClient      *rpcclient.Client
     sideClient      *rpcclient.Client
@@ -61,7 +59,8 @@ func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcj
         log.Fatal(err)
     }
 
-    fee := int64(FEE_PER_BYTE * msgtx.SerializeSize())
+    feePerByte := GetBestFee()
+    fee := int64(feePerByte * msgtx.SerializeSize())
     msgtx.TxOut[0].Value -= fee
 
     signedmsgtx, issigned, err := w.mainClient.SignRawTransaction(msgtx)
