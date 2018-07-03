@@ -26,18 +26,18 @@ type AttestService struct {
 
 var latestTx *Attestation
 
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, cfgMain *chaincfg.Params, tx0 string, pk0 string) *AttestService{
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, cfgMain *chaincfg.Params, tx0 string) *AttestService{
     if (len(tx0) != 64) {
         log.Fatal("Incorrect txid size")
     }
-    attester := NewAttestClient(rpcMain, rpcSide, cfgMain, pk0, tx0)
+    attester := NewAttestClient(rpcMain, rpcSide, cfgMain, tx0)
 
-    genesis, err := rpcSide.GetBlockHash(0)
+    genesisHash, err := rpcSide.GetBlockHash(0)
     if err!=nil {
         log.Fatal(err)
     }
     latestTx = &Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
-    server := NewAttestServer(rpcSide, *latestTx, tx0, *genesis)
+    server := NewAttestServer(rpcSide, *latestTx, tx0, *genesisHash)
 
     return &AttestService{ctx, wg, rpcMain, attester, server, channel}
 }
@@ -106,7 +106,7 @@ func (s *AttestService) doAttestation() {
                     time.Sleep(5*time.Second) // avoid flooding client with requests
                     return
                 }
-                txid := s.attester.sendAttestation(paytoaddr, txunspent)
+                txid := s.attester.sendAttestation(paytoaddr, txunspent, false /* don't sure default fee */)
                 latestTx = &Attestation{txid, hash, false, time.Now()}
                 log.Printf("*AttestService* Attestation committed for txid: (%s)\n", txid)
             } else {

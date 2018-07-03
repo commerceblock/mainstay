@@ -22,11 +22,26 @@ type AttestClient struct {
     walletPriv      *btcutil.WIF
 }
 
-func NewAttestClient(rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, cfgMain *chaincfg.Params, pk string, tx string) *AttestClient {
-    if (false && len(pk) != 64 /*need to validate key properly*/) {
-        log.Fatal("*AttestClient* Incorrect key size")
+func NewAttestClient(rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, cfgMain *chaincfg.Params, txid string) *AttestClient {
+    // Get initial private key from initial funding transaction of main client
+    txhash, errHash := chainhash.NewHashFromStr(txid)
+    if errHash != nil {
+        log.Fatal("Invalid tx id provided")
     }
-    return &AttestClient{rpcMain, rpcSide, cfgMain, pk, tx, crypto.GetWalletPrivKey(pk)}
+    tx, errGet := rpcMain.GetTransaction(txhash)
+    if errGet != nil {
+        log.Fatal("Inititial transcaction does not exist")
+    }
+    addr, errDec := btcutil.DecodeAddress(tx.Details[0].Address, cfgMain)
+    if errDec != nil {
+        log.Fatal("Failed decoding address from initial transaction")
+    }
+    pk, errDump := rpcMain.DumpPrivKey(addr)
+    if errDump != nil {
+        log.Fatal("Failed getting initial transaction private key from address")
+    }
+
+    return &AttestClient{rpcMain, rpcSide, cfgMain, pk.String(), txid, pk}
 }
 
 // Get next attestation address by tweaking initial private key with current sidechain block hash
@@ -41,7 +56,7 @@ func (w *AttestClient) getNextAttestationAddr() (chainhash.Hash, btcutil.Address
     addr := crypto.GetAddressFromPrivKey(tweakedWalletPriv, w.mainChainCfg)
 
     // Import tweaked priv key to wallet
-    importErr := w.mainClient.ImportPrivKey(tweakedWalletPriv)
+    importErr := w.mainClient.ImportPrivKeyRescan(tweakedWalletPriv, hash.String(), false)
     if importErr != nil {
         log.Fatal(importErr)
     }
@@ -50,7 +65,7 @@ func (w *AttestClient) getNextAttestationAddr() (chainhash.Hash, btcutil.Address
 }
 
 // Generate a new transaction paying to the tweaked address, add fees and send the transaction through the wallet client
-func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult) (chainhash.Hash) {
+func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult, useDefaultFee bool) (chainhash.Hash) {
     inputs := []btcjson.TransactionInput{{Txid: txunspent.TxID, Vout: txunspent.Vout},}
 
     amounts := map[btcutil.Address]btcutil.Amount{paytoaddr: btcutil.Amount(txunspent.Amount*100000000)}
@@ -59,7 +74,7 @@ func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcj
         log.Fatal(err)
     }
 
-    feePerByte := GetBestFee()
+    feePerByte := GetFee(useDefaultFee)
     fee := int64(feePerByte * msgtx.SerializeSize())
     msgtx.TxOut[0].Value -= fee
 

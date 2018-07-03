@@ -22,7 +22,7 @@ const MAIN_NAME = "main"
 const OCEAN_NAME = "ocean"
 
 var (
-	genesisTX, genesisPK    string
+	genesisTX               string
 	mainClient, oceanClient *rpcclient.Client
 	mainChainCfg            *chaincfg.Params
 	isRegtest               bool
@@ -31,12 +31,11 @@ var (
 func parseFlags() {
 	flag.BoolVar(&isRegtest, "regtest", false, "Use regtest wallet configuration instead of user wallet")
 	flag.StringVar(&genesisTX, "tx", "", "Tx id for genesis attestation transaction")
-	flag.StringVar(&genesisPK, "pk", "", "Private key used for genesis attestation transaction")
 	flag.Parse()
 
-	if (genesisTX == "" || genesisPK == "") && !isRegtest {
+	if (genesisTX == "") && !isRegtest {
 		flag.PrintDefaults()
-		log.Fatalf("Provide both -tx and -pk arguments. To use test configuration set the -regtest flag.")
+		log.Fatalf("Need to provide -tx argument. To use test configuration set the -regtest flag.")
 	}
 }
 
@@ -48,8 +47,7 @@ func init() {
 		oceanClient = test.Ocean
 		mainChainCfg = test.BtcConfig
         genesisTX = test.Tx0hash
-        genesisPK = test.Tx0pk
-        log.Printf("Running regtest mode with -tx=%s and -pk=%s\n", genesisTX, genesisPK)
+        log.Printf("Running regtest mode with -tx=%s\n", genesisTX)
 	} else {
 		mainClient = conf.GetRPC(MAIN_NAME)
 		oceanClient = conf.GetRPC(OCEAN_NAME)
@@ -66,7 +64,7 @@ func main() {
 
 	channel := models.NewChannel()
 	requestService := requestapi.NewRequestService(ctx, wg, channel, API_HOST)
-	attestService := attestation.NewAttestService(ctx, wg, channel, mainClient, oceanClient, mainChainCfg, genesisTX, genesisPK)
+	attestService := attestation.NewAttestService(ctx, wg, channel, mainClient, oceanClient, mainChainCfg, genesisTX)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)

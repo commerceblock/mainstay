@@ -3,7 +3,7 @@
         "rpcurl": "localhost:18000",
         "rpcuser": "user",
         "rpcpass": "pass",
-        "chain": "regtest"
+        "chain": "testnet"
     },
     "ocean": {
         "rpcurl": "localhost:18010",

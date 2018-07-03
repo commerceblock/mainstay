@@ -19,12 +19,20 @@ const FEE_API_URL = "https://bitcoinfees.earn.com/api/v1/fees/recommended"
 // options: fastestFee, halfHourFee, hourFee
 const BEST_FEE_TYPE = "hourFee"
 
-func GetBestFee(customFeeType ...string) int {
+func GetFee(defaultFee bool, customFeeType ...string) int {
+    if defaultFee {
+        return FEE_PER_BYTE
+    }
+
     var feeType = BEST_FEE_TYPE
     if len(customFeeType) > 0 {
         feeType = customFeeType[0]
     }
 
+    return GetFeeFromAPI(feeType)
+}
+
+func GetFeeFromAPI(feeType string) int {
     resp, getErr := http.Get(FEE_API_URL)
     if getErr!=nil {
        log.Printf("*Fees* API request failed - Using default fee: %d\n", FEE_PER_BYTE)

@@ -13,7 +13,7 @@ func TestAttestClient(t *testing.T) {
     // TEST INIT
     var txs []string
     test := test.NewTest(false, false)
-    client := NewAttestClient(test.Btc, test.Ocean, test.BtcConfig, test.Tx0pk, test.Tx0hash)
+    client := NewAttestClient(test.Btc, test.Ocean, test.BtcConfig, test.Tx0hash)
     txs = append(txs, client.txid0)
 
     // Find unspent and verify is it the genesis transaction
@@ -27,7 +27,7 @@ func TestAttestClient(t *testing.T) {
     for i := 0; i < 10; i++ {
         // Generate attestation transaction with the unspent vout
         oceanhash, addr := client.getNextAttestationAddr()
-        txnew := client.sendAttestation(addr, unspent)
+        txnew := client.sendAttestation(addr, unspent, true)
         client.sideClient.Generate(5)
 
         // Verify getUnconfirmedTx gives the unconfirmed transaction just submitted

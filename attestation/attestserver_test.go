@@ -18,7 +18,7 @@ func TestAttestServer(t *testing.T) {
     genesis, _ := test.Ocean.GetBlockHash(0)
     latestTx := &Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
     server := NewAttestServer(test.Ocean, *latestTx, test.Tx0hash, *genesis)
-    client := NewAttestClient(test.Btc, test.Ocean, test.BtcConfig, test.Tx0pk, test.Tx0hash)
+    client := NewAttestClient(test.Btc, test.Ocean, test.BtcConfig, test.Tx0hash)
 
     // Generate blocks in side chain
     client.sideClient.Generate(10)
@@ -26,7 +26,7 @@ func TestAttestServer(t *testing.T) {
     // Generate single attestation transaction
     _, unspent := client.findLastUnspent()
     sidehash, addr := client.getNextAttestationAddr()
-    txnew := client.sendAttestation(addr, unspent)
+    txnew := client.sendAttestation(addr, unspent, true)
     client.mainClient.Generate(1)
 
     // Update latest in server
