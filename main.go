@@ -17,7 +17,7 @@ import (
 	"ocean-attestation/test"
 )
 
-const API_HOST = "127.0.0.1:8080"
+const DEFAULT_API_HOST = "localhost:8080"
 const MAIN_NAME = "main"
 const OCEAN_NAME = "ocean"
 
@@ -26,6 +26,7 @@ var (
 	mainClient, oceanClient *rpcclient.Client
 	mainChainCfg            *chaincfg.Params
 	isRegtest               bool
+    apiHost                 string
 )
 
 func parseFlags() {
@@ -53,6 +54,11 @@ func init() {
 		oceanClient = conf.GetRPC(OCEAN_NAME)
 		mainChainCfg = conf.GetChainCfgParams(MAIN_NAME)
 	}
+
+    apiHost = os.Getenv("API_HOST")
+    if apiHost == "" {
+        apiHost = DEFAULT_API_HOST
+    }
 }
 
 func main() {
@@ -63,7 +69,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	channel := models.NewChannel()
-	requestService := requestapi.NewRequestService(ctx, wg, channel, API_HOST)
+	requestService := requestapi.NewRequestService(ctx, wg, channel, apiHost)
 	attestService := attestation.NewAttestService(ctx, wg, channel, mainClient, oceanClient, mainChainCfg, genesisTX)
 
 	c := make(chan os.Signal)
