@@ -12,27 +12,18 @@ import (
 // ChainFetcher struct
 type ChainFetcher struct {
     mainClient      *rpcclient.Client
-    sideClient      *rpcclient.Client
     txid0           string
     latestTx        Tx
     latestHeight    int64
 }
 
 // Get initial tx from main client and return fetcher instance
-func NewChainFetcher(main *rpcclient.Client, side *rpcclient.Client, txid string) ChainFetcher {
-    txhash, errHash := chainhash.NewHashFromStr(txid)
-    if errHash != nil {
-        log.Fatal("Invalid tx id provided")
-    }
-    txraw, errGet := main.GetRawTransactionVerbose(txhash)
-    if errGet != nil {
-        log.Fatal("Inititial transcaction does not exist")
-    }
+func NewChainFetcher(main *rpcclient.Client, tx Tx) ChainFetcher {
 
-    blockhash, _ := chainhash.NewHashFromStr(txraw.BlockHash)
+    blockhash, _ := chainhash.NewHashFromStr(tx.BlockHash)
     blockheader, _ := main.GetBlockHeaderVerbose(blockhash)
 
-    return ChainFetcher{main, side, txid, Tx(*txraw), int64(blockheader.Height)}
+    return ChainFetcher{main, tx.Txid, tx, int64(blockheader.Height)}
 }
 
 // Main method that tries to fetch the next transaction in the chan
@@ -44,7 +35,7 @@ func (f *ChainFetcher) Fetch() []Tx {
     }
 
     height := f.latestHeight
-    for height <= blockcount { // iterate through all blocks until latest
+    for height < blockcount { // iterate through all blocks until latest
         height += 1
         tx, found := f.txInBlock(height)
         if found { // if next tx found update latest and return
@@ -72,7 +63,7 @@ func (f *ChainFetcher) txInBlock(height int64) (Tx, bool) {
 
     // Iterate through block transactions searching for the next tx in the chain
     for _, tx := range block.Transactions {
-        if tx.TxIn[0].PreviousOutPoint.Hash.String() == f.latestTx.Hash {
+        if tx.TxIn[0].PreviousOutPoint.Hash.String() == f.latestTx.Txid {
             txhash := tx.TxHash()
             txraw, errGet := f.mainClient.GetRawTransactionVerbose(&txhash)
             if errGet != nil {

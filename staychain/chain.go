@@ -9,6 +9,8 @@ import (
     "github.com/btcsuite/btcd/btcjson"
 )
 
+const SLEEP_TIME = 5*time.Minute
+
 type Tx btcjson.TxRawResult
 
 // Chain struct
@@ -43,7 +45,7 @@ func (c *Chain) Close() error {
 // Fetch chain attestations using c.fetcher and add to updates
 func (c *Chain) fetch() {
     var pending []Tx // appended by fetch; consumed by send
-    var next time.Time // initially January 1, year 0
+    var next time.Time
     var err error
     for {
         var fetchDelay time.Duration // initally 0 (no delay)
@@ -64,14 +66,14 @@ func (c *Chain) fetch() {
                 var fetched []Tx
                 fetched = c.fetcher.Fetch()
                 if len(fetched) == 0 {
-                    log.Printf("No new tx found - waiting...\n")
-                    next = time.Now().Add(10 * time.Second)
+                    log.Printf("All attestations fetched. Sleeping for %s...\n", SLEEP_TIME.String())
+                    next = time.Now().Add(SLEEP_TIME)
                     break
                 }
                 pending = append(pending, fetched...)
             case errc := <-c.closing:
                 errc <- err
-                close(c.updates) // tells receiver we're done
+                close(c.updates)
                 return
             case updates <- first:
                 pending = pending[1:]

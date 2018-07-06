@@ -19,7 +19,7 @@ const TEST_INIT_PATH = "/src/ocean-attestation/test/test-init.sh"
 var testConf = []byte(`
 {
     "btc": {
-        "rpcurl": "localhost:18000",
+        "rpcurl": "localhost:8333",
         "rpcuser": "user",
         "rpcpass": "pass",
         "chain": "regtest"

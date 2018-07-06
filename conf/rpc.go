@@ -13,8 +13,8 @@ import (
 const CONF_PATH = "/src/ocean-attestation/conf/conf.json"
 
 // Get default conf from local file
-func getDefaultConf() []byte {
-    conf, err := ioutil.ReadFile(os.Getenv("GOPATH") + CONF_PATH)
+func GetConfFile(filepath string) []byte {
+    conf, err := ioutil.ReadFile(filepath)
     if err != nil {
         log.Fatal(err)
     }
@@ -27,7 +27,7 @@ func GetRPC(name string, customConf ...[]byte) *rpcclient.Client{
     if len(customConf) > 0 { //custom config provided
         conf = customConf[0]
     } else {
-        conf = getDefaultConf()
+        conf = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
     }
     cfg := getCfg(name, conf)
     connCfg := &rpcclient.ConnConfig{
@@ -49,7 +49,7 @@ func GetChainCfgParams(name string, customConf ...[]byte) *chaincfg.Params {
     if len(customConf) > 0 { //custom config provided
         conf = customConf[0]
     } else {
-        conf = getDefaultConf()
+        conf = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
     }
 
     cfg := getCfg(name, conf)
