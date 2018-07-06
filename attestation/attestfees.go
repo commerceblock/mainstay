@@ -29,7 +29,11 @@ func GetFee(defaultFee bool, customFeeType ...string) int {
         feeType = customFeeType[0]
     }
 
-    return GetFeeFromAPI(feeType)
+    fee := GetFeeFromAPI(feeType)
+    if fee < FEE_PER_BYTE {
+        return FEE_PER_BYTE
+    }
+    return fee
 }
 
 func GetFeeFromAPI(feeType string) int {
