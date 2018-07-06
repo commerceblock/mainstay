@@ -13,4 +13,3 @@ cd $GOPATH/src/ocean-attestation
 
 go build
 go install
-ocean-attestation
