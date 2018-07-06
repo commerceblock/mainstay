@@ -96,7 +96,7 @@ func (v *ChainVerifier) verifyTxAddr(addr string) (ChainVerifierInfo, error) {
         }
 
         if height%1000 == 0 { // log if verifying takes too long
-            log.Printf("Latest verifying block hash: %s height: %d\n", blockhash, height)
+            log.Printf("Latest verifying block height: %d\n", height)
         }
 
         tweakedPub := crypto.TweakPubKey(v.pubkey0, blockhash.CloneBytes())
