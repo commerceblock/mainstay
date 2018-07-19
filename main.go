@@ -90,17 +90,14 @@ func main() {
     if isRegtest { // In regtest demo mode generate main client blocks automatically
         wg.Add(1)
         go func() {
-            waitTime := time.Now()
             defer wg.Done()
             for {
+                newBlockTimer := time.NewTimer(60 * time.Second)
                 select {
                     case <-ctx.Done():
                         return
-                    default:
-                        if time.Since(waitTime).Seconds() > 60 {
-                            mainClient.Generate(1)
-                            waitTime = time.Now()
-                        }
+                    case <-newBlockTimer.C:
+                        mainClient.Generate(1)
                 }
             }
         }()

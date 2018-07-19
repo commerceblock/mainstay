@@ -25,6 +25,7 @@ type AttestService struct {
 }
 
 var latestTx *Attestation
+var attestDelay time.Duration // start with 0 delay
 
 func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, cfgMain *chaincfg.Params, tx0 string) *AttestService{
     if (len(tx0) != 64) {
@@ -59,11 +60,12 @@ func (s *AttestService) Run() {
     }()
 
     for { //Doing attestations using attestation client and waiting for transaction confirmation
+        timer := time.NewTimer(attestDelay)
         select {
             case <-s.ctx.Done():
                 log.Println("Shutting down Attestation Service...")
                 return
-            default:
+            case <-timer.C:
                 s.doAttestation()
         }
     }
@@ -77,21 +79,21 @@ func (s *AttestService) Run() {
 //  update information on the latest attestation when confirmation is received
 func (s *AttestService) doAttestation() {
     if (!latestTx.confirmed) { // wait for confirmation
-        if (time.Since(latestTx.latestTime).Seconds() > ATTEST_WAIT_TIME) { // Only check for confirmation every 60 seconds
-            log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestTx.txid.String(), latestTx.attestedHash.String())
-            newTx, err := s.mainClient.GetTransaction(&latestTx.txid)
-            if err != nil {
-                log.Fatal(err)
-            }
+        log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestTx.txid.String(), latestTx.attestedHash.String())
+        newTx, err := s.mainClient.GetTransaction(&latestTx.txid)
+        if err != nil {
+            log.Fatal(err)
+        }
+        if (newTx.BlockHash != "") {
             latestTx.latestTime = time.Now()
-            if (newTx.BlockHash != "") {
-                latestTx.confirmed = true
-                log.Printf("*AttestService* Attestation confirmed for txid: (%s)\n", latestTx.txid.String())
-                s.server.UpdateLatest(*latestTx)
-                log.Printf("**AttestServer** Updated latest attested height %d\n", s.server.latestHeight)
-            }
+            latestTx.confirmed = true
+            log.Printf("*AttestService* Attestation confirmed for txid: (%s)\n", latestTx.txid.String())
+            s.server.UpdateLatest(*latestTx)
+            log.Printf("**AttestServer** Updated latest attested height %d\n", s.server.latestHeight)
+            attestDelay = time.Duration(0) * time.Second
         }
     } else {
+        attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second
         unconfirmed, unconfirmedTx := s.attester.getUnconfirmedTx()
         if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
             *latestTx = unconfirmedTx
@@ -103,7 +105,6 @@ func (s *AttestService) doAttestation() {
                 hash, paytoaddr := s.attester.getNextAttestationAddr()
                 if (hash == latestTx.attestedHash) { // skip attestation if same client hash
                     log.Printf("*AttestService* Skipping attestation - Client hash already attested")
-                    time.Sleep(5*time.Second) // avoid flooding client with requests
                     return
                 }
                 txid := s.attester.sendAttestation(paytoaddr, txunspent, false /* don't sure default fee */)
