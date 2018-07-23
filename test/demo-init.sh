@@ -18,7 +18,7 @@ mkdir ~/btc-datadir ; mkdir ~/ocean-datadir ;
 
 printf '%s\n' '#!/bin/sh' 'rpcuser=user' \
     'rpcpassword=pass' \
-    'rpcport=8333' \
+    'rpcport=18443' \
     'keypool=0' \
     'deprecatedrpc=signrawtransaction' \
     'server=1' \

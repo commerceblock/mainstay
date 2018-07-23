@@ -19,7 +19,7 @@ const TEST_INIT_PATH = "/src/ocean-attestation/test/test-init.sh"
 var testConf = []byte(`
 {
     "btc": {
-        "rpcurl": "localhost:8333",
+        "rpcurl": "localhost:18443",
         "rpcuser": "user",
         "rpcpass": "pass",
         "chain": "regtest"
@@ -63,7 +63,10 @@ func NewTest(logOutput bool, isDemo bool) *Test {
     chaincfg := conf.GetChainCfgParams("btc", testConf)
 
     // Get first unspent as initial TX for attestation chain
-    unspent, _ := btc.ListUnspent()
+    unspent, errUnspent := btc.ListUnspent()
+    if errUnspent != nil {
+        log.Fatal(errUnspent)
+    }
     var tx0 btcjson.ListUnspentResult
     for _, vout := range unspent {
         if (vout.Amount > 50) { // skip regtest txs

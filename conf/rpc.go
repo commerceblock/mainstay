@@ -24,16 +24,33 @@ func GetConfFile(filepath string) []byte {
 // Get RPC connection for a client from a conf file
 func GetRPC(name string, customConf ...[]byte) *rpcclient.Client{
     var conf []byte
+    var host, user, pass string
     if len(customConf) > 0 { //custom config provided
         conf = customConf[0]
+        cfg := getCfg(name, conf)
+        host = cfg.getValue("rpcurl")
+        user = cfg.getValue("rpcuser")
+        pass = cfg.getValue("rpcpass")
     } else {
         conf = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+        cfg := getCfg(name, conf)
+        host := os.Getenv(cfg.getValue("rpcurl"))
+        if host == "" {
+            host = cfg.getValue("rpcurl")
+        }
+        user := os.Getenv(cfg.getValue("rpcuser"))
+        if user == "" {
+            user = cfg.getValue("rpcuser")
+        }
+        pass := os.Getenv(cfg.getValue("rpcpass"))
+        if pass == "" {
+            pass = cfg.getValue("rpcpass")
+        }
     }
-    cfg := getCfg(name, conf)
     connCfg := &rpcclient.ConnConfig{
-        Host:         cfg.getValue("rpcurl"),
-        User:         cfg.getValue("rpcuser"),
-        Pass:         cfg.getValue("rpcpass"),
+        Host:         host,
+        User:         user,
+        Pass:         pass,
         HTTPPostMode: true,
         DisableTLS:   true,
     }

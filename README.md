@@ -18,11 +18,11 @@ The ocean-attestation repository is an application that implements the [Mainstay
 
 - Testnet Mode
 
-    - Download and run a full Bitcoin Node on testnet mode, fully indexed and in blocksonly mode. `signrawtransaction` should also be included as a `deprecatedrpc` option. Add the connection details to this node in `conf/conf.json`
+    - Download and run a full Bitcoin Node on testnet mode, fully indexed and in blocksonly mode. `signrawtransaction` should also be included as a `deprecatedrpc` option. Add the connection details (actual value or ENV variable) to this node in `conf/conf.json`
 
     - Fund this wallet node, send all the funds to a single address and store the `TX_HASH` and `PRIVKEY` of this transaction.
 
-    - The `TX_HASH` should be included in the genesis block of the Ocean network using the conf option `attestationhash`. Initiate the Ocean testnet network and add connection details to one of it's nodes in `conf/conf.json`.
+    - The `TX_HASH` should be included in the genesis block of the Ocean network using the conf option `attestationhash`. Initiate the Ocean testnet network and add connection details (actual value or ENV variable) to one of it's nodes in `conf/conf.json`.
 
     - Run `ocean-attestation -tx TX_HASH`
 
