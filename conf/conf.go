@@ -1,5 +1,3 @@
-// Handle reading conf files and parsing configuration options
-
 package conf
 
 import (
@@ -8,6 +6,7 @@ import (
     "log"
 )
 
+// Handle reading conf files and parsing configuration options
 type ClientCfg map[string]interface{}
 
 // Get config for a specific client from conf file

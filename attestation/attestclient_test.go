@@ -1,14 +1,15 @@
-// Attest Client Test
-
 package attestation
 
 import (
     "testing"
+
+    "ocean-attestation/test"
+
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/stretchr/testify/assert"
-    "ocean-attestation/test"
 )
 
+// Attest Client Test
 func TestAttestClient(t *testing.T) {
     // TEST INIT
     var txs []string

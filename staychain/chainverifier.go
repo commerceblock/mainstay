@@ -1,14 +1,15 @@
-// chain verifier
 package staychain
 
 import (
     "log"
     "strings"
     "encoding/hex"
+
+    "ocean-attestation/crypto"
+
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg"
     "github.com/btcsuite/btcd/btcec"
-    "ocean-attestation/crypto"
 )
 
 // ChainVerifierInfo struct
@@ -38,6 +39,9 @@ func (e *ChainVerifierError) Error() string {
 }
 
 // ChainVerifier struct
+// Verifies that attestations are part of the staychain
+// Does basic validation checks
+// Extract attestation pubkey and verify it corresponds to a sidechain block hash
 type ChainVerifier struct {
     sideClient      *rpcclient.Client
     cfgMain         *chaincfg.Params

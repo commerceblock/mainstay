@@ -1,5 +1,3 @@
-// Request server handling Test
-
 package requestapi
 
 import (
@@ -8,9 +6,11 @@ import (
     "encoding/json"
     "net/http"
     "net/http/httptest"
+
     "ocean-attestation/models"
 )
 
+// Request server handling Test
 func TestRequestService(t *testing.T) {
     channel := models.NewChannel()
 

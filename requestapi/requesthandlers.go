@@ -1,19 +1,23 @@
-// Http handlers for service requests
-
 package requestapi
 
 import (
     "encoding/json"
     "fmt"
     "net/http"
-    "github.com/gorilla/mux"
+
     "ocean-attestation/models"
+
+    "github.com/gorilla/mux"
 )
 
+// Http handlers for service requests
+
+// Index request handler
 func Index(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
     fmt.Fprintln(w, "Request Service for Ocean Attestations!")
 }
 
+// Is Block Attested request handler
 func Block(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
     blockid := mux.Vars(r)["blockId"]
     request := models.Request{Name: mux.CurrentRoute(r).GetName(), Id: blockid,}
@@ -27,6 +31,7 @@ func Block(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
     }
 }
 
+// Best Block request handler
 func BestBlock(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
     request := models.Request{Name: mux.CurrentRoute(r).GetName(),}
 
@@ -39,6 +44,7 @@ func BestBlock(w http.ResponseWriter, r *http.Request, channel *models.Channel) 
     }
 }
 
+// Best Block Height request handler
 func BestBlockHeight(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
     request := models.Request{Name: mux.CurrentRoute(r).GetName(),}
 
@@ -51,6 +57,7 @@ func BestBlockHeight(w http.ResponseWriter, r *http.Request, channel *models.Cha
     }
 }
 
+// Is Transaction Attested request handler
 func Transaction(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
     transactionId := mux.Vars(r)["transactionId"]
     request := models.Request{Name: mux.CurrentRoute(r).GetName(), Id: transactionId,}
@@ -64,6 +71,7 @@ func Transaction(w http.ResponseWriter, r *http.Request, channel *models.Channel
     }
 }
 
+// Latest Attestation request handler
 func LatestAttestation(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
     request := models.Request{Name: mux.CurrentRoute(r).GetName(),}
 

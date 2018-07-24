@@ -1,5 +1,4 @@
-// Requests passed between attestation and request services
-
+// Package models provides structs for request/reponse service communications.
 package models
 
 type Request struct {

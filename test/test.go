@@ -1,19 +1,23 @@
-// Test struct
-
+// Package test implements unit test and regtest utitilies for attestation.
 package test
 
 import (
     "os/exec"
     "os"
     "log"
+
+    "ocean-attestation/conf"
+
     "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcutil"
     "github.com/btcsuite/btcd/chaincfg"
     "github.com/btcsuite/btcd/rpcclient"
-    "ocean-attestation/conf"
 )
 
+// For regtest attestation demonstration
 const DEMO_INIT_PATH = "/src/ocean-attestation/test/demo-init.sh"
+
+// For unit-testing
 const TEST_INIT_PATH = "/src/ocean-attestation/test/test-init.sh"
 
 var testConf = []byte(`
@@ -33,6 +37,8 @@ var testConf = []byte(`
 }
 `)
 
+// Test structure
+// Set up testing environment for use by regtest demo or unit tests
 type Test struct {
     Btc, Ocean  *rpcclient.Client
     BtcConfig   *chaincfg.Params
@@ -40,6 +46,7 @@ type Test struct {
     Tx0hash     string
 }
 
+// NewTest returns a pointer to a Test instance
 func NewTest(logOutput bool, isDemo bool) *Test {
     // Run init test script that sets up bitcoin and ocean
     var initPath string

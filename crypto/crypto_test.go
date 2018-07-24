@@ -1,13 +1,14 @@
-// Crypto utility Test
-
 package crypto
 
 import (
     "testing"
-    "github.com/stretchr/testify/assert"
+
     "ocean-attestation/test"
+
+    "github.com/stretchr/testify/assert"
 )
 
+// Crypto utility Test
 func TestCrypto(t *testing.T) {
     // TEST INIT
     test := test.NewTest(false, false)

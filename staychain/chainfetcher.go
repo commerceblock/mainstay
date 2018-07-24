@@ -1,15 +1,16 @@
-// Struct that handles fetching transactions of the attestation
-// chain by searching each main client block and trying to match
-// the vin of each transaction with the vout of the previous found
 package staychain
 
 import (
     "log"
+
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 // ChainFetcher struct
+// Struct that handles fetching transactions of the attestation
+// chain by searching each main client block and trying to match
+// the vin of each transaction with the vout of the previous found
 type ChainFetcher struct {
     mainClient      *rpcclient.Client
     txid0           string

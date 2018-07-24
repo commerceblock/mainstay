@@ -1,17 +1,18 @@
-// Attest Server Test
-
 package attestation
 
 import (
     "testing"
     "time"
     "log"
-    "github.com/btcsuite/btcd/chaincfg/chainhash"
-    "github.com/stretchr/testify/assert"
+
     "ocean-attestation/models"
     "ocean-attestation/test"
+
+    "github.com/btcsuite/btcd/chaincfg/chainhash"
+    "github.com/stretchr/testify/assert"
 )
 
+// Attest Server Test
 func TestAttestServer(t *testing.T) {
     // TEST INIT
     test := test.NewTest(false, false)

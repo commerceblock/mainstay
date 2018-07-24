@@ -1,13 +1,16 @@
-// Response handlers for attestation server
-
 package attestation
 
 import (
     "strconv"
-    "github.com/btcsuite/btcd/chaincfg/chainhash"
+
     "ocean-attestation/models"
+
+    "github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
+// Response handlers for requests send to AttestServer
+
+// BlockResponse handles response to whether a Block (heigh or hash) has been attested
 func (s *AttestServer) BlockResponse(req models.Request) models.BlockResponse {
     res := models.Response{req, ""}
     var height int32
@@ -35,6 +38,7 @@ func (s *AttestServer) BlockResponse(req models.Request) models.BlockResponse {
     return models.BlockResponse{res, s.latestHeight >= height}
 }
 
+// TransactionResponse handles response to whether a specific Transaction id has been attested
 func (s *AttestServer) TransactionResponse(req models.Request) models.TransactionResponse {
     res := models.Response{req, ""}
 
@@ -57,14 +61,17 @@ func (s *AttestServer) TransactionResponse(req models.Request) models.Transactio
     return models.TransactionResponse{res, s.latestHeight >= header.Height}
 }
 
+// BestBlockResponse handles reponse to Best (latest) Block attested
 func (s *AttestServer) BestBlockResponse(req models.Request) models.BestBlockResponse {
     return models.BestBlockResponse{models.Response{req, ""}, s.latest.attestedHash.String()}
 }
 
+// BestBlockHeightResponse handles reponse to Best (latest) Block height attested
 func (s *AttestServer) BestBlockHeightResponse(req models.Request) models.BestBlockHeightResponse {
     return models.BestBlockHeightResponse{models.Response{req, ""}, s.latestHeight}
 }
 
+// LatestAttestation handles reponse to Latest Attestation Transaction id
 func (s *AttestServer) LatestAttestation(req models.Request) models.LatestAttestationResponse {
     return models.LatestAttestationResponse{models.Response{req, ""}, s.latest.txid.String()}
 }

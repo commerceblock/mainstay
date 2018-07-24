@@ -1,18 +1,22 @@
-// Wallet transaction generation and general handling
-
 package attestation
 
 import (
     "log"
     "time"
+
+    "ocean-attestation/crypto"
+
     "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcutil"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcd/chaincfg"
-    "ocean-attestation/crypto"
 )
 
+// AttestClient structure
+// Maintains RPC connections to main and side chain clients
+// Handles generating staychain next address and next transaction
+// and verifying that the correct chain of transactions is maintained
 type AttestClient struct {
     mainClient      *rpcclient.Client
     sideClient      *rpcclient.Client
@@ -22,6 +26,9 @@ type AttestClient struct {
     walletPriv      *btcutil.WIF
 }
 
+// NewAttestClient returns a pointer to a new AttestClient instance
+// Initially locates the genesis transaction in the main chain wallet
+// and verifies that the corresponding private key is in the wallet
 func NewAttestClient(rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, cfgMain *chaincfg.Params, txid string) *AttestClient {
     // Get initial private key from initial funding transaction of main client
     txhash, errHash := chainhash.NewHashFromStr(txid)
@@ -123,7 +130,7 @@ func (w *AttestClient) findLastUnspent() (bool, btcjson.ListUnspentResult) {
     return false, btcjson.ListUnspentResult{}
 }
 
-// Find any previously unconfirmed transactions and start attestation from there
+// Find any previously unconfirmed transactions in order to start attestation from there
 func (w *AttestClient) getUnconfirmedTx() (bool, Attestation) {
     mempool, err := w.mainClient.GetRawMempool()
     if err != nil {
@@ -137,7 +144,7 @@ func (w *AttestClient) getUnconfirmedTx() (bool, Attestation) {
     return false, Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
 }
 
-// Find the attested hash from a transaction, by testing for all sidechain hashes
+// Find the attested sidechain hash from a transaction, by testing for all sidechain hashes
 func (w *AttestClient) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
     // Get latest block and block height from sidechain
     latesthash, err := w.sideClient.GetBestBlockHash()

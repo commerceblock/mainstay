@@ -1,15 +1,17 @@
-// Routing for http requests to request service
-
 package requestapi
 
 import (
     "net/http"
     "time"
     "log"
-    "github.com/gorilla/mux"
+
     "ocean-attestation/models"
+
+    "github.com/gorilla/mux"
 )
 
+// Route structure
+// Routing for http requests to request service
 type Route struct {
     name        string
     method      string
@@ -56,6 +58,7 @@ var routes = []Route{
     },
 }
 
+// NewRouter returns pointer to mux router instance
 func NewRouter(channel *models.Channel) *mux.Router {
     router := mux.NewRouter().StrictSlash(true)
     for _, route := range routes {
@@ -69,6 +72,7 @@ func NewRouter(channel *models.Channel) *mux.Router {
     return router
 }
 
+// make custom handler to pass communication channel between server and api
 func makeHandler(fn func (http.ResponseWriter, *http.Request, *models.Channel), channel *models.Channel) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         start := time.Now()

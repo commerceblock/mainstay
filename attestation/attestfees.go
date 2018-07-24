@@ -1,5 +1,3 @@
-// Get suggested bitcoin fees from remote API
-
 package attestation
 
 import (
@@ -7,6 +5,8 @@ import (
     "encoding/json"
     "log"
 )
+
+// Utility functions to get best bitcoin fees from a remote API
 
 // default fee in satoshis
 const FEE_PER_BYTE = 20
@@ -19,6 +19,7 @@ const FEE_API_URL = "https://bitcoinfees.earn.com/api/v1/fees/recommended"
 // options: fastestFee, halfHourFee, hourFee
 const BEST_FEE_TYPE = "hourFee"
 
+// GetFee returns the best fee based on the parameters provided
 func GetFee(defaultFee bool, customFeeType ...string) int {
     if defaultFee {
         log.Printf("*Fees* Using default fee value: %d\n", FEE_PER_BYTE)
@@ -39,6 +40,7 @@ func GetFee(defaultFee bool, customFeeType ...string) int {
     return fee
 }
 
+// GetFeeFromAPI attempts to get the best bitcoinfee from the fee API specified
 func GetFeeFromAPI(feeType string) int {
     resp, getErr := http.Get(FEE_API_URL)
     if getErr!=nil {

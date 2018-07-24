@@ -1,11 +1,11 @@
-// Crypto key generation and signing functionality
-
+// Package crypto contains utilities for generating and validation attestation addresses.
 package crypto
 
 import (
     "crypto/ecdsa"
     "math/big"
     "log"
+
     "github.com/btcsuite/btcutil"
     "github.com/btcsuite/btcd/btcec"
     "github.com/btcsuite/btcd/chaincfg"
@@ -71,6 +71,7 @@ func GetAddressFromPubKey(pubkey *btcec.PublicKey, chainCfg *chaincfg.Params) bt
     return addr
 }
 
+// Check whether an address has been tweaked by a specific hash
 func IsAddrTweakedFromHash(address string, hash []byte, walletPrivKey *btcutil.WIF, chainCfg *chaincfg.Params) bool {
     tweakedPriv := TweakPrivKey(walletPrivKey, hash, chainCfg)
     tweakedAddr := GetAddressFromPrivKey(tweakedPriv, chainCfg)

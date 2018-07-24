@@ -1,3 +1,4 @@
+// Package main implements attestation and request services.
 package main
 
 import (
@@ -8,13 +9,15 @@ import (
     "sync"
     "log"
     "time"
+
+    "ocean-attestation/attestation"
+    "ocean-attestation/conf"
+    "ocean-attestation/models"
+    "ocean-attestation/requestapi"
+    "ocean-attestation/test"
+
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/rpcclient"
-	"ocean-attestation/attestation"
-	"ocean-attestation/conf"
-	"ocean-attestation/models"
-	"ocean-attestation/requestapi"
-	"ocean-attestation/test"
 )
 
 const DEFAULT_API_HOST = "localhost:8080"

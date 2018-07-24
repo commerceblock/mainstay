@@ -1,5 +1,4 @@
-// Request service routine
-
+// Package requestapi implements the request api service that listens to attestation requests.
 package requestapi
 
 import (
@@ -8,10 +7,14 @@ import (
     "sync"
     "context"
     "time"
-    "github.com/gorilla/mux"
+
     "ocean-attestation/models"
+
+    "github.com/gorilla/mux"
 )
 
+// RequestService struct
+// Handles setting a request router and handling api requests
 type RequestService struct {
     ctx     context.Context
     wg      *sync.WaitGroup
@@ -19,11 +22,13 @@ type RequestService struct {
     router  *mux.Router
 }
 
+// NewRequestService returns a pointer to a RequestService instance
 func NewRequestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, host string) *RequestService {
     router := NewRouter(channel)
     return &RequestService{ctx, wg, host, router}
 }
 
+// Main Run method
 func (c *RequestService) Run() {
     defer c.wg.Done()
 

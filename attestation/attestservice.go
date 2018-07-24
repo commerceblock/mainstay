@@ -1,5 +1,11 @@
-// Attestation service routine
+/*
+Package attestation implements the MainStay protocol.
 
+Implemented using an Attestation Service structure that runs multiple concurrent processes:
+    - AttestClient that handles generating attestations and maintaining communication a bitcoin wallet
+    - AttestServer that handles responding to API requests
+    - A Requests channel to receive requests from requestapi
+ */
 package attestation
 
 import (
@@ -7,14 +13,20 @@ import (
     "sync"
     "context"
     "time"
+
+    "ocean-attestation/models"
+
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcd/chaincfg"
-    "ocean-attestation/models"
 )
 
-const ATTEST_WAIT_TIME = 60 // seconds
+// Waiting time between attestations and/or attestation confirmation attempts
+const ATTEST_WAIT_TIME = 60
 
+// AttestationService structure
+// Encapsulates Attest Server, Attest Client
+// and a channel for reading requests and writing responses
 type AttestService struct {
     ctx             context.Context
     wg              *sync.WaitGroup
@@ -25,8 +37,10 @@ type AttestService struct {
 }
 
 var latestTx *Attestation
-var attestDelay time.Duration // start with 0 delay
+var attestDelay time.Duration // initially 0 delay
 
+// NewAttestService returns a pointer to an AttestService instance
+// Initiates Attest Client and Attest Server
 func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, cfgMain *chaincfg.Params, tx0 string) *AttestService{
     if (len(tx0) != 64) {
         log.Fatal("Incorrect txid size")
@@ -43,6 +57,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
     return &AttestService{ctx, wg, rpcMain, attester, server, channel}
 }
 
+// Run Attest Service
 func (s *AttestService) Run() {
     defer s.wg.Done()
 

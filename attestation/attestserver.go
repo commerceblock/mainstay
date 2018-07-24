@@ -1,21 +1,25 @@
-// Attestation Server storing attestation subchain and responding to requests
-
 package attestation
 
 import (
     "log"
     "time"
+
+    "ocean-attestation/models"
+
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
-    "ocean-attestation/models"
 )
 
+// AttestServer structure
+// Stores information on the latest attestation
+// Responds to external API requests handled by RequestApi
 type AttestServer struct {
     latest          Attestation
     latestHeight    int32
     sideClient      *rpcclient.Client
 }
 
+// NewAttestServer returns a pointer to an AttestServer instance
 func NewAttestServer(rpcSide *rpcclient.Client, latest Attestation, tx0 string, genesis chainhash.Hash) *AttestServer{
     tx0hash, err := chainhash.NewHashFromStr(tx0)
     if err != nil {
@@ -24,7 +28,7 @@ func NewAttestServer(rpcSide *rpcclient.Client, latest Attestation, tx0 string, 
     return &AttestServer{Attestation{*tx0hash, genesis, true, time.Now()}, 0, rpcSide}
 }
 
-// Keep the latest attested transaction for handling requests
+// Update information on the latest attestation and sidechain height
 func (s *AttestServer) UpdateLatest(tx Attestation) {
     s.latest = tx
     latestheader, err := s.sideClient.GetBlockHeaderVerbose(&s.latest.attestedHash)
@@ -35,7 +39,7 @@ func (s *AttestServer) UpdateLatest(tx Attestation) {
     }
 }
 
-// Respond to requests by the request service
+// Respond returns appropriate response based on request type
 func (s *AttestServer) Respond(req models.Request) interface{} {
     switch req.Name {
     case "Block":

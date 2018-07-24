@@ -1,19 +1,22 @@
-// Struct that builds the staychain from the initial transaction,
-// adds fetched attestations to a channel on which clients can
-// subscribe to and then waits for the next attestation to happen
+// Package staychain provides utilities for fetching attestations and verifying them.
 package staychain
 
 import (
     "log"
     "time"
+
     "github.com/btcsuite/btcd/btcjson"
 )
 
+// Sleep time till next attestation
 const SLEEP_TIME = 5*time.Minute
 
 type Tx btcjson.TxRawResult
 
-// Chain struct
+// Chain structure
+// Struct that builds the staychain from the initial transaction,
+// adds fetched attestations to a channel on which clients can
+// subscribe to and then waits for the next attestation to happen
 type Chain struct {
     updates     chan Tx
     closing     chan chan error

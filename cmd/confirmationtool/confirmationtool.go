@@ -1,4 +1,4 @@
-// Confirmation Tool
+// Staychain confirmation tool
 package main
 
 import (
@@ -6,12 +6,16 @@ import (
     "log"
     "time"
     "flag"
+
+    "ocean-attestation/conf"
+    "ocean-attestation/staychain"
+
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg"
-    "ocean-attestation/conf"
-    "ocean-attestation/staychain"
 )
+
+// Use staychain package to read attestations, verify and print information
 
 const MAIN_NAME     = "bitcoin"
 const SIDE_NAME     = "ocean"
@@ -26,6 +30,7 @@ var (
     mainChainCfg    *chaincfg.Params
 )
 
+// init
 func init() {
     flag.BoolVar(&showDetails, "detailed", false, "Detailed information on attestation transaction")
     flag.StringVar(&tx, "tx", "", "Tx id for genesis attestation transaction")
@@ -40,6 +45,7 @@ func init() {
     mainChainCfg = conf.GetChainCfgParams(MAIN_NAME, confFile)
 }
 
+// main method
 func main() {
     defer mainClient.Shutdown()
     defer sideClient.Shutdown()
@@ -61,6 +67,7 @@ func main() {
         log.Println("Exit: ", chain.Close())
     })
 
+    // await new attestations and verify
     for tx := range chain.Updates() {
         log.Println("Verifying attestation")
         log.Printf("txid: %s\n", tx.Txid)
@@ -73,6 +80,7 @@ func main() {
     }
 }
 
+// print attestation information
 func printAttestation(tx staychain.Tx, info staychain.ChainVerifierInfo) {
     log.Println("Attestation Verified")
     if showDetails {
