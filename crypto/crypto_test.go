@@ -4,6 +4,7 @@ import (
     "testing"
 
     "ocean-attestation/test"
+    "ocean-attestation/clients"
 
     "github.com/stretchr/testify/assert"
 )
@@ -12,8 +13,10 @@ import (
 func TestCrypto(t *testing.T) {
     // TEST INIT
     test := test.NewTest(false, false)
+    var sideClientFake *clients.SidechainClientFake
+    sideClientFake = test.GetSidechainClient().(*clients.SidechainClientFake)
 
-    tweak, _ := test.Ocean.GetBestBlockHash()
+    tweak, _ := sideClientFake.GetBestBlockHash()
     privKey := GetWalletPrivKey(test.Tx0pk)
 
     // Tweak private key and generate a new pay to pub key hash address

@@ -4,6 +4,7 @@ import (
     "testing"
 
     "ocean-attestation/test"
+    "ocean-attestation/clients"
 
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/stretchr/testify/assert"
@@ -14,7 +15,10 @@ func TestAttestClient(t *testing.T) {
     // TEST INIT
     var txs []string
     test := test.NewTest(false, false)
-    client := NewAttestClient(test.Btc, test.Ocean, test.BtcConfig, test.Tx0hash)
+    var sideClientFake *clients.SidechainClientFake
+    sideClientFake = test.GetSidechainClient().(*clients.SidechainClientFake)
+
+    client := NewAttestClient(test.Btc, sideClientFake, test.BtcConfig, test.Tx0hash)
     txs = append(txs, client.txid0)
 
     // Find unspent and verify is it the genesis transaction
@@ -29,7 +33,7 @@ func TestAttestClient(t *testing.T) {
         // Generate attestation transaction with the unspent vout
         oceanhash, addr := client.getNextAttestationAddr()
         txnew := client.sendAttestation(addr, unspent, true)
-        client.sideClient.Generate(5)
+        sideClientFake.Generate(1)
 
         // Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
         var unconfirmed *Attestation = &Attestation{}

@@ -5,8 +5,8 @@ import (
     "time"
 
     "ocean-attestation/models"
+    "ocean-attestation/clients"
 
-    "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
@@ -16,11 +16,11 @@ import (
 type AttestServer struct {
     latest          Attestation
     latestHeight    int32
-    sideClient      *rpcclient.Client
+    sideClient      clients.SidechainClient
 }
 
 // NewAttestServer returns a pointer to an AttestServer instance
-func NewAttestServer(rpcSide *rpcclient.Client, latest Attestation, tx0 string, genesis chainhash.Hash) *AttestServer{
+func NewAttestServer(rpcSide clients.SidechainClient, latest Attestation, tx0 string, genesis chainhash.Hash) *AttestServer{
     tx0hash, err := chainhash.NewHashFromStr(tx0)
     if err != nil {
         log.Fatal("*AttestServer* Incorrect tx hash for initial transaction")
@@ -31,11 +31,11 @@ func NewAttestServer(rpcSide *rpcclient.Client, latest Attestation, tx0 string, 
 // Update information on the latest attestation and sidechain height
 func (s *AttestServer) UpdateLatest(tx Attestation) {
     s.latest = tx
-    latestheader, err := s.sideClient.GetBlockHeaderVerbose(&s.latest.attestedHash)
+    latestheight, err := s.sideClient.GetBlockHeight(&s.latest.attestedHash)
     if err != nil {
         log.Printf("**AttestServer** No client hash on confirmed tx - Happens on init, should fix soon")
     } else {
-        s.latestHeight = latestheader.Height
+        s.latestHeight = latestheight
     }
 }
 

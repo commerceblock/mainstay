@@ -5,6 +5,7 @@ import (
     "time"
 
     "ocean-attestation/crypto"
+    "ocean-attestation/clients"
 
     "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcd/rpcclient"
@@ -19,7 +20,7 @@ import (
 // and verifying that the correct chain of transactions is maintained
 type AttestClient struct {
     mainClient      *rpcclient.Client
-    sideClient      *rpcclient.Client
+    sideClient      clients.SidechainClient
     mainChainCfg    *chaincfg.Params
     pk0             string
     txid0           string
@@ -29,7 +30,7 @@ type AttestClient struct {
 // NewAttestClient returns a pointer to a new AttestClient instance
 // Initially locates the genesis transaction in the main chain wallet
 // and verifies that the corresponding private key is in the wallet
-func NewAttestClient(rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, cfgMain *chaincfg.Params, txid string) *AttestClient {
+func NewAttestClient(rpcMain *rpcclient.Client, rpcSide clients.SidechainClient, cfgMain *chaincfg.Params, txid string) *AttestClient {
     // Get initial private key from initial funding transaction of main client
     txhash, errHash := chainhash.NewHashFromStr(txid)
     if errHash != nil {
@@ -151,7 +152,7 @@ func (w *AttestClient) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
     if err != nil {
         log.Fatal(err)
     }
-    latestheader, err := w.sideClient.GetBlockHeaderVerbose(latesthash)
+    latestheight, err := w.sideClient.GetBlockHeight(latesthash)
     if err != nil {
         log.Fatal(err)
     }
@@ -169,7 +170,7 @@ func (w *AttestClient) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
     }
 
     // Iterate backwards through all sidechain hashes to find the block hash that was attested
-    for h := latestheader.Height - 1; h >= 0; h-- {
+    for h := latestheight - 1; h >= 0; h-- {
         hash, err := w.sideClient.GetBlockHash(int64(h))
         if err != nil {
             log.Fatal(err)

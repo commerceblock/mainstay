@@ -7,6 +7,7 @@ import (
     "log"
 
     "ocean-attestation/conf"
+    "ocean-attestation/clients"
 
     "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcutil"
@@ -40,17 +41,18 @@ var testConf = []byte(`
 // Test structure
 // Set up testing environment for use by regtest demo or unit tests
 type Test struct {
-    Btc, Ocean  *rpcclient.Client
+    Btc         *rpcclient.Client
     BtcConfig   *chaincfg.Params
     Tx0pk       string
     Tx0hash     string
+    isRegtest   bool
 }
 
 // NewTest returns a pointer to a Test instance
-func NewTest(logOutput bool, isDemo bool) *Test {
+func NewTest(logOutput bool, isRegtest bool) *Test {
     // Run init test script that sets up bitcoin and ocean
     var initPath string
-    if (isDemo) { // for running the demon in regtest mode along with ocean demo
+    if (isRegtest) { // for running the demon in regtest mode along with ocean demo
         initPath = os.Getenv("GOPATH") + DEMO_INIT_PATH
     } else { // for running unit tests
         initPath = os.Getenv("GOPATH") + TEST_INIT_PATH
@@ -66,8 +68,8 @@ func NewTest(logOutput bool, isDemo bool) *Test {
     }
 
     btc  := conf.GetRPC("btc", testConf)
-    ocean := conf.GetRPC("ocean", testConf)
-    chaincfg := conf.GetChainCfgParams("btc", testConf)
+    btcchaincfg := conf.GetChainCfgParams("btc", testConf)
+
 
     // Get first unspent as initial TX for attestation chain
     unspent, errUnspent := btc.ListUnspent()
@@ -81,8 +83,16 @@ func NewTest(logOutput bool, isDemo bool) *Test {
         }
     }
     tx0hash := tx0.TxID
-    tx0addr, _ := btcutil.DecodeAddress(tx0.Address, chaincfg)
+    tx0addr, _ := btcutil.DecodeAddress(tx0.Address, btcchaincfg)
     tx0pk, _ := btc.DumpPrivKey(tx0addr)
 
-    return &Test{btc, ocean, chaincfg, tx0pk.String(), tx0hash}
+    return &Test{btc, btcchaincfg, tx0pk.String(), tx0hash, isRegtest}
+}
+
+// Return SidechainClient depending on whether Test is regtest or unit-test
+func (t *Test) GetSidechainClient() clients.SidechainClient {
+    if (t.isRegtest) {
+        return clients.NewSidechainClientOcean(conf.GetRPC("ocean", testConf))
+    }
+    return clients.NewSidechainClientFake()
 }

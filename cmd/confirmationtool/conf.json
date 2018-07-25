@@ -1,12 +1,12 @@
 {
     "bitcoin": {
-        "rpcurl": "localhost:18000",
+        "rpcurl": "localhost:18332",
         "rpcuser": "user",
         "rpcpass": "pass",
         "chain": "testnet"
     },
     "ocean": {
-        "rpcurl": "34.244.75.62:18886",
+        "rpcurl": "explorer",
         "rpcuser": "bitcoinrpc",
         "rpcpass": "acc1e7a299bc49449912e235b54dbce5",
         "chain": "main"

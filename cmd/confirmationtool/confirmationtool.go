@@ -9,6 +9,7 @@ import (
 
     "ocean-attestation/conf"
     "ocean-attestation/staychain"
+    "ocean-attestation/clients"
 
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcd/rpcclient"
@@ -26,7 +27,7 @@ var (
     tx              string
     showDetails     bool
     mainClient      *rpcclient.Client
-    sideClient      *rpcclient.Client
+    sideClient      clients.SidechainClient
     mainChainCfg    *chaincfg.Params
 )
 
@@ -41,14 +42,14 @@ func init() {
 
     confFile := conf.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
     mainClient = conf.GetRPC(MAIN_NAME, confFile)
-    sideClient = conf.GetRPC(SIDE_NAME, confFile)
+    sideClient = clients.NewSidechainClientOcean(conf.GetRPC(SIDE_NAME, confFile))
     mainChainCfg = conf.GetChainCfgParams(MAIN_NAME, confFile)
 }
 
 // main method
 func main() {
     defer mainClient.Shutdown()
-    defer sideClient.Shutdown()
+    defer sideClient.Close()
 
     txhash, errHash := chainhash.NewHashFromStr(tx)
     if errHash != nil {

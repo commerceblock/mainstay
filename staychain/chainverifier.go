@@ -6,8 +6,8 @@ import (
     "encoding/hex"
 
     "ocean-attestation/crypto"
+    "ocean-attestation/clients"
 
-    "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg"
     "github.com/btcsuite/btcd/btcec"
 )
@@ -43,7 +43,7 @@ func (e *ChainVerifierError) Error() string {
 // Does basic validation checks
 // Extract attestation pubkey and verify it corresponds to a sidechain block hash
 type ChainVerifier struct {
-    sideClient      *rpcclient.Client
+    sideClient      clients.SidechainClient
     cfgMain         *chaincfg.Params
     pubkey0         *btcec.PublicKey
     latestHeight    int64
@@ -51,7 +51,7 @@ type ChainVerifier struct {
 }
 
 // Return new Chain Verifier instance that verifies attestations on the side chain
-func NewChainVerifier(cfgMain *chaincfg.Params, side *rpcclient.Client) ChainVerifier {
+func NewChainVerifier(cfgMain *chaincfg.Params, side clients.SidechainClient) ChainVerifier {
     return ChainVerifier{side, cfgMain, nil, 0, true}
 }
 

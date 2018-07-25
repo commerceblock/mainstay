@@ -20,12 +20,12 @@ func (s *AttestServer) BlockResponse(req models.Request) models.BlockResponse {
             res.Error = "Invalid request for block hash: " + req.Id
             return models.BlockResponse{res, false}
         }
-        header, err := s.sideClient.GetBlockHeaderVerbose(hash)
+        blockheight, err := s.sideClient.GetBlockHeight(hash)
         if err != nil {
             res.Error = "Invalid request block does not exist: " + req.Id
             return models.BlockResponse{res, false}
         }
-        height = header.Height
+        height = blockheight
     } else {
         h, err := strconv.Atoi(req.Id)
         if err != nil {
@@ -47,18 +47,18 @@ func (s *AttestServer) TransactionResponse(req models.Request) models.Transactio
         res.Error = "Invalid request for transaction: " + req.Id
         return models.TransactionResponse{res, false}
     }
-    tx, err := s.sideClient.GetRawTransactionVerbose(hash)
+    txblockhash, err := s.sideClient.GetTxBlockHash(hash)
     if err != nil {
         res.Error = "Invalid request transaction does not exist: " + req.Id
         return models.TransactionResponse{res, false}
     }
-    txhash, _ := chainhash.NewHashFromStr(tx.BlockHash)
-    header, err := s.sideClient.GetBlockHeaderVerbose(txhash)
+    txhash, _ := chainhash.NewHashFromStr(txblockhash)
+    blockheight, err := s.sideClient.GetBlockHeight(txhash)
     if err != nil {
         res.Error = "Invalid request transaction does not exist: " + req.Id
         return models.TransactionResponse{res, false}
     }
-    return models.TransactionResponse{res, s.latestHeight >= header.Height}
+    return models.TransactionResponse{res, s.latestHeight >= blockheight}
 }
 
 // BestBlockResponse handles reponse to Best (latest) Block attested

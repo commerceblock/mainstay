@@ -15,6 +15,7 @@ import (
     "ocean-attestation/models"
     "ocean-attestation/requestapi"
     "ocean-attestation/test"
+    "ocean-attestation/clients"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/rpcclient"
@@ -26,7 +27,8 @@ const OCEAN_NAME = "ocean"
 
 var (
 	genesisTX               string
-	mainClient, oceanClient *rpcclient.Client
+	mainClient              *rpcclient.Client
+    oceanClient             clients.SidechainClient
 	mainChainCfg            *chaincfg.Params
 	isRegtest               bool
     apiHost                 string
@@ -48,13 +50,13 @@ func init() {
 	if isRegtest { // Use configuration applied in unit tests
 		test := test.NewTest(true, true)
 		mainClient = test.Btc
-		oceanClient = test.Ocean
+		oceanClient = test.GetSidechainClient()
 		mainChainCfg = test.BtcConfig
         genesisTX = test.Tx0hash
         log.Printf("Running regtest mode with -tx=%s\n", genesisTX)
 	} else {
 		mainClient = conf.GetRPC(MAIN_NAME)
-		oceanClient = conf.GetRPC(OCEAN_NAME)
+		oceanClient = clients.NewSidechainClientOcean(conf.GetRPC(OCEAN_NAME))
 		mainChainCfg = conf.GetChainCfgParams(MAIN_NAME)
 	}
 
@@ -66,7 +68,7 @@ func init() {
 
 func main() {
 	defer mainClient.Shutdown()
-	defer oceanClient.Shutdown()
+	defer oceanClient.Close()
 
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())

@@ -15,6 +15,7 @@ import (
     "time"
 
     "ocean-attestation/models"
+    "ocean-attestation/clients"
 
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -41,7 +42,7 @@ var attestDelay time.Duration // initially 0 delay
 
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, rpcMain *rpcclient.Client, rpcSide *rpcclient.Client, cfgMain *chaincfg.Params, tx0 string) *AttestService{
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, rpcMain *rpcclient.Client, rpcSide clients.SidechainClient, cfgMain *chaincfg.Params, tx0 string) *AttestService{
     if (len(tx0) != 64) {
         log.Fatal("Incorrect txid size")
     }
