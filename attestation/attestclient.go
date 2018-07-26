@@ -34,19 +34,23 @@ func NewAttestClient(rpcMain *rpcclient.Client, rpcSide clients.SidechainClient,
     // Get initial private key from initial funding transaction of main client
     txhash, errHash := chainhash.NewHashFromStr(txid)
     if errHash != nil {
-        log.Fatal("Invalid tx id provided")
+        log.Println("Invalid tx id provided")
+        log.Fatal(errHash)
     }
     tx, errGet := rpcMain.GetTransaction(txhash)
     if errGet != nil {
-        log.Fatal("Inititial transcaction does not exist")
+        log.Println("Inititial transcaction does not exist")
+        log.Fatal(errGet)
     }
     addr, errDec := btcutil.DecodeAddress(tx.Details[0].Address, cfgMain)
     if errDec != nil {
-        log.Fatal("Failed decoding address from initial transaction")
+        log.Println("Failed decoding address from initial transaction")
+        log.Fatal(errDec)
     }
     pk, errDump := rpcMain.DumpPrivKey(addr)
     if errDump != nil {
-        log.Fatal("Failed getting initial transaction private key from address")
+        log.Println("Failed getting initial transaction private key from address")
+        log.Fatal(errDump)
     }
 
     return &AttestClient{rpcMain, rpcSide, cfgMain, pk.String(), txid, pk}

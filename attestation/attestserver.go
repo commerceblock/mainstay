@@ -33,7 +33,7 @@ func (s *AttestServer) UpdateLatest(tx Attestation) {
     s.latest = tx
     latestheight, err := s.sideClient.GetBlockHeight(&s.latest.attestedHash)
     if err != nil {
-        log.Printf("**AttestServer** No client hash on confirmed tx - Happens on init, should fix soon")
+        log.Printf("**AttestServer** No client hash on confirmed tx")
     } else {
         s.latestHeight = latestheight
     }
