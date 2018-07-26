@@ -1,0 +1,37 @@
+FROM golang:1.10.3-stretch
+
+ENV PKG_VER 0.16.1
+ENV PKG bitcoin-${PKG_VER}-x86_64-linux-gnu.tar.gz
+ENV PKG_URL https://bitcoincore.org/bin/bitcoin-core-${PKG_VER}/${PKG}
+
+COPY . $GOPATH/src/ocean-attestation
+
+RUN set -x \
+    && cd $GOPATH/src/ocean-attestation \
+    && go get ./... \
+    && go get github.com/stretchr/testify/assert \
+    && go build \
+    && go install
+
+RUN set -ex \
+    && cd $HOME \
+    && mkdir $HOME/.bitcoin \
+    && printf '%s\n' '#!/bin/sh' 'rpcuser=user' \
+        'rpcpassword=pass' \
+        'rpcport=18443' \
+        'keypool=0' \
+        'deprecatedrpc=signrawtransaction' \
+        'server=1' \
+        'regtest=1' \
+        'daemon=1' \
+        'txindex=1' > ~/.bitcoin/bitcoin.conf \
+    && wget ${PKG_URL} \
+    && tar zxvf ${PKG} \
+    && export PATH=$PATH:$HOME/bitcoin-${PKG_VER}/bin \
+    && bitcoind \
+    && /go/src/ocean-attestation/run-tests.sh
+
+COPY docker-entrypoint.sh /
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["ocean-attestation"]
