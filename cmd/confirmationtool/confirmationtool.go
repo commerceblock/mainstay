@@ -53,11 +53,13 @@ func main() {
 
     txhash, errHash := chainhash.NewHashFromStr(tx)
     if errHash != nil {
-        log.Fatal("Invalid tx id provided")
+        log.Println("Invalid tx id provided")
+        log.Fatal(errHash)
     }
     txraw, errGet := mainClient.GetRawTransactionVerbose(txhash)
     if errGet != nil {
-        log.Fatal("Inititial transcaction does not exist")
+        log.Println("Inititial transcaction does not exist")
+        log.Fatal(errGet)
     }
 
     fetcher := staychain.NewChainFetcher(mainClient, staychain.Tx(*txraw))
