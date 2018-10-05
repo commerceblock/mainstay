@@ -8,12 +8,14 @@ import (
     "flag"
 
     "ocean-attestation/conf"
+    "ocean-attestation/crypto"
     "ocean-attestation/staychain"
     "ocean-attestation/clients"
 
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg"
+    "github.com/btcsuite/btcutil"
 )
 
 // Use staychain package to read attestations, verify and print information
@@ -25,6 +27,8 @@ const DEFAULT_TX    = "bf41c0da8047b1416d5ca680e2643967b27537cdf9a41527034698c33
 
 var (
     tx              string
+    pk              string
+    pkWIF           *btcutil.WIF
     showDetails     bool
     mainClient      *rpcclient.Client
     sideClient      clients.SidechainClient
@@ -35,9 +39,13 @@ var (
 func init() {
     flag.BoolVar(&showDetails, "detailed", false, "Detailed information on attestation transaction")
     flag.StringVar(&tx, "tx", "", "Tx id for genesis attestation transaction")
+    flag.StringVar(&pk, "pk", "", "Private key for genesis attestation transaction")
     flag.Parse()
     if (tx == "") {
         tx = DEFAULT_TX
+    }
+    if pk != "" {
+        pkWIF = crypto.GetWalletPrivKey(pk)
     }
 
     confFile := conf.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
@@ -71,14 +79,17 @@ func main() {
     })
 
     // await new attestations and verify
-    for tx := range chain.Updates() {
+    for transaction := range chain.Updates() {
         log.Println("Verifying attestation")
-        log.Printf("txid: %s\n", tx.Txid)
-        info, err := verifier.Verify(tx)
+        log.Printf("txid: %s\n", transaction.Txid)
+        info, err := verifier.Verify(transaction)
         if err != nil {
             log.Println(err)
         } else {
-            printAttestation(tx, info)
+            printAttestation(transaction, info)
+            if pkWIF != nil {
+                printDerivedKey(info)
+            }
         }
     }
 }
@@ -94,4 +105,11 @@ func printAttestation(tx staychain.Tx, info staychain.ChainVerifierInfo) {
     log.Printf("%s blockhash: %s\n", SIDE_NAME, info.Hash())
     log.Printf("%s blockheight: %d\n", SIDE_NAME, info.Height())
     log.Printf("\n")
+}
+
+// print derived private key for attestation
+func printDerivedKey(info staychain.ChainVerifierInfo) {
+    tweak_hash := info.Hash()
+    tweaked_priv := crypto.TweakPrivKey(pkWIF, []byte(tweak_hash), mainChainCfg)
+    log.Printf("%s privkey: %s\n", MAIN_NAME, tweaked_priv.String())
 }
