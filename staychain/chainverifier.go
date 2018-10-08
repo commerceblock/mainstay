@@ -10,16 +10,17 @@ import (
 
     "github.com/btcsuite/btcd/chaincfg"
     "github.com/btcsuite/btcd/btcec"
+    "github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 // ChainVerifierInfo struct
 type ChainVerifierInfo struct {
-    hash    string
+    hash    chainhash.Hash
     height  int64
 }
 
 // Hash getter
-func (i *ChainVerifierInfo) Hash() string {
+func (i *ChainVerifierInfo) Hash() chainhash.Hash {
     return i.hash
 }
 
@@ -47,12 +48,13 @@ type ChainVerifier struct {
     cfgMain         *chaincfg.Params
     pubkey0         *btcec.PublicKey
     latestHeight    int64
-    firstTx         bool
 }
 
 // Return new Chain Verifier instance that verifies attestations on the side chain
-func NewChainVerifier(cfgMain *chaincfg.Params, side clients.SidechainClient) ChainVerifier {
-    return ChainVerifier{side, cfgMain, nil, 0, true}
+func NewChainVerifier(cfgMain *chaincfg.Params, side clients.SidechainClient, tx0 Tx) ChainVerifier {
+
+    pubkey0 := getPubKeyFromTx(tx0)
+    return ChainVerifier{side, cfgMain, pubkey0, 0}
 }
 
 // Method to get the pub key from the scriptSig of a transaction
@@ -96,6 +98,7 @@ func (v *ChainVerifier) verifyTxAddr(addr string) (ChainVerifierInfo, error) {
         height += 1
         blockhash, errHash := v.sideClient.GetBlockHash(height)
         if errHash != nil {
+            log.Printf("height: %d Hash: %s\n", height, blockhash.String())
             log.Fatal(errHash)
         }
 
@@ -107,7 +110,7 @@ func (v *ChainVerifier) verifyTxAddr(addr string) (ChainVerifierInfo, error) {
         tweakedAddr := crypto.GetAddressFromPubKey(tweakedPub, v.cfgMain)
         if (tweakedAddr.String() == addr) {
             v.latestHeight = height
-            return ChainVerifierInfo{blockhash.String(), height}, nil
+            return ChainVerifierInfo{*blockhash, height}, nil
         }
     }
     return ChainVerifierInfo{}, &ChainVerifierError{"Matching hash not found"}
@@ -118,11 +121,6 @@ func (v *ChainVerifier) Verify(tx Tx) (ChainVerifierInfo, error) {
     errBasic := verifyTxBasic(tx)
     if errBasic != nil {
         return ChainVerifierInfo{}, errBasic
-    }
-
-    if v.firstTx { // initial tx pubkey lies in first attestation scriptSig
-        v.pubkey0 = getPubKeyFromTx(tx)
-        v.firstTx = false
     }
 
     // In regtest mode it is not obvious how to extract the pubkey
