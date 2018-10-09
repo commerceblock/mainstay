@@ -98,7 +98,7 @@ func (v *ChainVerifier) verifyTxAddr(addr string) (ChainVerifierInfo, error) {
         height += 1
         blockhash, errHash := v.sideClient.GetBlockHash(height)
         if errHash != nil {
-            log.Printf("height: %d Hash: %s\n", height, blockhash.String())
+            log.Printf("failure height: %d\n", height)
             log.Fatal(errHash)
         }
 

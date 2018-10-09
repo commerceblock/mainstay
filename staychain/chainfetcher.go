@@ -20,7 +20,6 @@ type ChainFetcher struct {
 
 // Get initial tx from main client and return fetcher instance
 func NewChainFetcher(main *rpcclient.Client, tx Tx) ChainFetcher {
-
     blockhash, _ := chainhash.NewHashFromStr(tx.BlockHash)
     blockheader, _ := main.GetBlockHeaderVerbose(blockhash)
 
