@@ -16,6 +16,10 @@ sleep 1
 rm -r ~/btc-datadir ; rm -r ~/ocean-datadir ;
 mkdir ~/btc-datadir ; mkdir ~/ocean-datadir ;
 
+mkdir ~/ocean-datadir/terms-and-conditions
+printf '%s\n' 'These are the terms and conditions' \
+       'Approve to use the CBT network' > ~/ocean-datadir/terms-and-conditions/latest.txt
+
 printf '%s\n' '#!/bin/sh' 'rpcuser=user' \
     'rpcpassword=pass' \
     'rpcport=18443' \
@@ -32,8 +36,11 @@ printf '%s\n' '#!/bin/sh' "rpcuser=bitcoinrpc" \
     "port=18011" \
     "addnode=localhost:18801" \
     "addnode=localhost:18803" \
-    "initialfreecoins=50000000000000" \
-    "signblockscript=522103d517f6e9affa60000a08d478970e6bbfa45d63b1967ed1e066dd46b802edb2a62102afc18e8a7ff988ca1ae7b659cb09a79852d301c2283e18cba1faf7a0b020b1a22102edd8080e31f05c68cf68a97782ac97744e86ba19dfd3ba68e597f10868ee5bc453ae" \
+    "initialfreecoins=2100000000000000" \
+    "signblockscript=52210394caaf4ccf40a216c2e1ad012d517b25b3d524c1249a55501b63a74b93adddd32103db95cad2e9506a926e22a7fa1294dc455fae403a39dc2a35ef9cb37813b9ba4a2102e5d227e18a196575a771be0993a639732bebdff6d6c3f0bd20568c21fb41730953ae" \
+    "con_mandatorycoinbase=52210394caaf4ccf40a216c2e1ad012d517b25b3d524c1249a55501b63a74b93adddd32103db95cad2e9506a926e22a7fa1294dc455fae403a39dc2a35ef9cb37813b9ba4a2102e5d227e18a196575a771be0993a639732bebdff6d6c3f0bd20568c21fb41730953ae" \
+    "issuecontrolscript=5121024da1a90bce74c44b37914a9c3e4cfc52953b90693c155cd4091d6c593b1624d151ae" \
+    "initialfreecoinsdestination=5121024da1a90bce74c44b37914a9c3e4cfc52953b90693c155cd4091d6c593b1624d151ae"\
     "regtest=0" \
     "server=1" \
     "daemon=1" \
