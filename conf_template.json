@@ -10,5 +10,8 @@
         "rpcuser": "USERNAME",
         "rpcpass": "PASSWORD",
         "chain": "main"
+    },
+    "misc": {
+        "multisignodes": "node0:1000,node1:1001"
     }
 }

@@ -31,6 +31,8 @@ var testConf = []byte(`
         "rpcuser": "bitcoinrpc",
         "rpcpass": "acc1e7a299bc49449912e235b54dbce5",
         "chain": "main"
+    },
+    "misc": {
     }
 }
 `)

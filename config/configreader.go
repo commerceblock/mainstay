@@ -63,3 +63,17 @@ func GetChainCfgParams(name string, conf []byte) *chaincfg.Params {
     }
     return &chaincfg.RegressionNetParams
 }
+
+// Get env from conf file argument using base name and argument name
+func GetEnvFromConf(baseName string, argName string, conf []byte) string {
+    cfg := getCfg(baseName, conf)
+    argValue := cfg.tryGetValue(argName)
+    if argValue != "" {
+        argValueEnv := os.Getenv(argValue)
+        if argValueEnv == "" {
+            return argValue
+        }
+        return argValueEnv
+    }
+    return ""
+}

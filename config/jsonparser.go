@@ -37,3 +37,16 @@ func (conf ClientCfg) getValue(key string) string {
     }
     return str
 }
+
+// Try get string values of config options for a client
+func (conf ClientCfg) tryGetValue(key string) string {
+    val, ok := conf[key]
+    if !ok {
+        return ""
+    }
+    str, ok := val.(string)
+    if !ok {
+        return ""
+    }
+    return str
+}

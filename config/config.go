@@ -3,6 +3,7 @@ package config
 
 import (
     "os"
+    "strings"
 
     "ocean-attestation/clients"
 
@@ -14,6 +15,9 @@ const MAIN_CHAIN_NAME = "main"
 const SIDE_CHAIN_NAME = "ocean"
 const CONF_PATH = "/src/ocean-attestation/config/conf.json"
 
+const TX_TOPIC = "1"
+const SIG_TOPIC = "9"
+
 // Config struct
 // Client connections and other parameters required
 // by ocean attestation service and testing
@@ -21,6 +25,7 @@ type Config struct {
     mainClient              *rpcclient.Client
     mainChainCfg            *chaincfg.Params
     oceanClient             clients.SidechainClient
+    multisigNodes           []string
 }
 
 // Get Main Client
@@ -38,6 +43,11 @@ func (c *Config) MainChainCfg() *chaincfg.Params {
     return c.mainChainCfg
 }
 
+// Get Tx Signers host names
+func (c *Config) MultisigNodes() []string {
+    return c.multisigNodes
+}
+
 // Return Config instance
 func NewConfig(isUnitTest bool, customConf ...[]byte) *Config {
     var conf []byte
@@ -50,7 +60,9 @@ func NewConfig(isUnitTest bool, customConf ...[]byte) *Config {
     mainClient := GetRPC(MAIN_CHAIN_NAME, conf)
     mainClientCfg := GetChainCfgParams(MAIN_CHAIN_NAME, conf)
     oceanClient := GetSidechainClient(isUnitTest, conf)
-    return &Config{mainClient, mainClientCfg, oceanClient}
+
+    multisignodes := strings.Split(GetEnvFromConf("misc", "multisignodes", conf) , ",")
+    return &Config{mainClient, mainClientCfg, oceanClient, multisignodes}
 }
 
 // Return SidechainClient depending on whether unit test config or actual config
