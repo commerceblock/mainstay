@@ -17,13 +17,14 @@ import (
 func TestAttestServer(t *testing.T) {
     // TEST INIT
     test := test.NewTest(false, false)
+    testConfig := test.Config
     var sideClientFake *clients.SidechainClientFake
-    sideClientFake = test.GetSidechainClient().(*clients.SidechainClientFake)
+    sideClientFake = testConfig.OceanClient().(*clients.SidechainClientFake)
 
     genesis, _ := sideClientFake.GetBlockHash(0)
     latestTx := &Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
     server := NewAttestServer(sideClientFake, *latestTx, test.Tx0hash, *genesis)
-    client := NewAttestClient(test.Btc, sideClientFake, test.BtcConfig, test.Tx0hash)
+    client := NewAttestClient(testConfig.MainClient(), sideClientFake, testConfig.MainChainCfg(), test.Tx0hash)
 
     // Generate blocks in side chain
     sideClientFake.Generate(10)

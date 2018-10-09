@@ -1,5 +1,5 @@
 // Package conf handles reading conf files and establishing client RPC connections.
-package conf
+package config
 
 import (
     "log"
@@ -11,8 +11,6 @@ import (
 
 // Client RPC connectivity and client related functionality
 
-const CONF_PATH = "/src/ocean-attestation/conf/conf.json"
-
 // Get default conf from local file
 func GetConfFile(filepath string) []byte {
     conf, err := ioutil.ReadFile(filepath)
@@ -23,13 +21,7 @@ func GetConfFile(filepath string) []byte {
 }
 
 // Get RPC connection for a client from a conf file
-func GetRPC(name string, customConf ...[]byte) *rpcclient.Client{
-    var conf []byte
-    if len(customConf) > 0 { //custom config provided
-        conf = customConf[0]
-    } else {
-        conf = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
-    }
+func GetRPC(name string, conf []byte) *rpcclient.Client{
     cfg := getCfg(name, conf)
     host := os.Getenv(cfg.getValue("rpcurl"))
     if host == "" {
@@ -58,14 +50,7 @@ func GetRPC(name string, customConf ...[]byte) *rpcclient.Client{
 }
 
 // Chain configuration parameters from btcsuite for btc client only
-func GetChainCfgParams(name string, customConf ...[]byte) *chaincfg.Params {
-    var conf []byte
-    if len(customConf) > 0 { //custom config provided
-        conf = customConf[0]
-    } else {
-        conf = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
-    }
-
+func GetChainCfgParams(name string, conf []byte) *chaincfg.Params {
     cfg := getCfg(name, conf)
 
     chain := cfg.getValue("chain")

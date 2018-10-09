@@ -7,14 +7,11 @@ import (
     "time"
     "flag"
 
-    "ocean-attestation/conf"
+    "ocean-attestation/config"
     "ocean-attestation/crypto"
     "ocean-attestation/staychain"
-    "ocean-attestation/clients"
 
     "github.com/btcsuite/btcd/chaincfg/chainhash"
-    "github.com/btcsuite/btcd/rpcclient"
-    "github.com/btcsuite/btcd/chaincfg"
     "github.com/btcsuite/btcutil"
 )
 
@@ -31,9 +28,7 @@ var (
     pk              string
     pkWIF           *btcutil.WIF
     showDetails     bool
-    mainClient      *rpcclient.Client
-    sideClient      clients.SidechainClient
-    mainChainCfg    *chaincfg.Params
+    mainConfig      *config.Config
 )
 
 // init
@@ -49,23 +44,21 @@ func init() {
         pkWIF = crypto.GetWalletPrivKey(pk)
     }
 
-    confFile := conf.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
-    mainClient = conf.GetRPC(MAIN_NAME, confFile)
-    sideClient = clients.NewSidechainClientOcean(conf.GetRPC(SIDE_NAME, confFile))
-    mainChainCfg = conf.GetChainCfgParams(MAIN_NAME, confFile)
+    confFile := config.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+    mainConfig = config.NewConfig(false, confFile)
 }
 
 // main method
 func main() {
-    defer mainClient.Shutdown()
-    defer sideClient.Close()
+    defer mainConfig.MainClient().Shutdown()
+    defer mainConfig.OceanClient().Close()
 
     txraw := getRawTxFromHash(tx)
     tx0raw := getRawTxFromHash(FIRST_TX)
 
-    fetcher := staychain.NewChainFetcher(mainClient, txraw)
+    fetcher := staychain.NewChainFetcher(mainConfig.MainClient(), txraw)
     chain := staychain.NewChain(fetcher)
-    verifier := staychain.NewChainVerifier(mainChainCfg, sideClient, tx0raw)
+    verifier := staychain.NewChainVerifier(mainConfig.MainChainCfg(), mainConfig.OceanClient(), tx0raw)
 
     time.AfterFunc(5*time.Minute, func() {
         log.Println("Exit: ", chain.Close())
@@ -94,7 +87,7 @@ func getRawTxFromHash(hashstr string) staychain.Tx {
         log.Println("Invalid tx id provided")
         log.Fatal(errHash)
     }
-    txraw, errGet := mainClient.GetRawTransactionVerbose(txhash)
+    txraw, errGet := mainConfig.MainClient().GetRawTransactionVerbose(txhash)
     if errGet != nil {
         log.Println("Inititial transcaction does not exist")
         log.Fatal(errGet)
@@ -118,6 +111,6 @@ func printAttestation(tx staychain.Tx, info staychain.ChainVerifierInfo) {
 // print derived private key for attestation
 func printDerivedKey(info staychain.ChainVerifierInfo) {
     tweak_hash := info.Hash()
-    tweaked_priv := crypto.TweakPrivKey(pkWIF, tweak_hash.CloneBytes(), mainChainCfg)
+    tweaked_priv := crypto.TweakPrivKey(pkWIF, tweak_hash.CloneBytes(), mainConfig.MainChainCfg())
     log.Printf("%s privkey: %s\n", MAIN_NAME, tweaked_priv.String())
 }

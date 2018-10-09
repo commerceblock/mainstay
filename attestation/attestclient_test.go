@@ -15,10 +15,11 @@ func TestAttestClient(t *testing.T) {
     // TEST INIT
     var txs []string
     test := test.NewTest(false, false)
+    testConfig := test.Config
     var sideClientFake *clients.SidechainClientFake
-    sideClientFake = test.GetSidechainClient().(*clients.SidechainClientFake)
+    sideClientFake = testConfig.OceanClient().(*clients.SidechainClientFake)
 
-    client := NewAttestClient(test.Btc, sideClientFake, test.BtcConfig, test.Tx0hash)
+    client := NewAttestClient(testConfig.MainClient(), sideClientFake, testConfig.MainChainCfg(), test.Tx0hash)
     txs = append(txs, client.txid0)
 
     // Find unspent and verify is it the genesis transaction

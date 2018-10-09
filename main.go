@@ -11,27 +11,20 @@ import (
     "time"
 
     "ocean-attestation/attestation"
-    "ocean-attestation/conf"
+    "ocean-attestation/config"
     "ocean-attestation/models"
     "ocean-attestation/requestapi"
     "ocean-attestation/test"
-    "ocean-attestation/clients"
-
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/rpcclient"
 )
 
 const DEFAULT_API_HOST = "localhost:8080"
-const MAIN_NAME = "main"
-const OCEAN_NAME = "ocean"
 
 var (
 	genesisTX               string
-	mainClient              *rpcclient.Client
-    oceanClient             clients.SidechainClient
-	mainChainCfg            *chaincfg.Params
+    genesisPK               string
 	isRegtest               bool
     apiHost                 string
+    mainConfig              *config.Config
 )
 
 func parseFlags() {
@@ -47,18 +40,15 @@ func parseFlags() {
 
 func init() {
 	parseFlags()
-	if isRegtest { // Use configuration applied in unit tests
-		test := test.NewTest(true, true)
-		mainClient = test.Btc
-		oceanClient = test.GetSidechainClient()
-		mainChainCfg = test.BtcConfig
+
+    if isRegtest {
+        test := test.NewTest(true, true)
+        mainConfig = test.Config
         genesisTX = test.Tx0hash
         log.Printf("Running regtest mode with -tx=%s\n", genesisTX)
-	} else {
-		mainClient = conf.GetRPC(MAIN_NAME)
-		oceanClient = clients.NewSidechainClientOcean(conf.GetRPC(OCEAN_NAME))
-		mainChainCfg = conf.GetChainCfgParams(MAIN_NAME)
-	}
+    } else {
+        mainConfig = config.NewConfig(false)
+    }
 
     apiHost = os.Getenv("API_HOST")
     if apiHost == "" {
@@ -67,15 +57,15 @@ func init() {
 }
 
 func main() {
-	defer mainClient.Shutdown()
-	defer oceanClient.Close()
+	defer mainConfig.MainClient().Shutdown()
+	defer mainConfig.OceanClient().Close()
 
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	channel := models.NewChannel()
 	requestService := requestapi.NewRequestService(ctx, wg, channel, apiHost)
-	attestService := attestation.NewAttestService(ctx, wg, channel, mainClient, oceanClient, mainChainCfg, genesisTX)
+	attestService := attestation.NewAttestService(ctx, wg, channel, mainConfig, genesisTX)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
@@ -102,7 +92,7 @@ func main() {
                     case <-ctx.Done():
                         return
                     case <-newBlockTimer.C:
-                        mainClient.Generate(1)
+                        mainConfig.MainClient().Generate(1)
                 }
             }
         }()

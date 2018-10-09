@@ -6,13 +6,10 @@ import (
     "os"
     "log"
 
-    "ocean-attestation/conf"
-    "ocean-attestation/clients"
+    "ocean-attestation/config"
 
     "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcutil"
-    "github.com/btcsuite/btcd/chaincfg"
-    "github.com/btcsuite/btcd/rpcclient"
 )
 
 // For regtest attestation demonstration
@@ -23,7 +20,7 @@ const TEST_INIT_PATH = "/src/ocean-attestation/test/test-init.sh"
 
 var testConf = []byte(`
 {
-    "btc": {
+    "main": {
         "rpcurl": "localhost:18443",
         "rpcuser": "user",
         "rpcpass": "pass",
@@ -41,11 +38,9 @@ var testConf = []byte(`
 // Test structure
 // Set up testing environment for use by regtest demo or unit tests
 type Test struct {
-    Btc         *rpcclient.Client
-    BtcConfig   *chaincfg.Params
+    Config      *config.Config
     Tx0pk       string
     Tx0hash     string
-    isRegtest   bool
 }
 
 // NewTest returns a pointer to a Test instance
@@ -67,12 +62,11 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
         log.Println(string(output))
     }
 
-    btc  := conf.GetRPC("btc", testConf)
-    btcchaincfg := conf.GetChainCfgParams("btc", testConf)
-
+    // if not a regtest, then unittest
+    config := config.NewConfig(!isRegtest, testConf)
 
     // Get first unspent as initial TX for attestation chain
-    unspent, errUnspent := btc.ListUnspent()
+    unspent, errUnspent := config.MainClient().ListUnspent()
     if errUnspent != nil {
         log.Fatal(errUnspent)
     }
@@ -83,16 +77,8 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
         }
     }
     tx0hash := tx0.TxID
-    tx0addr, _ := btcutil.DecodeAddress(tx0.Address, btcchaincfg)
-    tx0pk, _ := btc.DumpPrivKey(tx0addr)
+    tx0addr, _ := btcutil.DecodeAddress(tx0.Address, config.MainChainCfg())
+    tx0pk, _ := config.MainClient().DumpPrivKey(tx0addr)
 
-    return &Test{btc, btcchaincfg, tx0pk.String(), tx0hash, isRegtest}
-}
-
-// Return SidechainClient depending on whether Test is regtest or unit-test
-func (t *Test) GetSidechainClient() clients.SidechainClient {
-    if (t.isRegtest) {
-        return clients.NewSidechainClientOcean(conf.GetRPC("ocean", testConf))
-    }
-    return clients.NewSidechainClientFake()
+    return &Test{config, tx0pk.String(), tx0hash}
 }

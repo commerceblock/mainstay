@@ -15,11 +15,10 @@ import (
     "time"
 
     "ocean-attestation/models"
-    "ocean-attestation/clients"
+    "ocean-attestation/config"
 
     "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
-    "github.com/btcsuite/btcd/chaincfg"
 )
 
 // Waiting time between attestations and/or attestation confirmation attempts
@@ -42,20 +41,20 @@ var attestDelay time.Duration // initially 0 delay
 
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, rpcMain *rpcclient.Client, rpcSide clients.SidechainClient, cfgMain *chaincfg.Params, tx0 string) *AttestService{
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, config *config.Config, tx0 string) *AttestService{
     if (len(tx0) != 64) {
         log.Fatal("Incorrect txid size")
     }
-    attester := NewAttestClient(rpcMain, rpcSide, cfgMain, tx0)
+    attester := NewAttestClient(config.MainClient(), config.OceanClient(), config.MainChainCfg(), tx0)
 
-    genesisHash, err := rpcSide.GetBlockHash(0)
+    genesisHash, err := config.OceanClient().GetBlockHash(0)
     if err!=nil {
         log.Fatal(err)
     }
     latestTx = &Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
-    server := NewAttestServer(rpcSide, *latestTx, tx0, *genesisHash)
+    server := NewAttestServer(config.OceanClient(), *latestTx, tx0, *genesisHash)
 
-    return &AttestService{ctx, wg, rpcMain, attester, server, channel}
+    return &AttestService{ctx, wg, config.MainClient(), attester, server, channel}
 }
 
 // Run Attest Service
