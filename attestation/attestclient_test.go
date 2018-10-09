@@ -19,7 +19,7 @@ func TestAttestClient(t *testing.T) {
     var sideClientFake *clients.SidechainClientFake
     sideClientFake = testConfig.OceanClient().(*clients.SidechainClientFake)
 
-    client := NewAttestClient(testConfig.MainClient(), sideClientFake, testConfig.MainChainCfg(), test.Tx0hash)
+    client := NewAttestClient(testConfig.MainClient(), sideClientFake, testConfig.MainChainCfg(), testConfig.InitTX())
     txs = append(txs, client.txid0)
 
     // Find unspent and verify is it the genesis transaction

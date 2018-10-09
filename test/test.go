@@ -41,8 +41,6 @@ var testConf = []byte(`
 // Set up testing environment for use by regtest demo or unit tests
 type Test struct {
     Config      *config.Config
-    Tx0pk       string
-    Tx0hash     string
 }
 
 // NewTest returns a pointer to a Test instance
@@ -78,9 +76,11 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
             tx0 = vout
         }
     }
-    tx0hash := tx0.TxID
+
+    config.SetInitTX(tx0.TxID)
     tx0addr, _ := btcutil.DecodeAddress(tx0.Address, config.MainChainCfg())
     tx0pk, _ := config.MainClient().DumpPrivKey(tx0addr)
+    config.SetInitPK(tx0pk.String())
 
-    return &Test{config, tx0pk.String(), tx0hash}
+    return &Test{config}
 }

@@ -18,7 +18,7 @@ func TestCrypto(t *testing.T) {
     sideClientFake = testConfig.OceanClient().(*clients.SidechainClientFake)
 
     tweak, _ := sideClientFake.GetBestBlockHash()
-    privKey := GetWalletPrivKey(test.Tx0pk)
+    privKey := GetWalletPrivKey(testConfig.InitPK())
 
     // Tweak private key and generate a new pay to pub key hash address
     tweakedPrivKey := TweakPrivKey(privKey, tweak.CloneBytes(), testConfig.MainChainCfg())

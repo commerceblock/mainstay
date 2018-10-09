@@ -20,8 +20,8 @@ import (
 const DEFAULT_API_HOST = "localhost:8080"
 
 var (
-	genesisTX               string
-    genesisPK               string
+	tx0                     string
+    pk0                     string
 	isRegtest               bool
     apiHost                 string
     mainConfig              *config.Config
@@ -29,12 +29,13 @@ var (
 
 func parseFlags() {
 	flag.BoolVar(&isRegtest, "regtest", false, "Use regtest wallet configuration instead of user wallet")
-	flag.StringVar(&genesisTX, "tx", "", "Tx id for genesis attestation transaction")
+	flag.StringVar(&tx0, "tx", "", "Tx id for genesis attestation transaction")
+    flag.StringVar(&pk0, "pk", "", "Main client pk for genesis attestation transaction")
 	flag.Parse()
 
-	if (genesisTX == "") && !isRegtest {
+	if (tx0 == "" || pk0 == "") && !isRegtest {
 		flag.PrintDefaults()
-		log.Fatalf("Need to provide -tx argument. To use test configuration set the -regtest flag.")
+		log.Fatalf("Need to provide both -tx and -pk argument. To use test configuration set the -regtest flag.")
 	}
 }
 
@@ -44,10 +45,11 @@ func init() {
     if isRegtest {
         test := test.NewTest(true, true)
         mainConfig = test.Config
-        genesisTX = test.Tx0hash
-        log.Printf("Running regtest mode with -tx=%s\n", genesisTX)
+        log.Printf("Running regtest mode with -tx=%s\n", mainConfig.InitTX())
     } else {
         mainConfig = config.NewConfig(false)
+        mainConfig.SetInitTX(tx0)
+        mainConfig.SetInitPK(pk0)
     }
 
     apiHost = os.Getenv("API_HOST")
@@ -65,7 +67,7 @@ func main() {
 
 	channel := models.NewChannel()
 	requestService := requestapi.NewRequestService(ctx, wg, channel, apiHost)
-	attestService := attestation.NewAttestService(ctx, wg, channel, mainConfig, genesisTX)
+	attestService := attestation.NewAttestService(ctx, wg, channel, mainConfig)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)

@@ -23,8 +23,8 @@ func TestAttestServer(t *testing.T) {
 
     genesis, _ := sideClientFake.GetBlockHash(0)
     latestTx := &Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
-    server := NewAttestServer(sideClientFake, *latestTx, test.Tx0hash, *genesis)
-    client := NewAttestClient(testConfig.MainClient(), sideClientFake, testConfig.MainChainCfg(), test.Tx0hash)
+    server := NewAttestServer(sideClientFake, *latestTx, testConfig.InitTX(), *genesis)
+    client := NewAttestClient(testConfig.MainClient(), sideClientFake, testConfig.MainChainCfg(), testConfig.InitTX())
 
     // Generate blocks in side chain
     sideClientFake.Generate(10)

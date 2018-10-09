@@ -41,18 +41,18 @@ var attestDelay time.Duration // initially 0 delay
 
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, config *config.Config, tx0 string) *AttestService{
-    if (len(tx0) != 64) {
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, config *config.Config) *AttestService{
+    if (len(config.InitTX()) != 64) {
         log.Fatal("Incorrect txid size")
     }
-    attester := NewAttestClient(config.MainClient(), config.OceanClient(), config.MainChainCfg(), tx0)
+    attester := NewAttestClient(config.MainClient(), config.OceanClient(), config.MainChainCfg(), config.InitTX())
 
     genesisHash, err := config.OceanClient().GetBlockHash(0)
     if err!=nil {
         log.Fatal(err)
     }
     latestTx = &Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
-    server := NewAttestServer(config.OceanClient(), *latestTx, tx0, *genesisHash)
+    server := NewAttestServer(config.OceanClient(), *latestTx, config.InitTX(), *genesisHash)
 
     return &AttestService{ctx, wg, config.MainClient(), attester, server, channel}
 }
