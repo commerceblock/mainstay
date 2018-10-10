@@ -12,6 +12,7 @@ import (
     "github.com/btcsuite/btcutil"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcd/chaincfg"
+    "github.com/btcsuite/btcd/wire"
 )
 
 // AttestClient structure
@@ -56,16 +57,19 @@ func NewAttestClient(rpcMain *rpcclient.Client, rpcSide clients.SidechainClient,
     return &AttestClient{rpcMain, rpcSide, cfgMain, pk.String(), txid, pk}
 }
 
-// Get next attestation address by tweaking initial private key with current sidechain block hash
-func (w *AttestClient) getNextAttestationAddr() (chainhash.Hash, btcutil.Address) {
+// Get latest client hash to use for attestation key tweaking
+func (w *AttestClient) getNextAttestationHash() (chainhash.Hash) {
     hash, err := w.sideClient.GetBestBlockHash()
     if err != nil {
         log.Fatal(err)
     }
+    return *hash
+}
 
+// Get next attestation key by tweaking with latest hash
+func (w *AttestClient) getNextAttestationKey(hash chainhash.Hash) *btcutil.WIF {
     // Tweak priv key with the latest ocean hash
     tweakedWalletPriv := crypto.TweakPrivKey(w.walletPriv, hash.CloneBytes(), w.mainChainCfg)
-    addr := crypto.GetAddressFromPrivKey(tweakedWalletPriv, w.mainChainCfg)
 
     // Import tweaked priv key to wallet
     importErr := w.mainClient.ImportPrivKeyRescan(tweakedWalletPriv, hash.String(), false)
@@ -73,11 +77,21 @@ func (w *AttestClient) getNextAttestationAddr() (chainhash.Hash, btcutil.Address
         log.Fatal(importErr)
     }
 
-    return *hash, addr
+    return tweakedWalletPriv
 }
 
-// Generate a new transaction paying to the tweaked address, add fees and send the transaction through the wallet client
-func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult, useDefaultFee bool) (chainhash.Hash) {
+// Get next attestation address from private key
+func (w *AttestClient) getNextAttestationAddr(key *btcutil.WIF) btcutil.Address {
+
+    addr := crypto.GetAddressFromPrivKey(key, w.mainChainCfg)
+
+    // follow address if multisig
+
+    return addr
+}
+
+// Generate a new transaction paying to the tweaked address and add fees
+func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult, useDefaultFee bool) *wire.MsgTx {
     inputs := []btcjson.TransactionInput{{Txid: txunspent.TxID, Vout: txunspent.Vout},}
 
     amounts := map[btcutil.Address]btcutil.Amount{paytoaddr: btcutil.Amount(txunspent.Amount*100000000)}
@@ -90,6 +104,11 @@ func (w *AttestClient) sendAttestation(paytoaddr btcutil.Address, txunspent btcj
     fee := int64(feePerByte * msgtx.SerializeSize())
     msgtx.TxOut[0].Value -= fee
 
+    return msgtx
+}
+
+// Sign and send the latest attestation transaction
+func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx) chainhash.Hash {
     signedmsgtx, issigned, err := w.mainClient.SignRawTransaction(msgtx)
     if err != nil || !issigned {
         log.Fatal(err)
@@ -143,10 +162,10 @@ func (w *AttestClient) getUnconfirmedTx() (bool, Attestation) {
     }
     for _, hash := range mempool {
         if (w.verifyTxOnSubchain(*hash)) {
-            return true, Attestation{*hash, w.getTxAttestedHash(*hash), false, time.Now()}
+            return true, Attestation{*hash, w.getTxAttestedHash(*hash), ASTATE_UNCONFIRMED, time.Now()}
         }
     }
-    return false, Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
+    return false, Attestation{chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION, time.Now()}
 }
 
 // Find the attested sidechain hash from a transaction, by testing for all sidechain hashes

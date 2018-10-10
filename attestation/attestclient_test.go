@@ -32,8 +32,12 @@ func TestAttestClient(t *testing.T) {
     // Do 10 attestations
     for i := 0; i < 10; i++ {
         // Generate attestation transaction with the unspent vout
-        oceanhash, addr := client.getNextAttestationAddr()
-        txnew := client.sendAttestation(addr, unspent, true)
+        oceanhash := client.getNextAttestationHash()
+        key := client.getNextAttestationKey(oceanhash)
+        addr := client.getNextAttestationAddr(key)
+
+        tx := client.createAttestation(addr, unspent, true)
+        txid := client.signAndSendAttestation(tx)
         sideClientFake.Generate(1)
 
         // Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
@@ -41,7 +45,7 @@ func TestAttestClient(t *testing.T) {
         unconf, unconftx := client.getUnconfirmedTx()    // new tx is unconfirmed
         *unconfirmed = unconftx
         assert.Equal(t, true, unconf)
-        assert.Equal(t, txnew, unconfirmed.txid)
+        assert.Equal(t, txid, unconfirmed.txid)
         assert.Equal(t, oceanhash, unconfirmed.attestedHash)
 
         // Verify no more unconfirmed transactions after new block generation
@@ -51,14 +55,14 @@ func TestAttestClient(t *testing.T) {
         assert.Equal(t, false, unconfRe)
         assert.Equal(t, chainhash.Hash{}, unconfirmed.txid) // new tx no longer unconfirmed
         assert.Equal(t, chainhash.Hash{}, unconfirmed.attestedHash)
-        txs = append(txs, txnew.String())
+        txs = append(txs, txid.String())
 
         // Now check that the new unspent is the vout from the transaction just submitted
         success, unspent = client.findLastUnspent()
         if (!success) {
             t.Fail()
         }
-        assert.Equal(t, txnew.String(), unspent.TxID) // last unspent txnew is txnew vout
+        assert.Equal(t, txid.String(), unspent.TxID) // last unspent txnew is txnew vout
     }
 
     assert.Equal(t, len(txs), 11)

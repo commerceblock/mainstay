@@ -22,7 +22,7 @@ func TestAttestServer(t *testing.T) {
     sideClientFake = testConfig.OceanClient().(*clients.SidechainClientFake)
 
     genesis, _ := sideClientFake.GetBlockHash(0)
-    latestTx := &Attestation{chainhash.Hash{}, chainhash.Hash{}, true, time.Now()}
+    latestTx := &Attestation{chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION, time.Now()}
     server := NewAttestServer(sideClientFake, *latestTx, testConfig.InitTX(), *genesis)
     client := NewAttestClient(testConfig.MainClient(), sideClientFake, testConfig.MainChainCfg(), testConfig.InitTX())
 
@@ -31,15 +31,20 @@ func TestAttestServer(t *testing.T) {
 
     // Generate single attestation transaction
     _, unspent := client.findLastUnspent()
-    sidehash, addr := client.getNextAttestationAddr()
-    txnew := client.sendAttestation(addr, unspent, true)
+
+    sidehash := client.getNextAttestationHash()
+    key := client.getNextAttestationKey(sidehash)
+    addr := client.getNextAttestationAddr(key)
+
+    tx := client.createAttestation(addr, unspent, true)
+    txid := client.signAndSendAttestation(tx)
     client.mainClient.Generate(1)
 
     // Update latest in server
-    latest := &Attestation{txnew, sidehash, true, time.Now()}
+    latest := &Attestation{txid, sidehash, ASTATE_CONFIRMED, time.Now()}
     server.UpdateLatest(*latest)
-    assert.Equal(t, true, server.latest.confirmed)
-    assert.Equal(t, txnew, server.latest.txid)
+    assert.Equal(t, ASTATE_CONFIRMED, server.latest.state)
+    assert.Equal(t, txid, server.latest.txid)
     assert.Equal(t, sidehash, server.latest.attestedHash)
     assert.Equal(t, int32(10), server.latestHeight)
 
@@ -59,7 +64,7 @@ func TestAttestServer(t *testing.T) {
     req = models.Request{"LatestAttestation", ""}
     resp2, _ := server.Respond(req).(models.LatestAttestationResponse)
     assert.Equal(t, "", resp2.Error)
-    assert.Equal(t, txnew.String(), resp2.TxHash)
+    assert.Equal(t, txid.String(), resp2.TxHash)
 
     req = models.Request{"Block", "1"}
     resp3, _ := server.Respond(req).(models.BlockResponse)
