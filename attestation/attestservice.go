@@ -21,10 +21,11 @@ import (
 
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcd/wire"
+    zmq "github.com/pebbe/zmq4"
 )
 
 // Waiting time between attestations and/or attestation confirmation attempts
-const ATTEST_WAIT_TIME = 20
+const ATTEST_WAIT_TIME = 30
 
 // AttestationService structure
 // Encapsulates Attest Server, Attest Client
@@ -37,11 +38,14 @@ type AttestService struct {
     server          *AttestServer
     channel         *models.Channel
     publisher       *messengers.PublisherZmq
+    subscribers     []*messengers.SubscriberZmq
 }
 
 var latestAttestation *Attestation
 var latestTx *wire.MsgTx
 var attestDelay time.Duration // initially 0 delay
+
+var poller *zmq.Poller // poller to add all subscriber/publisher sockets
 
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
@@ -59,8 +63,18 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
     latestAttestation = &Attestation{chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION, time.Now()}
     server := NewAttestServer(config.OceanClient(), *latestAttestation, config.InitTX(), *genesisHash)
 
-    publisher := messengers.NewPublisherZmq(confpkg.MAIN_PUBLISHER_PORT)
-    return &AttestService{ctx, wg, config, attester, server, channel, publisher}
+    // Initialise publisher for sending new hashes and txs
+    // and subscribers to receive sig responses
+    poller = zmq.NewPoller()
+    publisher := messengers.NewPublisherZmq(confpkg.MAIN_PUBLISHER_PORT, poller)
+    var subscribers []*messengers.SubscriberZmq
+    subtopics := []string{confpkg.TOPIC_SIGS}
+    for _ , nodeaddr := range config.MultisigNodes() {
+        subscribers = append(subscribers, messengers.NewSubscriberZmq(nodeaddr, subtopics, poller))
+    }
+    attestDelay = 30 * time.Second // add some delay for subscribers to have time to set up
+
+    return &AttestService{ctx, wg, config, attester, server, channel, publisher, subscribers}
 }
 
 // Run Attest Service
@@ -111,7 +125,7 @@ func (s *AttestService) Run() {
 func (s *AttestService) doAttestation() {
     switch latestAttestation.state {
     case ASTATE_UNCONFIRMED:
-        log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.txid.String(), latestAttestation.attestedHash.String())
+        log.Printf("*AttestService* AWAITING CONFIRMATION \ntxid: (%s)\nhash: (%s)\n", latestAttestation.txid.String(), latestAttestation.attestedHash.String())
         newTx, err := s.config.MainClient().GetTransaction(&latestAttestation.txid)
         if err != nil {
             log.Fatal(err)
@@ -119,9 +133,9 @@ func (s *AttestService) doAttestation() {
         if (newTx.BlockHash != "") {
             latestAttestation.latestTime = time.Now()
             latestAttestation.state = ASTATE_CONFIRMED
-            log.Printf("*AttestService* Attestation confirmed for txid: (%s)\n", latestAttestation.txid.String())
+            log.Printf("********** Attestation confirmed for txid: (%s)\n", latestAttestation.txid.String())
             s.server.UpdateLatest(*latestAttestation)
-            log.Printf("**AttestServer** Updated latest attested height %d\n", s.server.latestHeight)
+            log.Printf("********** Updated latest attested height %d\n", s.server.latestHeight)
             attestDelay = time.Duration(0) * time.Second
         }
     case ASTATE_CONFIRMED, ASTATE_NEW_ATTESTATION:
@@ -134,9 +148,9 @@ func (s *AttestService) doAttestation() {
         } else {
             log.Println("*AttestService* NEW ATTESTATION")
             hash := s.attester.getNextAttestationHash()
-            log.Printf("*AttestService* hash: %s\n", hash.String())
+            log.Printf("********** hash: %s\n", hash.String())
             if (hash == latestAttestation.attestedHash) { // skip attestation if same client hash
-                log.Printf("*AttestService* Skipping attestation - Client hash already attested")
+                log.Printf("********** Skipping attestation - Client hash already attested")
                 return
             }
             // publish new attestation hash
@@ -149,16 +163,15 @@ func (s *AttestService) doAttestation() {
 
         key := s.attester.getNextAttestationKey(latestAttestation.attestedHash)
         //
-        // read keys from subscriber
-        // combine keys
-        // if fail - restart
+        // combine tweaked keys
+        // generate multisig address
         //
         paytoaddr := s.attester.getNextAttestationAddr(key)
 
         success, txunspent := s.attester.findLastUnspent()
         if (success) {
             latestTx = s.attester.createAttestation(paytoaddr, txunspent, false)
-            log.Printf("*AttestService* pre-sign txid: %s\n", latestTx.TxHash().String())
+            log.Printf("********** pre-sign txid: %s\n", latestTx.TxHash().String())
 
             // publish pre signed transaction
             var txbytes bytes.Buffer
@@ -167,19 +180,30 @@ func (s *AttestService) doAttestation() {
 
             latestAttestation.state = ASTATE_COLLECTING_SIGS // update attestation state
         } else {
-            log.Fatal("*AttestService* Attestation unsuccessful - No valid unspent found")
+            log.Fatal("Attestation unsuccessful - No valid unspent found")
         }
     case ASTATE_COLLECTING_SIGS:
         log.Printf("*AttestService* COLLECTING SIGS\n")
         attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
+        // Read sigs using subscribers
+        sockets, _ := poller.Poll(-1)
+        for _, socket := range sockets {
+            for _, sub := range s.subscribers {
+                if sub.Socket() == socket.Socket {
+                    _, msg := sub.ReadMessage()
+                    log.Printf("********** received signature: %s \n", msg)
+                }
+            }
+        }
+
         //
-        // read sigs from subscriber
         // combine sigs
         // if fail - restart
         //
+
         txid := s.attester.signAndSendAttestation(latestTx)
-        log.Printf("*AttestService* Attestation committed for txid: (%s)\n", txid)
+        log.Printf("********** Attestation committed for txid: (%s)\n", txid)
         latestAttestation.txid = txid
         latestAttestation.state = ASTATE_UNCONFIRMED
     }

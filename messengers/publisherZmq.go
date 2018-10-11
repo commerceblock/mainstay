@@ -24,12 +24,19 @@ func (p *PublisherZmq) Close() {
     return
 }
 
+// Return underlying socket
+func (p *PublisherZmq) Socket() *zmq.Socket {
+    return p.socket
+}
+
 // Return new PublisherZmq instance
 // Bind to localhost and port provided
-func NewPublisherZmq(port int) *PublisherZmq {
+func NewPublisherZmq(port int, poller *zmq.Poller) *PublisherZmq {
     //  Prepare our publisher
     publisher, _ := zmq.NewSocket(zmq.PUB)
     publisher.Bind(fmt.Sprintf("tcp://*:%d", port))
+
+    poller.Add(publisher, zmq.POLLOUT)
 
     return &PublisherZmq{publisher}
 }
