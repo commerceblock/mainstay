@@ -13,9 +13,9 @@ type PublisherZmq struct {
 }
 
 // Publish message via zmq socket
-func (p *PublisherZmq) SendMessage(msg string, topic string) {
-    p.socket.Send(topic, zmq.SNDMORE)
-    p.socket.Send(msg, 0)
+func (p *PublisherZmq) SendMessage(msg []byte, topic string) {
+    p.socket.SendBytes([]byte(topic), zmq.SNDMORE)
+    p.socket.SendBytes(msg, 0)
 }
 
 // Close underlying zmq socket - To be used with defer

@@ -14,13 +14,14 @@ type SubscriberZmq struct {
 }
 
 // Read topic-msg from zmq socket
-func (s *SubscriberZmq) ReadMessage() {
+func (s *SubscriberZmq) ReadMessage() (string, []byte) {
 
     //  Read envelope with address
-    address, _ := s.socket.Recv(0)
+    address, _ := s.socket.RecvBytes(0)
     //  Read message contents
-    contents, _ := s.socket.Recv(0)
-    fmt.Printf("[%s] %s\n", address, contents)
+    contents, _ := s.socket.RecvBytes(0)
+
+    return string(address), contents
 }
 
 // Close underlying zmq socket - To be used with defer

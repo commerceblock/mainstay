@@ -15,8 +15,11 @@ const MAIN_CHAIN_NAME = "main"
 const SIDE_CHAIN_NAME = "ocean"
 const CONF_PATH = "/src/ocean-attestation/config/conf.json"
 
-const TX_TOPIC = "1"
-const SIG_TOPIC = "9"
+const MAIN_PUBLISHER_PORT = 5000
+const TOPIC_NEW_HASH    = "H"
+const TOPIC_NEW_TX      = "T"
+const TOPIC_KEYS        = "K"
+const TOPIC_SIGS        = "S"
 
 // Config struct
 // Client connections and other parameters required

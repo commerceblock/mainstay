@@ -14,8 +14,8 @@ const (
     ASTATE_NEW_ATTESTATION         AttestationState = 0
     ASTATE_UNCONFIRMED             AttestationState = 1
     ASTATE_CONFIRMED               AttestationState = 2
-    ASTATE_AWAITING_PUBKEYS        AttestationState = 3
-    ASTATE_AWAITING_SIGS           AttestationState = 4
+    ASTATE_COLLECTING_PUBKEYS      AttestationState = 3
+    ASTATE_COLLECTING_SIGS         AttestationState = 4
     ASTATE_FAILURE                 AttestationState = 10
 )
 

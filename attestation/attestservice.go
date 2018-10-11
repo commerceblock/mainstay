@@ -13,17 +13,18 @@ import (
     "sync"
     "context"
     "time"
+    "bytes"
 
     "ocean-attestation/models"
-    "ocean-attestation/config"
+    confpkg "ocean-attestation/config"
+    "ocean-attestation/messengers"
 
-    "github.com/btcsuite/btcd/rpcclient"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcd/wire"
 )
 
 // Waiting time between attestations and/or attestation confirmation attempts
-const ATTEST_WAIT_TIME = 60
+const ATTEST_WAIT_TIME = 20
 
 // AttestationService structure
 // Encapsulates Attest Server, Attest Client
@@ -31,10 +32,11 @@ const ATTEST_WAIT_TIME = 60
 type AttestService struct {
     ctx             context.Context
     wg              *sync.WaitGroup
-    mainClient      *rpcclient.Client
+    config          *confpkg.Config
     attester        *AttestClient
     server          *AttestServer
     channel         *models.Channel
+    publisher       *messengers.PublisherZmq
 }
 
 var latestAttestation *Attestation
@@ -43,21 +45,22 @@ var attestDelay time.Duration // initially 0 delay
 
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, config *config.Config) *AttestService{
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, config *confpkg.Config) *AttestService{
     if (len(config.InitTX()) != 64) {
         log.Fatal("Incorrect txid size")
     }
     attester := NewAttestClient(config.MainClient(), config.OceanClient(), config.MainChainCfg(), config.InitTX())
 
+    // Set initial attestation to genesis, since no DB is being used yet
     genesisHash, err := config.OceanClient().GetBlockHash(0)
     if err!=nil {
         log.Fatal(err)
     }
-
     latestAttestation = &Attestation{chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION, time.Now()}
     server := NewAttestServer(config.OceanClient(), *latestAttestation, config.InitTX(), *genesisHash)
 
-    return &AttestService{ctx, wg, config.MainClient(), attester, server, channel}
+    publisher := messengers.NewPublisherZmq(confpkg.MAIN_PUBLISHER_PORT)
+    return &AttestService{ctx, wg, config, attester, server, channel, publisher}
 }
 
 // Run Attest Service
@@ -96,12 +99,12 @@ func (s *AttestService) Run() {
 // ASTATE_CONFIRMED, ASTATE_NEW_ATTESTATION
 // - Either attestation failed or we are initiation the attestation chain
 // - Generate new hash for attestation and publish it to other signers
-// ASTATE_AWAITING_PUBKEYS
+// ASTATE_COLLECTING_PUBKEYS
 // - Waiting for tweaked keys from signers
 // - Collect keys and generate address to pay the previous unspent to
 // - Create unsigned attestation transaction and publish it to other signers
 // - If successful await for sigs
-// ASTATE_AWAITING_SIGS
+// ASTATE_COLLECTING_SIGS
 // - Waiting for signatures from signers
 // - Collect signatures, combine them and sign the attestation transaction
 // - If successful propagate the transaction and set state to unconfirmed
@@ -109,7 +112,7 @@ func (s *AttestService) doAttestation() {
     switch latestAttestation.state {
     case ASTATE_UNCONFIRMED:
         log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.txid.String(), latestAttestation.attestedHash.String())
-        newTx, err := s.mainClient.GetTransaction(&latestAttestation.txid)
+        newTx, err := s.config.MainClient().GetTransaction(&latestAttestation.txid)
         if err != nil {
             log.Fatal(err)
         }
@@ -131,17 +134,17 @@ func (s *AttestService) doAttestation() {
         } else {
             log.Println("*AttestService* NEW ATTESTATION")
             hash := s.attester.getNextAttestationHash()
+            log.Printf("*AttestService* hash: %s\n", hash.String())
             if (hash == latestAttestation.attestedHash) { // skip attestation if same client hash
                 log.Printf("*AttestService* Skipping attestation - Client hash already attested")
                 return
             }
-            //
-            // publish
-            //
-            latestAttestation = &Attestation{chainhash.Hash{}, hash, ASTATE_AWAITING_PUBKEYS, time.Now()}
+            // publish new attestation hash
+            s.publisher.SendMessage(hash.CloneBytes(), confpkg.TOPIC_NEW_HASH)
+            latestAttestation = &Attestation{chainhash.Hash{}, hash, ASTATE_COLLECTING_PUBKEYS, time.Now()} // update attestation state
         }
-    case ASTATE_AWAITING_PUBKEYS:
-        log.Printf("*AttestService* AWAITING PUBKEYS\n")
+    case ASTATE_COLLECTING_PUBKEYS:
+        log.Printf("*AttestService* COLLECTING PUBKEYS\n")
         attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
         key := s.attester.getNextAttestationKey(latestAttestation.attestedHash)
@@ -155,15 +158,19 @@ func (s *AttestService) doAttestation() {
         success, txunspent := s.attester.findLastUnspent()
         if (success) {
             latestTx = s.attester.createAttestation(paytoaddr, txunspent, false)
-            //
-            // publish
-            //
-            latestAttestation.state = ASTATE_AWAITING_SIGS
+            log.Printf("*AttestService* pre-sign txid: %s\n", latestTx.TxHash().String())
+
+            // publish pre signed transaction
+            var txbytes bytes.Buffer
+            latestTx.Serialize(&txbytes)
+            s.publisher.SendMessage(txbytes.Bytes(), confpkg.TOPIC_NEW_TX)
+
+            latestAttestation.state = ASTATE_COLLECTING_SIGS // update attestation state
         } else {
             log.Fatal("*AttestService* Attestation unsuccessful - No valid unspent found")
         }
-    case ASTATE_AWAITING_SIGS:
-        log.Printf("*AttestService* AWAITING SIGS\n")
+    case ASTATE_COLLECTING_SIGS:
+        log.Printf("*AttestService* COLLECTING SIGS\n")
         attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
         //
