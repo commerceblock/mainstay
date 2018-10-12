@@ -19,13 +19,14 @@ import (
     confpkg "ocean-attestation/config"
     "ocean-attestation/messengers"
 
+    "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcd/wire"
     zmq "github.com/pebbe/zmq4"
 )
 
 // Waiting time between attestations and/or attestation confirmation attempts
-const ATTEST_WAIT_TIME = 30
+const ATTEST_WAIT_TIME = 5
 
 // AttestationService structure
 // Encapsulates Attest Server, Attest Client
@@ -43,6 +44,8 @@ type AttestService struct {
 
 var latestAttestation *Attestation
 var latestTx *wire.MsgTx
+var latestUnspent btcjson.ListUnspentResult
+
 var attestDelay time.Duration // initially 0 delay
 
 var poller *zmq.Poller // poller to add all subscriber/publisher sockets
@@ -53,7 +56,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
     if (len(config.InitTX()) != 64) {
         log.Fatal("Incorrect txid size")
     }
-    attester := NewAttestClient(config.MainClient(), config.OceanClient(), config.MainChainCfg(), config.InitTX())
+    attester := NewAttestClient(config)
 
     // Set initial attestation to genesis, since no DB is being used yet
     genesisHash, err := config.OceanClient().GetBlockHash(0)
@@ -171,6 +174,7 @@ func (s *AttestService) doAttestation() {
         success, txunspent := s.attester.findLastUnspent()
         if (success) {
             latestTx = s.attester.createAttestation(paytoaddr, txunspent, false)
+            latestUnspent = txunspent // ?
             log.Printf("********** pre-sign txid: %s\n", latestTx.TxHash().String())
 
             // publish pre signed transaction
@@ -202,7 +206,7 @@ func (s *AttestService) doAttestation() {
         // if fail - restart
         //
 
-        txid := s.attester.signAndSendAttestation(latestTx)
+        txid := s.attester.signAndSendAttestation(latestTx, latestUnspent)
         log.Printf("********** Attestation committed for txid: (%s)\n", txid)
         latestAttestation.txid = txid
         latestAttestation.state = ASTATE_UNCONFIRMED

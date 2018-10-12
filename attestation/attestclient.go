@@ -6,6 +6,7 @@ import (
 
     "ocean-attestation/crypto"
     "ocean-attestation/clients"
+    confpkg "ocean-attestation/config"
 
     "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcd/rpcclient"
@@ -28,33 +29,28 @@ type AttestClient struct {
     walletPriv      *btcutil.WIF
 }
 
+var latestScript string
+var latestPk string
+var lastPk string
+
 // NewAttestClient returns a pointer to a new AttestClient instance
 // Initially locates the genesis transaction in the main chain wallet
 // and verifies that the corresponding private key is in the wallet
-func NewAttestClient(rpcMain *rpcclient.Client, rpcSide clients.SidechainClient, cfgMain *chaincfg.Params, txid string) *AttestClient {
+func NewAttestClient(config *confpkg.Config) *AttestClient {
     // Get initial private key from initial funding transaction of main client
-    txhash, errHash := chainhash.NewHashFromStr(txid)
-    if errHash != nil {
-        log.Println("Invalid tx id provided")
-        log.Fatal(errHash)
-    }
-    tx, errGet := rpcMain.GetTransaction(txhash)
-    if errGet != nil {
-        log.Println("Inititial transcaction does not exist")
-        log.Fatal(errGet)
-    }
-    addr, errDec := btcutil.DecodeAddress(tx.Details[0].Address, cfgMain)
-    if errDec != nil {
-        log.Println("Failed decoding address from initial transaction")
-        log.Fatal(errDec)
-    }
-    pk, errDump := rpcMain.DumpPrivKey(addr)
-    if errDump != nil {
-        log.Println("Failed getting initial transaction private key from address")
-        log.Fatal(errDump)
+    pk := config.InitPK()
+    pkWif := crypto.GetWalletPrivKey(pk)
+
+    // TODO: get proper struct for these
+    latestScript = config.MultisigScript()
+    lastPk = pk
+
+    importErr := config.MainClient().ImportPrivKeyRescan(pkWif, "init", false)
+    if importErr != nil {
+        log.Fatal(importErr)
     }
 
-    return &AttestClient{rpcMain, rpcSide, cfgMain, pk.String(), txid, pk}
+    return &AttestClient{config.MainClient(), config.OceanClient(), config.MainChainCfg(), pk, config.InitTX(), pkWif}
 }
 
 // Get latest client hash to use for attestation key tweaking
@@ -77,15 +73,20 @@ func (w *AttestClient) getNextAttestationKey(hash chainhash.Hash) *btcutil.WIF {
         log.Fatal(importErr)
     }
 
+    latestPk = tweakedWalletPriv.String()
+
     return tweakedWalletPriv
 }
 
 // Get next attestation address from private key
 func (w *AttestClient) getNextAttestationAddr(key *btcutil.WIF) btcutil.Address {
 
+    // tweak all keys not mine only
+    // create multisig
+
     addr := crypto.GetAddressFromPrivKey(key, w.mainChainCfg)
 
-    // follow address if multisig
+    // importaddress
 
     return addr
 }
@@ -108,16 +109,26 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent bt
 }
 
 // Sign and send the latest attestation transaction
-func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx) chainhash.Hash {
-    signedmsgtx, issigned, err := w.mainClient.SignRawTransaction(msgtx)
-    if err != nil || !issigned {
+func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx, txunspent btcjson.ListUnspentResult) chainhash.Hash {
+
+    // combine sigs
+
+    rawtxinput := btcjson.RawTxInput{txunspent.TxID, txunspent.Vout, txunspent.ScriptPubKey, latestScript}
+    signedmsgtx, issigned, err := w.mainClient.SignRawTransaction3(msgtx, []btcjson.RawTxInput{rawtxinput}, []string{lastPk})
+    if err != nil{
         log.Fatal(err)
+    } else if !issigned {
+        log.Printf("incomplete signing")
     }
 
     txhash, err := w.mainClient.SendRawTransaction(signedmsgtx, false)
     if err != nil {
         log.Fatal(err)
     }
+
+    lastPk = latestPk   // for now
+    latestScript = ""   // for now
+
     return *txhash
 }
 

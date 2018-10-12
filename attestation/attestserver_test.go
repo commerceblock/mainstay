@@ -24,7 +24,7 @@ func TestAttestServer(t *testing.T) {
     genesis, _ := sideClientFake.GetBlockHash(0)
     latestTx := &Attestation{chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION, time.Now()}
     server := NewAttestServer(sideClientFake, *latestTx, testConfig.InitTX(), *genesis)
-    client := NewAttestClient(testConfig.MainClient(), sideClientFake, testConfig.MainChainCfg(), testConfig.InitTX())
+    client := NewAttestClient(testConfig)
 
     // Generate blocks in side chain
     sideClientFake.Generate(10)
@@ -37,7 +37,7 @@ func TestAttestServer(t *testing.T) {
     addr := client.getNextAttestationAddr(key)
 
     tx := client.createAttestation(addr, unspent, true)
-    txid := client.signAndSendAttestation(tx)
+    txid := client.signAndSendAttestation(tx, unspent)
     client.mainClient.Generate(1)
 
     // Update latest in server

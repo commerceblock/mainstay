@@ -19,7 +19,7 @@ func TestAttestClient(t *testing.T) {
     var sideClientFake *clients.SidechainClientFake
     sideClientFake = testConfig.OceanClient().(*clients.SidechainClientFake)
 
-    client := NewAttestClient(testConfig.MainClient(), sideClientFake, testConfig.MainChainCfg(), testConfig.InitTX())
+    client := NewAttestClient(testConfig)
     txs = append(txs, client.txid0)
 
     // Find unspent and verify is it the genesis transaction
@@ -37,7 +37,7 @@ func TestAttestClient(t *testing.T) {
         addr := client.getNextAttestationAddr(key)
 
         tx := client.createAttestation(addr, unspent, true)
-        txid := client.signAndSendAttestation(tx)
+        txid := client.signAndSendAttestation(tx, unspent)
         sideClientFake.Generate(1)
 
         // Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
