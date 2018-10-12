@@ -31,6 +31,7 @@ type Config struct {
     multisigNodes           []string
     initTX                  string
     initPK                  string
+    multisigScript          string
 }
 
 // Get Main Client
@@ -73,6 +74,16 @@ func (c *Config) SetInitPK(pk string) {
     c.initPK = pk
 }
 
+// Get init PK
+func (c *Config) MultisigScript() string {
+    return c.multisigScript
+}
+
+// Set init PK
+func (c *Config) SetMultisigScript(script string) {
+    c.multisigScript = script
+}
+
 // Return Config instance
 func NewConfig(isUnitTest bool, customConf ...[]byte) *Config {
     var conf []byte
@@ -87,7 +98,7 @@ func NewConfig(isUnitTest bool, customConf ...[]byte) *Config {
     oceanClient := GetSidechainClient(isUnitTest, conf)
 
     multisignodes := strings.Split(GetEnvFromConf("misc", "multisignodes", conf) , ",")
-    return &Config{mainClient, mainClientCfg, oceanClient, multisignodes, "", ""}
+    return &Config{mainClient, mainClientCfg, oceanClient, multisignodes, "", "", ""}
 }
 
 // Return SidechainClient depending on whether unit test config or actual config

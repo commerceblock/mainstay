@@ -9,7 +9,6 @@ import (
     "ocean-attestation/config"
 
     "github.com/btcsuite/btcd/btcjson"
-    "github.com/btcsuite/btcutil"
 )
 
 // For regtest attestation demonstration
@@ -66,6 +65,21 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
     // if not a regtest, then unittest
     config := config.NewConfig(!isRegtest, testConf)
 
+    /*
+    addr1 := "2N9z6a8BQB1xWmesCJcBWZm1R3f1PZcwrGz"
+    pub1 := "03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33"
+    priv1 := "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz"
+
+    addr2 := "2MyC1i1FGy6MZWyMgmZXku4gdWZxWCRa6RL"
+    pub2 := "02f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e75"
+    priv2 := "cSS9R4XPpajhqy28hcfHEzEzAbyWDqBaGZR4xtV7Jg8TixSWee1x"
+
+    address := "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB"
+    script := "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332102f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e7552ae"
+    */
+    priv1 := "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz"
+    script := "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332102f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e7552ae"
+
     // Get first unspent as initial TX for attestation chain
     unspent, errUnspent := config.MainClient().ListUnspent()
     if errUnspent != nil {
@@ -79,9 +93,8 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
     }
 
     config.SetInitTX(tx0.TxID)
-    tx0addr, _ := btcutil.DecodeAddress(tx0.Address, config.MainChainCfg())
-    tx0pk, _ := config.MainClient().DumpPrivKey(tx0addr)
-    config.SetInitPK(tx0pk.String())
+    config.SetInitPK(priv1)
+    config.SetMultisigScript(script)
 
     return &Test{config}
 }

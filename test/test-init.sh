@@ -26,7 +26,8 @@ sleep 5
 btcl generate 103
 sleep 1
 
-btcl sendtoaddress $(btcl getnewaddress) $(btcl getbalance) "" "" true
+btcl importaddress "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB"
+btcl sendtoaddress "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB" $(btcl getbalance) "" "" true
 sleep 1
 
 btcl generate 1

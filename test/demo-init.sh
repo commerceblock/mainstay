@@ -49,14 +49,18 @@ printf '%s\n' '#!/bin/sh' "rpcuser=bitcoinrpc" \
     "disablewallet=1" > ~/ocean-datadir/elements.conf
 
 btcd
-sleep 5
+sleep 2
 oceand
-sleep 5
+sleep 2
 
 btcl generate 103
 sleep 1
 
-btcl sendtoaddress $(btcl getnewaddress) $(btcl getbalance) "" "" true
+#multisig=$(btcl createmultisig 1 '''["'''$pub1'''", "'''$pub2'''"]''')
+#multisigaddr=$(echo $multisig | jq --raw-output '.address')
+
+btcl importaddress "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB"
+btcl sendtoaddress "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB" $(btcl getbalance) "" "" true
 sleep 1
 
 btcl generate 1
