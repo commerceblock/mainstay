@@ -13,6 +13,7 @@ import (
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcd/chaincfg"
     "github.com/btcsuite/btcd/wire"
+    "github.com/btcsuite/btcd/btcec"
 )
 
 // AttestClient structure
@@ -25,7 +26,8 @@ type AttestClient struct {
     mainChainCfg    *chaincfg.Params
     pk0             string
     txid0           string
-    script0         string
+    pubkeys         []*btcec.PublicKey
+    numOfSigs       int
     walletPriv      *btcutil.WIF
 }
 
@@ -41,7 +43,12 @@ func NewAttestClient(config *confpkg.Config) *AttestClient {
         log.Fatal(importErr)
     }
 
-    return &AttestClient{config.MainClient(), config.OceanClient(), config.MainChainCfg(), pk, config.InitTX(), config.MultisigScript(), pkWif}
+    multisig := config.MultisigScript()
+    if multisig != "" { // if multisig attestation, parse pubkeys
+        pubkeys, numOfSigs := crypto.ParseRedeemScript(config.MultisigScript())
+        return &AttestClient{config.MainClient(), config.OceanClient(), config.MainChainCfg(), pk, config.InitTX(), pubkeys, numOfSigs, pkWif}
+    }
+    return &AttestClient{config.MainClient(), config.OceanClient(), config.MainChainCfg(), pk, config.InitTX(), []*btcec.PublicKey{}, 1, pkWif}
 }
 
 // Get latest client hash to use for attestation key tweaking

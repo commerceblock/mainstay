@@ -5,6 +5,8 @@ import (
     "crypto/ecdsa"
     "math/big"
     "log"
+    "strconv"
+    "encoding/hex"
 
     "github.com/btcsuite/btcutil"
     "github.com/btcsuite/btcd/btcec"
@@ -77,4 +79,42 @@ func IsAddrTweakedFromHash(address string, hash []byte, walletPrivKey *btcutil.W
     tweakedAddr := GetAddressFromPrivKey(tweakedPriv, chainCfg)
 
     return address == tweakedAddr.String()
+}
+
+// Raw method to parse a multisig script and get pubkeys and num of sigs
+func ParseRedeemScript(script string) ([]*btcec.PublicKey, int) {
+
+    // check op codes
+    lscript := len(script)
+    op := script[0]
+    op1 := script[lscript-4]
+    if ! (string(op) == string(op1)) && (string(op1) == "5") {
+        log.Fatal("Incorrect opcode in redeem script")
+    }
+
+    // check multisig
+    if script[lscript-2:] != "ae" {
+        log.Fatal("Checkmultisig missing from redeem script")
+    }
+
+    numOfSigs, _ := strconv.Atoi(string(script[1]))
+    numOfKeys, _ := strconv.Atoi(string(script[lscript-3]))
+
+    var startIndex int64 = 2
+    var keys []*btcec.PublicKey
+    for i:=0; i<numOfKeys; i++ {
+        keysize, _ := strconv.ParseInt(string(script[startIndex:startIndex+2]), 16, 16)
+        if ! (keysize == 65 || keysize == 33) {
+            log.Fatal("Incorrect pubkey size")
+        }
+        keystr := script[startIndex+2:startIndex+2+2*keysize]
+        keybytes, _ := hex.DecodeString(keystr)
+        pubkey, err := btcec.ParsePubKey(keybytes, btcec.S256())
+        if err != nil {
+            log.Fatal(err)
+        }
+        startIndex += 2 + 2*keysize
+        keys = append(keys, pubkey)
+    }
+    return keys, numOfSigs
 }
