@@ -19,9 +19,7 @@ import (
     confpkg "ocean-attestation/config"
     "ocean-attestation/messengers"
 
-    "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcd/chaincfg/chainhash"
-    "github.com/btcsuite/btcd/wire"
     zmq "github.com/pebbe/zmq4"
 )
 
@@ -42,10 +40,7 @@ type AttestService struct {
     subscribers     []*messengers.SubscriberZmq
 }
 
-var latestAttestation *Attestation
-var latestTx *wire.MsgTx
-var latestUnspent btcjson.ListUnspentResult
-
+var latestAttestation *Attestation // hold latest state
 var attestDelay time.Duration // initially 0 delay
 
 var poller *zmq.Poller // poller to add all subscriber/publisher sockets
@@ -63,7 +58,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
     if err!=nil {
         log.Fatal(err)
     }
-    latestAttestation = &Attestation{chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION, time.Now()}
+    latestAttestation = NewAttestation(chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION)
     server := NewAttestServer(config.OceanClient(), *latestAttestation, config.InitTX(), *genesisHash)
 
     // Initialise publisher for sending new hashes and txs
@@ -158,7 +153,7 @@ func (s *AttestService) doAttestation() {
             }
             // publish new attestation hash
             s.publisher.SendMessage(hash.CloneBytes(), confpkg.TOPIC_NEW_HASH)
-            latestAttestation = &Attestation{chainhash.Hash{}, hash, ASTATE_COLLECTING_PUBKEYS, time.Now()} // update attestation state
+            latestAttestation = NewAttestation(chainhash.Hash{}, hash, ASTATE_COLLECTING_PUBKEYS) // update attestation state
         }
     case ASTATE_COLLECTING_PUBKEYS:
         log.Printf("*AttestService* COLLECTING PUBKEYS\n")
@@ -173,13 +168,13 @@ func (s *AttestService) doAttestation() {
 
         success, txunspent := s.attester.findLastUnspent()
         if (success) {
-            latestTx = s.attester.createAttestation(paytoaddr, txunspent, false)
-            latestUnspent = txunspent // ?
-            log.Printf("********** pre-sign txid: %s\n", latestTx.TxHash().String())
+            latestAttestation.tx = *s.attester.createAttestation(paytoaddr, txunspent, false)
+            latestAttestation.txunspent = txunspent
+            log.Printf("********** pre-sign txid: %s\n", latestAttestation.tx.TxHash().String())
 
             // publish pre signed transaction
             var txbytes bytes.Buffer
-            latestTx.Serialize(&txbytes)
+            latestAttestation.tx.Serialize(&txbytes)
             s.publisher.SendMessage(txbytes.Bytes(), confpkg.TOPIC_NEW_TX)
 
             latestAttestation.state = ASTATE_COLLECTING_SIGS // update attestation state
@@ -205,8 +200,9 @@ func (s *AttestService) doAttestation() {
         // combine sigs
         // if fail - restart
         //
+        var sigs []string
 
-        txid := s.attester.signAndSendAttestation(latestTx, latestUnspent)
+        txid := s.attester.signAndSendAttestation(&latestAttestation.tx, latestAttestation.txunspent, sigs)
         log.Printf("********** Attestation committed for txid: (%s)\n", txid)
         latestAttestation.txid = txid
         latestAttestation.state = ASTATE_UNCONFIRMED

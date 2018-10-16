@@ -2,7 +2,6 @@ package attestation
 
 import (
     "log"
-    "time"
 
     "ocean-attestation/models"
     "ocean-attestation/clients"
@@ -25,7 +24,7 @@ func NewAttestServer(rpcSide clients.SidechainClient, latest Attestation, tx0 st
     if err != nil {
         log.Fatal("*AttestServer* Incorrect tx hash for initial transaction")
     }
-    return &AttestServer{Attestation{*tx0hash, genesis, ASTATE_CONFIRMED, time.Now()}, 0, rpcSide}
+    return &AttestServer{*NewAttestation(*tx0hash, genesis, ASTATE_CONFIRMED), 0, rpcSide}
 }
 
 // Update information on the latest attestation and sidechain height

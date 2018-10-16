@@ -37,7 +37,7 @@ func TestAttestClient(t *testing.T) {
         addr := client.getNextAttestationAddr(key)
 
         tx := client.createAttestation(addr, unspent, true)
-        txid := client.signAndSendAttestation(tx, unspent)
+        txid := client.signAndSendAttestation(tx, unspent, []string{})
         sideClientFake.Generate(1)
 
         // Verify getUnconfirmedTx gives the unconfirmed transaction just submitted

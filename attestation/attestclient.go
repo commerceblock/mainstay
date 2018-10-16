@@ -2,7 +2,6 @@ package attestation
 
 import (
     "log"
-    "time"
 
     "ocean-attestation/crypto"
     "ocean-attestation/clients"
@@ -26,12 +25,9 @@ type AttestClient struct {
     mainChainCfg    *chaincfg.Params
     pk0             string
     txid0           string
+    script0         string
     walletPriv      *btcutil.WIF
 }
-
-var latestScript string
-var latestPk string
-var lastPk string
 
 // NewAttestClient returns a pointer to a new AttestClient instance
 // Initially locates the genesis transaction in the main chain wallet
@@ -40,17 +36,12 @@ func NewAttestClient(config *confpkg.Config) *AttestClient {
     // Get initial private key from initial funding transaction of main client
     pk := config.InitPK()
     pkWif := crypto.GetWalletPrivKey(pk)
-
-    // TODO: get proper struct for these
-    latestScript = config.MultisigScript()
-    lastPk = pk
-
     importErr := config.MainClient().ImportPrivKeyRescan(pkWif, "init", false)
     if importErr != nil {
         log.Fatal(importErr)
     }
 
-    return &AttestClient{config.MainClient(), config.OceanClient(), config.MainChainCfg(), pk, config.InitTX(), pkWif}
+    return &AttestClient{config.MainClient(), config.OceanClient(), config.MainChainCfg(), pk, config.InitTX(), config.MultisigScript(), pkWif}
 }
 
 // Get latest client hash to use for attestation key tweaking
@@ -73,20 +64,19 @@ func (w *AttestClient) getNextAttestationKey(hash chainhash.Hash) *btcutil.WIF {
         log.Fatal(importErr)
     }
 
-    latestPk = tweakedWalletPriv.String()
-
     return tweakedWalletPriv
 }
 
 // Get next attestation address from private key
 func (w *AttestClient) getNextAttestationAddr(key *btcutil.WIF) btcutil.Address {
 
-    // tweak all keys not mine only
-    // create multisig
+    // tweak all keys
+    // verify mine is correct
 
     addr := crypto.GetAddressFromPrivKey(key, w.mainChainCfg)
 
-    // importaddress
+    // importaddress addr
+    // importaddress script
 
     return addr
 }
@@ -109,25 +99,28 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent bt
 }
 
 // Sign and send the latest attestation transaction
-func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx, txunspent btcjson.ListUnspentResult) chainhash.Hash {
+func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx, txunspent btcjson.ListUnspentResult, sigs []string) chainhash.Hash {
 
-    // combine sigs
+    // Get redeem script from unspent - Priv key should already have been imported
+    redeemScript := ""
+    if txunspent.RedeemScript != "" {
+        redeemScript = txunspent.RedeemScript
+    }
 
-    rawtxinput := btcjson.RawTxInput{txunspent.TxID, txunspent.Vout, txunspent.ScriptPubKey, latestScript}
-    signedmsgtx, issigned, err := w.mainClient.SignRawTransaction3(msgtx, []btcjson.RawTxInput{rawtxinput}, []string{lastPk})
+    rawtxinput := btcjson.RawTxInput{txunspent.TxID, txunspent.Vout, txunspent.ScriptPubKey, redeemScript}
+    signedmsgtx, issigned, err := w.mainClient.SignRawTransaction2(msgtx, []btcjson.RawTxInput{rawtxinput})
     if err != nil{
         log.Fatal(err)
     } else if !issigned {
         log.Printf("incomplete signing")
     }
 
+    // add sigs
+
     txhash, err := w.mainClient.SendRawTransaction(signedmsgtx, false)
     if err != nil {
         log.Fatal(err)
     }
-
-    lastPk = latestPk   // for now
-    latestScript = ""   // for now
 
     return *txhash
 }
@@ -173,10 +166,10 @@ func (w *AttestClient) getUnconfirmedTx() (bool, Attestation) {
     }
     for _, hash := range mempool {
         if (w.verifyTxOnSubchain(*hash)) {
-            return true, Attestation{*hash, w.getTxAttestedHash(*hash), ASTATE_UNCONFIRMED, time.Now()}
+            return true, *NewAttestation(*hash, w.getTxAttestedHash(*hash), ASTATE_UNCONFIRMED)
         }
     }
-    return false, Attestation{chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION, time.Now()}
+    return false, *NewAttestation(chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION)
 }
 
 // Find the attested sidechain hash from a transaction, by testing for all sidechain hashes

@@ -2,7 +2,6 @@ package attestation
 
 import (
     "testing"
-    "time"
     "log"
 
     "ocean-attestation/models"
@@ -22,7 +21,7 @@ func TestAttestServer(t *testing.T) {
     sideClientFake = testConfig.OceanClient().(*clients.SidechainClientFake)
 
     genesis, _ := sideClientFake.GetBlockHash(0)
-    latestTx := &Attestation{chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION, time.Now()}
+    latestTx := NewAttestation(chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION)
     server := NewAttestServer(sideClientFake, *latestTx, testConfig.InitTX(), *genesis)
     client := NewAttestClient(testConfig)
 
@@ -37,11 +36,11 @@ func TestAttestServer(t *testing.T) {
     addr := client.getNextAttestationAddr(key)
 
     tx := client.createAttestation(addr, unspent, true)
-    txid := client.signAndSendAttestation(tx, unspent)
+    txid := client.signAndSendAttestation(tx, unspent, []string{})
     client.mainClient.Generate(1)
 
     // Update latest in server
-    latest := &Attestation{txid, sidehash, ASTATE_CONFIRMED, time.Now()}
+    latest := NewAttestation(txid, sidehash, ASTATE_CONFIRMED)
     server.UpdateLatest(*latest)
     assert.Equal(t, ASTATE_CONFIRMED, server.latest.state)
     assert.Equal(t, txid, server.latest.txid)

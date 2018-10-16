@@ -4,6 +4,8 @@ import (
     "time"
 
     "github.com/btcsuite/btcd/chaincfg/chainhash"
+    "github.com/btcsuite/btcd/btcjson"
+    "github.com/btcsuite/btcd/wire"
 )
 
 // Attestation state type
@@ -28,4 +30,11 @@ type Attestation struct {
     attestedHash    chainhash.Hash
     state           AttestationState
     latestTime      time.Time
+    tx              wire.MsgTx
+    txunspent       btcjson.ListUnspentResult
+}
+
+// Attestation constructor for defaulting some values
+func NewAttestation(txid chainhash.Hash, hash chainhash.Hash, state AttestationState) *Attestation {
+    return &Attestation{txid, hash, state, time.Now(), wire.MsgTx{}, btcjson.ListUnspentResult{}}
 }
