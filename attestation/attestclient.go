@@ -14,6 +14,7 @@ import (
     "github.com/btcsuite/btcd/chaincfg"
     "github.com/btcsuite/btcd/wire"
     "github.com/btcsuite/btcd/btcec"
+    "github.com/btcsuite/btcd/txscript"
 )
 
 // AttestClient structure
@@ -151,7 +152,6 @@ func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx, txunspent btcjs
     // if txunspent.RedeemScript != "" {
     //     redeemScript = txunspent.RedeemScript
     // }
-    log.Printf("redeem: %s\n", redeemScript)
 
     rawtxinput := btcjson.RawTxInput{txunspent.TxID, txunspent.Vout, txunspent.ScriptPubKey, redeemScript}
     signedmsgtx, issigned, err := w.mainClient.SignRawTransaction3(msgtx, []btcjson.RawTxInput{rawtxinput}, []string{key.String()})
@@ -231,14 +231,20 @@ func (w *AttestClient) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
     }
 
     // Get address from transaction
-    tx, err := w.mainClient.GetTransaction(&txid)
+    tx, err := w.mainClient.GetRawTransaction(&txid)
     if err != nil {
         log.Fatal(err)
     }
-    addr := tx.Details[0].Address
+    _, addrs, _, errExtract := txscript.ExtractPkScriptAddrs(tx.MsgTx().TxOut[0].PkScript, w.mainChainCfg)
+    if errExtract != nil {
+        log.Fatal(errExtract)
+    }
+    addr := addrs[0]
 
+    tweakedPriv := crypto.TweakPrivKey(w.walletPriv, latesthash.CloneBytes(), w.mainChainCfg)
+    addrTweaked, _ := w.getNextAttestationAddr(tweakedPriv, *latesthash)
     // Check first if the attestation came from the latest block
-    if (crypto.IsAddrTweakedFromHash(addr, latesthash.CloneBytes(), w.walletPriv, w.mainChainCfg)) {
+    if (addr.String() == addrTweaked.String()) {
         return *latesthash
     }
 
@@ -248,7 +254,9 @@ func (w *AttestClient) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
         if err != nil {
             log.Fatal(err)
         }
-        if (crypto.IsAddrTweakedFromHash(addr, hash.CloneBytes(), w.walletPriv, w.mainChainCfg)) {
+        tweakedPriv := crypto.TweakPrivKey(w.walletPriv, hash.CloneBytes(), w.mainChainCfg)
+        addrTweaked, _ := w.getNextAttestationAddr(tweakedPriv, *hash)
+        if (addr.String() == addrTweaked.String()) {
             return *hash
         }
     }
