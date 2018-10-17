@@ -7,6 +7,7 @@ import (
     "log"
     "strconv"
     "encoding/hex"
+    "fmt"
 
     "github.com/btcsuite/btcutil"
     "github.com/btcsuite/btcd/btcec"
@@ -117,4 +118,27 @@ func ParseRedeemScript(script string) ([]*btcec.PublicKey, int) {
         keys = append(keys, pubkey)
     }
     return keys, numOfSigs
+}
+
+// Raw method to create a multisig from pubkeys and return P2SH address and redeemScript
+func CreateMultisig(pubkeys []*btcec.PublicKey, nSigs int, chainCfg *chaincfg.Params) (btcutil.Address, string) {
+
+    var script string
+    script += fmt.Sprintf("5%d",nSigs)
+
+    for _, pub := range(pubkeys) {
+        script += "21"
+        script += hex.EncodeToString(pub.SerializeCompressed())
+    }
+
+    script += fmt.Sprintf("5%d",len(pubkeys))
+    script += "ae"
+
+    scriptBytes, _ := hex.DecodeString(script)
+    multisigAddr, err := btcutil.NewAddressScriptHash(scriptBytes, chainCfg)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    return multisigAddr, script
 }

@@ -8,6 +8,7 @@ import (
     "ocean-attestation/clients"
 
     "github.com/stretchr/testify/assert"
+    "github.com/btcsuite/btcd/btcec"
 )
 
 // Crypto utility Test
@@ -47,11 +48,21 @@ func TestCrypto(t *testing.T) {
 
     assert.Equal(t, addr.String(), tweakedPubKeyAddr.String())
 
-    // Test ParseRedeemScript for multisig script
+    // Test CreateMultisig, ParseRedeemScript - test works both ways
     multisig := "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332102f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e7552ae"
-    multisigPubkeys, nSigs := ParseRedeemScript(multisig)
-    assert.Equal(t, 1, nSigs)
-    assert.Equal(t, 2, len(multisigPubkeys))
-    assert.Equal(t, "03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33", hex.EncodeToString(multisigPubkeys[0].SerializeCompressed()))
-     assert.Equal(t, "02f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e75", hex.EncodeToString(multisigPubkeys[1].SerializeCompressed()))
+    multisigAddr := "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB"
+    pubkeystr1 := "03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33"
+    pubkeystr2 := "02f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e75"
+    nSigs := 1
+    nPubs := 2
+
+    msPubTest, nSigsTest := ParseRedeemScript(multisig)
+    assert.Equal(t, nSigs, nSigsTest)
+    assert.Equal(t, nPubs, len(msPubTest))
+    assert.Equal(t, pubkeystr1, hex.EncodeToString(msPubTest[0].SerializeCompressed()))
+    assert.Equal(t, pubkeystr2, hex.EncodeToString(msPubTest[1].SerializeCompressed()))
+
+    msAddrTest, msTest := CreateMultisig([]*btcec.PublicKey{msPubTest[0], msPubTest[1]}, nSigs, mainChainCfg)
+    assert.Equal(t, multisigAddr, msAddrTest.String())
+    assert.Equal(t, multisig, msTest)
 }
