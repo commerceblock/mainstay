@@ -43,6 +43,10 @@ type AttestService struct {
 var latestAttestation *Attestation // hold latest state
 var attestDelay time.Duration // initially 0 delay
 
+// need to store this as btcd does not support
+// importing multisig scripts yet
+var lastRedeemScript string
+
 var poller *zmq.Poller // poller to add all subscriber/publisher sockets
 
 // NewAttestService returns a pointer to an AttestService instance
@@ -71,6 +75,8 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
         subscribers = append(subscribers, messengers.NewSubscriberZmq(nodeaddr, subtopics, poller))
     }
     attestDelay = 30 * time.Second // add some delay for subscribers to have time to set up
+
+    lastRedeemScript = config.MultisigScript() // will require method to get latest
 
     return &AttestService{ctx, wg, config, attester, server, channel, publisher, subscribers}
 }
@@ -135,6 +141,7 @@ func (s *AttestService) doAttestation() {
             s.server.UpdateLatest(*latestAttestation)
             log.Printf("********** Updated latest attested height %d\n", s.server.latestHeight)
             attestDelay = time.Duration(0) * time.Second
+            lastRedeemScript = latestAttestation.redeemScript
         }
     case ASTATE_CONFIRMED, ASTATE_NEW_ATTESTATION:
         attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
@@ -160,16 +167,13 @@ func (s *AttestService) doAttestation() {
         attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
         key := s.attester.getNextAttestationKey(latestAttestation.attestedHash)
-        //
-        // combine tweaked keys
-        // generate multisig address
-        //
-        paytoaddr := s.attester.getNextAttestationAddr(key)
+        paytoaddr, script := s.attester.getNextAttestationAddr(key, latestAttestation.attestedHash)
 
         success, txunspent := s.attester.findLastUnspent()
         if (success) {
             latestAttestation.tx = *s.attester.createAttestation(paytoaddr, txunspent, false)
             latestAttestation.txunspent = txunspent
+            latestAttestation.redeemScript = script
             log.Printf("********** pre-sign txid: %s\n", latestAttestation.tx.TxHash().String())
 
             // publish pre signed transaction
@@ -202,7 +206,7 @@ func (s *AttestService) doAttestation() {
         //
         var sigs []string
 
-        txid := s.attester.signAndSendAttestation(&latestAttestation.tx, latestAttestation.txunspent, sigs)
+        txid := s.attester.signAndSendAttestation(&latestAttestation.tx, latestAttestation.txunspent, sigs, s.server.latest.attestedHash)
         log.Printf("********** Attestation committed for txid: (%s)\n", txid)
         latestAttestation.txid = txid
         latestAttestation.state = ASTATE_UNCONFIRMED

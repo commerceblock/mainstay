@@ -32,9 +32,10 @@ type Attestation struct {
     latestTime      time.Time
     tx              wire.MsgTx
     txunspent       btcjson.ListUnspentResult
+    redeemScript    string
 }
 
 // Attestation constructor for defaulting some values
 func NewAttestation(txid chainhash.Hash, hash chainhash.Hash, state AttestationState) *Attestation {
-    return &Attestation{txid, hash, state, time.Now(), wire.MsgTx{}, btcjson.ListUnspentResult{}}
+    return &Attestation{txid, hash, state, time.Now(), wire.MsgTx{}, btcjson.ListUnspentResult{}, ""}
 }

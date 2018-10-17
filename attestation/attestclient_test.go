@@ -29,16 +29,20 @@ func TestAttestClient(t *testing.T) {
     }
     assert.Equal(t, txs[0], unspent.TxID)
 
+    lastHash := chainhash.Hash{}
+
     // Do 10 attestations
     for i := 0; i < 10; i++ {
         // Generate attestation transaction with the unspent vout
         oceanhash := client.getNextAttestationHash()
         key := client.getNextAttestationKey(oceanhash)
-        addr := client.getNextAttestationAddr(key)
+        addr, _ := client.getNextAttestationAddr(key, oceanhash)
 
         tx := client.createAttestation(addr, unspent, true)
-        txid := client.signAndSendAttestation(tx, unspent, []string{})
+        txid := client.signAndSendAttestation(tx, unspent, []string{}, lastHash)
         sideClientFake.Generate(1)
+
+        lastHash = oceanhash
 
         // Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
         var unconfirmed *Attestation = &Attestation{}
