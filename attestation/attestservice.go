@@ -43,10 +43,6 @@ type AttestService struct {
 var latestAttestation *Attestation // hold latest state
 var attestDelay time.Duration // initially 0 delay
 
-// need to store this as btcd does not support
-// importing multisig scripts yet
-var lastRedeemScript string
-
 var poller *zmq.Poller // poller to add all subscriber/publisher sockets
 
 // NewAttestService returns a pointer to an AttestService instance
@@ -75,8 +71,6 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
         subscribers = append(subscribers, messengers.NewSubscriberZmq(nodeaddr, subtopics, poller))
     }
     attestDelay = 30 * time.Second // add some delay for subscribers to have time to set up
-
-    lastRedeemScript = config.MultisigScript() // will require method to get latest
 
     return &AttestService{ctx, wg, config, attester, server, channel, publisher, subscribers}
 }
@@ -141,7 +135,6 @@ func (s *AttestService) doAttestation() {
             s.server.UpdateLatest(*latestAttestation)
             log.Printf("********** Updated latest attested height %d\n", s.server.latestHeight)
             attestDelay = time.Duration(0) * time.Second
-            lastRedeemScript = latestAttestation.redeemScript
         }
     case ASTATE_CONFIRMED, ASTATE_NEW_ATTESTATION:
         attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
