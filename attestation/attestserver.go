@@ -19,7 +19,7 @@ type AttestServer struct {
 }
 
 // NewAttestServer returns a pointer to an AttestServer instance
-func NewAttestServer(rpcSide clients.SidechainClient, latest Attestation, tx0 string, genesis chainhash.Hash) *AttestServer{
+func NewAttestServer(rpcSide clients.SidechainClient, latest Attestation, tx0 string) *AttestServer{
     tx0hash, err := chainhash.NewHashFromStr(tx0)
     if err != nil {
         log.Fatal("*AttestServer* Incorrect tx hash for initial transaction")

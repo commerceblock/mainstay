@@ -19,6 +19,7 @@ const (
     ASTATE_COLLECTING_PUBKEYS      AttestationState = 3
     ASTATE_COLLECTING_SIGS         AttestationState = 4
     ASTATE_FAILURE                 AttestationState = 10
+    ASTATE_INIT                    AttestationState = 100
 )
 
 // Attestation structure

@@ -53,13 +53,8 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
     }
     attester := NewAttestClient(config)
 
-    // Set initial attestation to genesis, since no DB is being used yet
-    genesisHash, err := config.OceanClient().GetBlockHash(0)
-    if err!=nil {
-        log.Fatal(err)
-    }
-    latestAttestation = NewAttestation(chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION)
-    server := NewAttestServer(config.OceanClient(), *latestAttestation, config.InitTX(), *genesisHash)
+    latestAttestation = NewAttestation(chainhash.Hash{}, chainhash.Hash{}, ASTATE_INIT)
+    server := NewAttestServer(config.OceanClient(), *latestAttestation, config.InitTX())
 
     // Initialise publisher for sending new hashes and txs
     // and subscribers to receive sig responses
@@ -105,6 +100,10 @@ func (s *AttestService) Run() {
 }
 
 // Main attestation method. States:
+// ASTATE_INIT
+// - Check if there are unconfirmed or unspent transactions in the client
+// - Update server with latest attestation information
+// - If no transaction found wait, else initiate new attestation
 // ASTATE_UNCONFIRMED
 // - Check for unconfirmed transactions in the mempool of the main client
 // - If confirmed, initiate new attestation
@@ -122,6 +121,25 @@ func (s *AttestService) Run() {
 // - If successful propagate the transaction and set state to unconfirmed
 func (s *AttestService) doAttestation() {
     switch latestAttestation.state {
+    case ASTATE_INIT:
+        log.Println("*AttestService* INIT ATTESTATION CLIENT AND SERVER")
+        // find the state of the attestation
+        // when a DB is put in place, these information will be collected from there
+        unconfirmed, unconfirmedTx := s.attester.getUnconfirmedTx()
+        if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
+            *latestAttestation = unconfirmedTx
+            s.server.UpdateLatest(*latestAttestation)
+        } else {
+            success, txunspent := s.attester.findLastUnspent()
+            if (success) {
+                txunspentHash, _ := chainhash.NewHashFromStr(txunspent.TxID)
+                s.server.UpdateLatest(*NewAttestation(*txunspentHash, s.attester.getTxAttestedHash(*txunspentHash), ASTATE_CONFIRMED))
+                latestAttestation.state = ASTATE_NEW_ATTESTATION
+            } else{
+                log.Println("*AttestService* No unconfirmed (mempool) or unspent tx found. Sleeping...")
+                attestDelay = time.Duration(ATTEST_WAIT_TIME*10) * time.Second // add wait time
+            }
+        }
     case ASTATE_UNCONFIRMED:
         log.Printf("*AttestService* AWAITING CONFIRMATION \ntxid: (%s)\nhash: (%s)\n", latestAttestation.txid.String(), latestAttestation.attestedHash.String())
         newTx, err := s.config.MainClient().GetTransaction(&latestAttestation.txid)

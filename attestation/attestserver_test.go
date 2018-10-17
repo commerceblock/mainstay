@@ -20,9 +20,8 @@ func TestAttestServer(t *testing.T) {
     var sideClientFake *clients.SidechainClientFake
     sideClientFake = testConfig.OceanClient().(*clients.SidechainClientFake)
 
-    genesis, _ := sideClientFake.GetBlockHash(0)
     latestTx := NewAttestation(chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION)
-    server := NewAttestServer(sideClientFake, *latestTx, testConfig.InitTX(), *genesis)
+    server := NewAttestServer(sideClientFake, *latestTx, testConfig.InitTX())
     client := NewAttestClient(testConfig)
 
     // Generate blocks in side chain
