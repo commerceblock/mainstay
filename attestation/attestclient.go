@@ -53,15 +53,6 @@ func NewAttestClient(config *confpkg.Config) *AttestClient {
     return &AttestClient{config.MainClient(), config.OceanClient(), config.MainChainCfg(), pk, config.InitTX(), multisig, []*btcec.PublicKey{}, 1, pkWif}
 }
 
-// Get latest client hash to use for attestation key tweaking
-func (w *AttestClient) getNextAttestationHash() (chainhash.Hash) {
-    hash, err := w.sideClient.GetBestBlockHash()
-    if err != nil {
-        log.Fatal(err)
-    }
-    return *hash
-}
-
 // Get next attestation key by tweaking with latest hash
 func (w *AttestClient) getNextAttestationKey(hash chainhash.Hash) *btcutil.WIF {
     // Tweak priv key with the latest ocean hash

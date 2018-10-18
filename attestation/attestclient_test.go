@@ -34,7 +34,7 @@ func TestAttestClient(t *testing.T) {
     // Do 10 attestations
     for i := 0; i < 10; i++ {
         // Generate attestation transaction with the unspent vout
-        oceanhash := client.getNextAttestationHash()
+        oceanhash := GetNextAttestationHash(sideClientFake)
         key := client.getNextAttestationKey(oceanhash)
         addr, _ := client.getNextAttestationAddr(key, oceanhash)
 
