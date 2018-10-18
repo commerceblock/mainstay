@@ -5,7 +5,7 @@ import (
     "fmt"
     "net/http"
 
-    "ocean-attestation/models"
+    "mainstay/models"
 
     "github.com/gorilla/mux"
 )

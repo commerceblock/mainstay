@@ -3,8 +3,8 @@ package attestation
 import (
     "testing"
 
-    "ocean-attestation/test"
-    "ocean-attestation/clients"
+    "mainstay/test"
+    "mainstay/clients"
 
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/stretchr/testify/assert"

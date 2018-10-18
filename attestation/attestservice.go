@@ -15,10 +15,10 @@ import (
     "time"
     "bytes"
 
-    "ocean-attestation/models"
-    "ocean-attestation/clients"
-    confpkg "ocean-attestation/config"
-    "ocean-attestation/messengers"
+    "mainstay/models"
+    "mainstay/clients"
+    confpkg "mainstay/config"
+    "mainstay/messengers"
 
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     zmq "github.com/pebbe/zmq4"

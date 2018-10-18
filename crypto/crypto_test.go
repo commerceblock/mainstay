@@ -4,8 +4,8 @@ import (
     "testing"
     "encoding/hex"
 
-    "ocean-attestation/test"
-    "ocean-attestation/clients"
+    "mainstay/test"
+    "mainstay/clients"
 
     "github.com/stretchr/testify/assert"
     "github.com/btcsuite/btcd/btcec"

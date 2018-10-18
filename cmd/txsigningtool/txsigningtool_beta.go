@@ -5,8 +5,8 @@ import (
     "log"
     "bytes"
 
-    "ocean-attestation/messengers"
-    "ocean-attestation/config"
+    "mainstay/messengers"
+    "mainstay/config"
 
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcd/wire"

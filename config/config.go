@@ -5,7 +5,7 @@ import (
     "os"
     "strings"
 
-    "ocean-attestation/clients"
+    "mainstay/clients"
 
     "github.com/btcsuite/btcd/chaincfg"
     "github.com/btcsuite/btcd/rpcclient"
@@ -13,7 +13,7 @@ import (
 
 const MAIN_CHAIN_NAME = "main"
 const SIDE_CHAIN_NAME = "ocean"
-const CONF_PATH = "/src/ocean-attestation/config/conf.json"
+const CONF_PATH = "/src/mainstay/config/conf.json"
 
 const MAIN_PUBLISHER_PORT = 5000
 const TOPIC_NEW_HASH    = "H"

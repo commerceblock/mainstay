@@ -4,9 +4,9 @@ import (
     "testing"
     "log"
 
-    "ocean-attestation/models"
-    "ocean-attestation/test"
-    "ocean-attestation/clients"
+    "mainstay/models"
+    "mainstay/test"
+    "mainstay/clients"
 
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/stretchr/testify/assert"

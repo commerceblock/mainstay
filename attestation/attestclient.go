@@ -3,9 +3,9 @@ package attestation
 import (
     "log"
 
-    "ocean-attestation/crypto"
-    "ocean-attestation/clients"
-    confpkg "ocean-attestation/config"
+    "mainstay/crypto"
+    "mainstay/clients"
+    confpkg "mainstay/config"
 
     "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcd/rpcclient"

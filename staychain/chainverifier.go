@@ -5,8 +5,8 @@ import (
     "strings"
     "encoding/hex"
 
-    "ocean-attestation/crypto"
-    "ocean-attestation/clients"
+    "mainstay/crypto"
+    "mainstay/clients"
 
     "github.com/btcsuite/btcd/chaincfg"
     "github.com/btcsuite/btcd/btcec"

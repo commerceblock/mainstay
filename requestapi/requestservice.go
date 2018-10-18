@@ -8,7 +8,7 @@ import (
     "context"
     "time"
 
-    "ocean-attestation/models"
+    "mainstay/models"
 
     "github.com/gorilla/mux"
 )

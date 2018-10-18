@@ -7,7 +7,7 @@ import (
     "net/http"
     "net/http/httptest"
 
-    "ocean-attestation/models"
+    "mainstay/models"
 )
 
 // Request server handling Test

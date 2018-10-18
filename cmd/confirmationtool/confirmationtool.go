@@ -7,9 +7,9 @@ import (
     "time"
     "flag"
 
-    "ocean-attestation/config"
-    "ocean-attestation/crypto"
-    "ocean-attestation/staychain"
+    "mainstay/config"
+    "mainstay/crypto"
+    "mainstay/staychain"
 
     "github.com/btcsuite/btcd/chaincfg/chainhash"
     "github.com/btcsuite/btcutil"
@@ -19,7 +19,7 @@ import (
 
 const MAIN_NAME     = "bitcoin"
 const SIDE_NAME     = "ocean"
-const CONF_PATH     = "/src/ocean-attestation/cmd/confirmationtool/conf.json"
+const CONF_PATH     = "/src/mainstay/cmd/confirmationtool/conf.json"
 const FUNDING_TX    = "bf41c0da8047b1416d5ca680e2643967b27537cdf9a41527034698c336b55313"
 const FIRST_TX      = "902fd11c3166eb07864a7b8ed0a3a0fbda0f4c26423b8eee4dd94420cfbae40e"
 

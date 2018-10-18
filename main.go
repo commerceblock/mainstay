@@ -10,11 +10,11 @@ import (
     "log"
     "time"
 
-    "ocean-attestation/attestation"
-    "ocean-attestation/config"
-    "ocean-attestation/models"
-    "ocean-attestation/requestapi"
-    "ocean-attestation/test"
+    "mainstay/attestation"
+    "mainstay/config"
+    "mainstay/models"
+    "mainstay/requestapi"
+    "mainstay/test"
 )
 
 const DEFAULT_API_HOST = "localhost:8080"

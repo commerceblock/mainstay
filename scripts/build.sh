@@ -8,8 +8,8 @@ mkdir $GOPATH/bin
 
 export GOBIN=$GOPATH/bin
 
-git clone https://github.com/commerceblock/ocean-attestation $GOPATH/src/ocean-attestation
-cd $GOPATH/src/ocean-attestation
+git clone https://github.com/commerceblock/mainstay $GOPATH/src/mainstay
+cd $GOPATH/src/mainstay
 
 go build
 go install

@@ -5,7 +5,7 @@ import (
     "time"
     "log"
 
-    "ocean-attestation/models"
+    "mainstay/models"
 
     "github.com/gorilla/mux"
 )
