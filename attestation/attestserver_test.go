@@ -31,12 +31,12 @@ func TestAttestServer(t *testing.T) {
     _, unspent := client.findLastUnspent()
 
     sidehash := GetNextAttestationHash(sideClientFake)
-    key := client.getNextAttestationKey(sidehash)
-    addr, _ := client.getNextAttestationAddr(key, sidehash)
+    key := client.GetNextAttestationKey(sidehash)
+    addr, _ := client.GetNextAttestationAddr(key, sidehash)
 
     tx := client.createAttestation(addr, unspent, true)
     txid := client.signAndSendAttestation(tx, unspent, []string{}, chainhash.Hash{})
-    client.mainClient.Generate(1)
+    client.MainClient.Generate(1)
 
     // Update latest in server
     latest := NewAttestation(txid, sidehash, ASTATE_CONFIRMED)

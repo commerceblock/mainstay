@@ -25,7 +25,7 @@ import (
 )
 
 // Waiting time between attestations and/or attestation confirmation attempts
-const ATTEST_WAIT_TIME = 5
+const ATTEST_WAIT_TIME = 60
 
 // AttestationService structure
 // Encapsulates Attest Server, Attest Client
@@ -154,6 +154,9 @@ func (s *AttestService) doAttestation() {
             s.server.UpdateLatest(*latestAttestation)
             log.Printf("********** Updated latest attested height %d\n", s.server.latestHeight)
             attestDelay = time.Duration(0) * time.Second
+
+            // publish confirmed attestation hash
+            s.publisher.SendMessage(latestAttestation.attestedHash.CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH)
         }
     case ASTATE_CONFIRMED, ASTATE_NEW_ATTESTATION:
         attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
@@ -178,8 +181,8 @@ func (s *AttestService) doAttestation() {
         log.Printf("*AttestService* COLLECTING PUBKEYS\n")
         attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
-        key := s.attester.getNextAttestationKey(latestAttestation.attestedHash)
-        paytoaddr, script := s.attester.getNextAttestationAddr(key, latestAttestation.attestedHash)
+        key := s.attester.GetNextAttestationKey(latestAttestation.attestedHash)
+        paytoaddr, script := s.attester.GetNextAttestationAddr(key, latestAttestation.attestedHash)
 
         success, txunspent := s.attester.findLastUnspent()
         if (success) {
@@ -202,23 +205,21 @@ func (s *AttestService) doAttestation() {
         attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
         // Read sigs using subscribers
+        var sigs [][]byte
+
         sockets, _ := poller.Poll(-1)
         for _, socket := range sockets {
             for _, sub := range s.subscribers {
                 if sub.Socket() == socket.Socket {
                     _, msg := sub.ReadMessage()
-                    log.Printf("********** received signature: %s \n", msg)
+                    sigs = append(sigs, msg)
                 }
             }
         }
 
-        //
-        // combine sigs
-        // if fail - restart
-        //
-        var sigs []string
+        log.Printf("received signatures: %v\n", sigs)
 
-        txid := s.attester.signAndSendAttestation(&latestAttestation.tx, latestAttestation.txunspent, sigs, s.server.latest.attestedHash)
+        txid := s.attester.signAndSendAttestation(&latestAttestation.tx, latestAttestation.txunspent, []string{}, s.server.latest.attestedHash)
         log.Printf("********** Attestation committed for txid: (%s)\n", txid)
         latestAttestation.txid = txid
         latestAttestation.state = ASTATE_UNCONFIRMED
