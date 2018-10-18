@@ -22,15 +22,15 @@ import (
 // Handles generating staychain next address and next transaction
 // and verifying that the correct chain of transactions is maintained
 type AttestClient struct {
-    mainClient      *rpcclient.Client
+    MainClient      *rpcclient.Client
     sideClient      clients.SidechainClient
-    mainChainCfg    *chaincfg.Params
+    MainChainCfg    *chaincfg.Params
     pk0             string
     txid0           string
     script0         string
     pubkeys         []*btcec.PublicKey
     numOfSigs       int
-    walletPriv      *btcutil.WIF
+    WalletPriv      *btcutil.WIF
 }
 
 // NewAttestClient returns a pointer to a new AttestClient instance
@@ -54,12 +54,12 @@ func NewAttestClient(config *confpkg.Config) *AttestClient {
 }
 
 // Get next attestation key by tweaking with latest hash
-func (w *AttestClient) getNextAttestationKey(hash chainhash.Hash) *btcutil.WIF {
+func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) *btcutil.WIF {
     // Tweak priv key with the latest ocean hash
-    tweakedWalletPriv := crypto.TweakPrivKey(w.walletPriv, hash.CloneBytes(), w.mainChainCfg)
+    tweakedWalletPriv := crypto.TweakPrivKey(w.WalletPriv, hash.CloneBytes(), w.MainChainCfg)
 
     // Import tweaked priv key to wallet
-    importErr := w.mainClient.ImportPrivKeyRescan(tweakedWalletPriv, hash.String(), false)
+    importErr := w.MainClient.ImportPrivKeyRescan(tweakedWalletPriv, hash.String(), false)
     if importErr != nil {
         log.Fatal(importErr)
     }
@@ -68,9 +68,9 @@ func (w *AttestClient) getNextAttestationKey(hash chainhash.Hash) *btcutil.WIF {
 }
 
 // Get next attestation address from private key
-func (w *AttestClient) getNextAttestationAddr(key *btcutil.WIF, hash chainhash.Hash) (btcutil.Address, string) {
+func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.Hash) (btcutil.Address, string) {
 
-    myAddr := crypto.GetAddressFromPrivKey(key, w.mainChainCfg)
+    myAddr := crypto.GetAddressFromPrivKey(key, w.MainChainCfg)
 
     // In multisig case tweak all initial pubkeys and import
     // a multisig address to the main client wallet
@@ -82,7 +82,7 @@ func (w *AttestClient) getNextAttestationAddr(key *btcutil.WIF, hash chainhash.H
             tweakedPub := crypto.TweakPubKey(pub, hashBytes)
             tweakedPubs = append(tweakedPubs, tweakedPub)
             if myAddr.String() ==
-            crypto.GetAddressFromPubKey(tweakedPub, w.mainChainCfg).String() {
+            crypto.GetAddressFromPubKey(tweakedPub, w.MainChainCfg).String() {
                 myFound = true
             }
         }
@@ -90,14 +90,14 @@ func (w *AttestClient) getNextAttestationAddr(key *btcutil.WIF, hash chainhash.H
             log.Fatal("Client address missing from tweaked pubkey addresses")
         }
 
-        multisigAddr, redeemScript := crypto.CreateMultisig(tweakedPubs, w.numOfSigs, w.mainChainCfg)
+        multisigAddr, redeemScript := crypto.CreateMultisig(tweakedPubs, w.numOfSigs, w.MainChainCfg)
 
-        importErr := w.mainClient.ImportAddress(multisigAddr.String())
+        importErr := w.MainClient.ImportAddress(multisigAddr.String())
         if importErr != nil {
             log.Fatal(importErr)
         }
         // importaddress for P2SH no currently supported by btcd code
-        // importErr2 := w.mainClient.ImportAddress(redeemScript)
+        // importErr2 := w.MainClient.ImportAddress(redeemScript)
         // if importErr2 != nil {
         //     log.Printf("import error")
         //     log.Fatal(importErr2)
@@ -114,7 +114,7 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent bt
     inputs := []btcjson.TransactionInput{{Txid: txunspent.TxID, Vout: txunspent.Vout},}
 
     amounts := map[btcutil.Address]btcutil.Amount{paytoaddr: btcutil.Amount(txunspent.Amount*100000000)}
-    msgtx, err := w.mainClient.CreateRawTransaction(inputs, amounts, nil)
+    msgtx, err := w.MainClient.CreateRawTransaction(inputs, amounts, nil)
     if err != nil {
         log.Fatal(err)
     }
@@ -126,35 +126,41 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent bt
     return msgtx
 }
 
-// Sign and send the latest attestation transaction
-func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx, txunspent btcjson.ListUnspentResult, sigs []string, hash chainhash.Hash) chainhash.Hash {
-
-    // Redeem script stored in client
+// Given a hash return the corresponding client private key and redeemscript
+func (w *AttestClient) GetKeyAndScriptFromHash(hash chainhash.Hash) (btcutil.WIF, string) {
     var key btcutil.WIF
     var redeemScript string
     if !hash.IsEqual(&chainhash.Hash{}) {
-        key = *crypto.TweakPrivKey(w.walletPriv, hash.CloneBytes(), w.mainChainCfg)
-        _, redeemScript = w.getNextAttestationAddr(&key, hash)
+        key = *crypto.TweakPrivKey(w.WalletPriv, hash.CloneBytes(), w.MainChainCfg)
+        _, redeemScript = w.GetNextAttestationAddr(&key, hash)
     } else {
-        key = *w.walletPriv
+        key = *w.WalletPriv
         redeemScript = w.script0
     }
+    return key, redeemScript
+}
+
+// Sign and send the latest attestation transaction
+func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx, txunspent btcjson.ListUnspentResult, sigs []string, hash chainhash.Hash) chainhash.Hash {
+
+    // Calculate private key and redeemScript from hash
+    key, redeemScript := w.GetKeyAndScriptFromHash(hash)
     // Can't get redeem script from unspent as importaddress P2SH not supported
     // if txunspent.RedeemScript != "" {
     //     redeemScript = txunspent.RedeemScript
     // }
 
     rawtxinput := btcjson.RawTxInput{txunspent.TxID, txunspent.Vout, txunspent.ScriptPubKey, redeemScript}
-    signedmsgtx, issigned, err := w.mainClient.SignRawTransaction3(msgtx, []btcjson.RawTxInput{rawtxinput}, []string{key.String()})
+    signedmsgtx, issigned, err := w.MainClient.SignRawTransaction3(msgtx, []btcjson.RawTxInput{rawtxinput}, []string{key.String()})
     if err != nil{
         log.Fatal(err)
     } else if !issigned {
         log.Printf("incomplete signing")
     }
 
-    // add sigs
+    // combine client sig with sigs
 
-    txhash, err := w.mainClient.SendRawTransaction(signedmsgtx, false)
+    txhash, err := w.MainClient.SendRawTransaction(signedmsgtx, false)
     if err != nil {
         log.Fatal(err)
     }
@@ -167,7 +173,7 @@ func (w *AttestClient) verifyTxOnSubchain(txid chainhash.Hash) bool {
     if (txid.String() == w.txid0) { // genesis transaction
         return true
     } else { //might be better to store subchain on init and no need to parse all transactions every time
-        txraw, err := w.mainClient.GetRawTransaction(&txid)
+        txraw, err := w.MainClient.GetRawTransaction(&txid)
         if err != nil {
             return false
         }
@@ -180,7 +186,7 @@ func (w *AttestClient) verifyTxOnSubchain(txid chainhash.Hash) bool {
 
 // Find the latest unspent vout that is on the tip of subchain attestations
 func (w *AttestClient) findLastUnspent() (bool, btcjson.ListUnspentResult) {
-    unspent, err := w.mainClient.ListUnspent()
+    unspent, err := w.MainClient.ListUnspent()
     if err != nil {
         log.Fatal(err)
     }
@@ -197,7 +203,7 @@ func (w *AttestClient) findLastUnspent() (bool, btcjson.ListUnspentResult) {
 
 // Find any previously unconfirmed transactions in order to start attestation from there
 func (w *AttestClient) getUnconfirmedTx() (bool, Attestation) {
-    mempool, err := w.mainClient.GetRawMempool()
+    mempool, err := w.MainClient.GetRawMempool()
     if err != nil {
         log.Fatal(err)
     }
@@ -222,18 +228,18 @@ func (w *AttestClient) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
     }
 
     // Get address from transaction
-    tx, err := w.mainClient.GetRawTransaction(&txid)
+    tx, err := w.MainClient.GetRawTransaction(&txid)
     if err != nil {
         log.Fatal(err)
     }
-    _, addrs, _, errExtract := txscript.ExtractPkScriptAddrs(tx.MsgTx().TxOut[0].PkScript, w.mainChainCfg)
+    _, addrs, _, errExtract := txscript.ExtractPkScriptAddrs(tx.MsgTx().TxOut[0].PkScript, w.MainChainCfg)
     if errExtract != nil {
         log.Fatal(errExtract)
     }
     addr := addrs[0]
 
-    tweakedPriv := crypto.TweakPrivKey(w.walletPriv, latesthash.CloneBytes(), w.mainChainCfg)
-    addrTweaked, _ := w.getNextAttestationAddr(tweakedPriv, *latesthash)
+    tweakedPriv := crypto.TweakPrivKey(w.WalletPriv, latesthash.CloneBytes(), w.MainChainCfg)
+    addrTweaked, _ := w.GetNextAttestationAddr(tweakedPriv, *latesthash)
     // Check first if the attestation came from the latest block
     if (addr.String() == addrTweaked.String()) {
         return *latesthash
@@ -245,8 +251,8 @@ func (w *AttestClient) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
         if err != nil {
             log.Fatal(err)
         }
-        tweakedPriv := crypto.TweakPrivKey(w.walletPriv, hash.CloneBytes(), w.mainChainCfg)
-        addrTweaked, _ := w.getNextAttestationAddr(tweakedPriv, *hash)
+        tweakedPriv := crypto.TweakPrivKey(w.WalletPriv, hash.CloneBytes(), w.MainChainCfg)
+        addrTweaked, _ := w.GetNextAttestationAddr(tweakedPriv, *hash)
         if (addr.String() == addrTweaked.String()) {
             return *hash
         }
