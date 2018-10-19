@@ -217,9 +217,7 @@ func (s *AttestService) doAttestation() {
             }
         }
 
-        log.Printf("received signatures: %v\n", sigs)
-
-        txid := s.attester.signAndSendAttestation(&latestAttestation.tx, latestAttestation.txunspent, sigs, s.server.latest.attestedHash)
+        txid := s.attester.signAndSendAttestation(&latestAttestation.tx, sigs, s.server.latest.attestedHash)
         log.Printf("********** Attestation committed for txid: (%s)\n", txid)
         latestAttestation.txid = txid
         latestAttestation.state = ASTATE_UNCONFIRMED

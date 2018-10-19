@@ -14,9 +14,9 @@ import (
     confpkg "mainstay/config"
     "mainstay/attestation"
     "mainstay/crypto"
+    "mainstay/test"
 
     "github.com/btcsuite/btcd/chaincfg/chainhash"
-    "github.com/btcsuite/btcd/btcjson"
     "github.com/btcsuite/btcd/wire"
     "github.com/btcsuite/btcd/txscript"
     zmq "github.com/pebbe/zmq4"
@@ -35,7 +35,10 @@ var (
     client          *attestation.AttestClient
 )
 
+// main conf path for main use in attestation
 const CONF_PATH = "/src/mainstay/cmd/txsigningtool/conf.json"
+
+// demo parameters for use with regtest demo
 const DEMO_CONF_PATH = "/src/mainstay/cmd/txsigningtool/demo-conf.json"
 const DEMO_INIT_PATH = "/src/mainstay/cmd/txsigningtool/demo-init-signingtool.sh"
 
@@ -59,17 +62,15 @@ func init() {
     if isRegtest {
         // btc regtest node setup
         cmd := exec.Command("/bin/sh", os.Getenv("GOPATH") + DEMO_INIT_PATH)
-        output, err := cmd.Output()
+        _, err := cmd.Output()
         if err != nil {
             log.Fatal(err)
         }
-        log.Printf("%s\n", output)
 
         confFile := confpkg.GetConfFile(os.Getenv("GOPATH") + DEMO_CONF_PATH)
         config = confpkg.NewConfig(false, confFile)
-        tx0 = "cfda78d3ad0510bd49f971b28fd3c58d38c2a8dd79dd97c9a76ece8002507697"
-        pk0 = "cSS9R4XPpajhqy28hcfHEzEzAbyWDqBaGZR4xtV7Jg8TixSWee1x"
-        script = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332102f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e7552ae"
+        pk0 = test.PRIV_CLIENT
+        script = test.SCRIPT
     } else {
         confFile := confpkg.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
         config = confpkg.NewConfig(false, confFile)
@@ -109,6 +110,7 @@ func main() {
     }
 }
 
+// Get hash from received message
 func processHash(msg []byte) chainhash.Hash {
     hash, hashErr := chainhash.NewHash(msg)
     if hashErr != nil {
@@ -117,6 +119,7 @@ func processHash(msg []byte) chainhash.Hash {
     return *hash
 }
 
+// Check received tx and verify tx address and client generated address match
 func verifyTx(tx wire.MsgTx) bool {
     nextKey := client.GetNextAttestationKey(nextHash)
     nextAddr, _ := client.GetNextAttestationAddr(nextKey, nextHash)
@@ -134,6 +137,7 @@ func verifyTx(tx wire.MsgTx) bool {
     return false
 }
 
+// Process received tx, verify and reply with signature
 func processTx(msg []byte) {
     // parse received tx into useful format
     var msgTx wire.MsgTx
@@ -146,28 +150,12 @@ func processTx(msg []byte) {
         return
     }
 
-    // Get previous pk - redeem script
-    key, redeemScript := client.GetKeyAndScriptFromHash(attestedHash)
-
-    // sign tx and send signature to main attestation client
-    prevTxId := msgTx.TxIn[0].PreviousOutPoint.Hash
-    prevTx, errRaw := client.MainClient.GetRawTransaction(&prevTxId)
-    if errRaw!= nil {
-        log.Println(errRaw)
-        return
-    }
-
-    // Sign transaction
-    rawTxInput := btcjson.RawTxInput{prevTxId.String(), 0, hex.EncodeToString(prevTx.MsgTx().TxOut[0].PkScript), redeemScript}
-    signedMsgTx, _, errSign := client.MainClient.SignRawTransaction3(&msgTx, []btcjson.RawTxInput{rawTxInput}, []string{key.String()})
-    if errSign != nil{
-        log.Println(errSign)
-        return
-    }
+    signedMsgTx, _ := client.SignTransaction(attestedHash, msgTx)
 
     scriptSig := signedMsgTx.TxIn[0].SignatureScript
     if len(scriptSig) > 0 {
         sigs, _ := crypto.ParseScriptSig(scriptSig)
+        fmt.Printf("sending sig %s\n", hex.EncodeToString(sigs[0]))
         pub.SendMessage(sigs[0], confpkg.TOPIC_SIGS)
     }
 }
