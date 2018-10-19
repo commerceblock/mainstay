@@ -12,7 +12,6 @@ import (
 	"bytes"
 	"context"
 	"log"
-	"mainstay/clients"
 	confpkg "mainstay/config"
 	"mainstay/messengers"
 	"mainstay/models"
@@ -163,7 +162,8 @@ func (s *AttestService) doAttestation() {
 			log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.txid.String(), latestAttestation.attestedHash.String())
 		} else {
 			log.Println("*AttestService* NEW ATTESTATION")
-			hash := GetNextAttestationHash(s.config.OceanClient())
+			clientListener := NewListener(s.config.OceanClient())
+			hash := clientListener.GetNextHash()
 			log.Printf("********** hash: %s\n", hash.String())
 			if hash == latestAttestation.attestedHash { // skip attestation if same client hash
 				log.Printf("********** Skipping attestation - Client hash already attested")
@@ -222,13 +222,4 @@ func (s *AttestService) doAttestation() {
 		latestAttestation.txid = txid
 		latestAttestation.state = ASTATE_UNCONFIRMED
 	}
-}
-
-// Get latest client hash to use for attestation key tweaking
-func GetNextAttestationHash(client clients.SidechainClient) chainhash.Hash {
-	hash, err := client.GetBestBlockHash()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return *hash
 }

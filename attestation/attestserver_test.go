@@ -28,8 +28,8 @@ func TestAttestServer(t *testing.T) {
 
 	// Generate single attestation transaction
 	_, unspent := client.findLastUnspent()
-
-	sidehash := GetNextAttestationHash(sideClientFake)
+	clientListener := NewListener(sideClientFake)
+	sidehash := clientListener.GetNextHash()
 	key := client.getNextAttestationKey(sidehash)
 	addr, _ := client.getNextAttestationAddr(key, sidehash)
 

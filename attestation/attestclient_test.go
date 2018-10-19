@@ -29,11 +29,11 @@ func TestAttestClient(t *testing.T) {
 	assert.Equal(t, txs[0], unspent.TxID)
 
 	lastHash := chainhash.Hash{}
-
+	clientListener := NewListener(sideClientFake)
 	// Do 10 attestations
 	for i := 0; i < 10; i++ {
 		// Generate attestation transaction with the unspent vout
-		oceanhash := GetNextAttestationHash(sideClientFake)
+		oceanhash := clientListener.GetNextHash()
 		key := client.getNextAttestationKey(oceanhash)
 		addr, _ := client.getNextAttestationAddr(key, oceanhash)
 
