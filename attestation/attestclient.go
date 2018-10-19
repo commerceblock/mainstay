@@ -2,6 +2,7 @@ package attestation
 
 import (
     "log"
+    "encoding/hex"
 
     "mainstay/crypto"
     "mainstay/clients"
@@ -141,7 +142,7 @@ func (w *AttestClient) GetKeyAndScriptFromHash(hash chainhash.Hash) (btcutil.WIF
 }
 
 // Sign and send the latest attestation transaction
-func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx, txunspent btcjson.ListUnspentResult, sigs []string, hash chainhash.Hash) chainhash.Hash {
+func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx, txunspent btcjson.ListUnspentResult, sigs [][]byte, hash chainhash.Hash) chainhash.Hash {
 
     // Calculate private key and redeemScript from hash
     key, redeemScript := w.GetKeyAndScriptFromHash(hash)
@@ -151,16 +152,26 @@ func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx, txunspent btcjs
     // }
 
     rawtxinput := btcjson.RawTxInput{txunspent.TxID, txunspent.Vout, txunspent.ScriptPubKey, redeemScript}
-    signedmsgtx, issigned, err := w.MainClient.SignRawTransaction3(msgtx, []btcjson.RawTxInput{rawtxinput}, []string{key.String()})
+    signedMsgTx, issigned, err := w.MainClient.SignRawTransaction3(msgtx, []btcjson.RawTxInput{rawtxinput}, []string{key.String()})
     if err != nil{
         log.Fatal(err)
     } else if !issigned {
         log.Printf("incomplete signing")
     }
 
-    // combine client sig with sigs
+    // MultiSig case - combine sigs and create new scriptSig
+    if redeemScript != "" {
+        clientSigs, script := crypto.ParseScriptSig(signedMsgTx.TxIn[0].SignatureScript)
+        if hex.EncodeToString(script) == redeemScript {
+            combinedSigs := append(clientSigs, sigs...)
 
-    txhash, err := w.MainClient.SendRawTransaction(signedmsgtx, false)
+            // take only numOfSigs required
+            combinedScriptSig := crypto.CreateScriptSig(combinedSigs[:w.numOfSigs], script)
+            signedMsgTx.TxIn[0].SignatureScript = combinedScriptSig
+        }
+    }
+
+    txhash, err := w.MainClient.SendRawTransaction(signedMsgTx, false)
     if err != nil {
         log.Fatal(err)
     }

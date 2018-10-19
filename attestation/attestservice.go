@@ -25,7 +25,7 @@ import (
 )
 
 // Waiting time between attestations and/or attestation confirmation attempts
-const ATTEST_WAIT_TIME = 60
+const ATTEST_WAIT_TIME = 10
 
 // AttestationService structure
 // Encapsulates Attest Server, Attest Client
@@ -219,7 +219,7 @@ func (s *AttestService) doAttestation() {
 
         log.Printf("received signatures: %v\n", sigs)
 
-        txid := s.attester.signAndSendAttestation(&latestAttestation.tx, latestAttestation.txunspent, []string{}, s.server.latest.attestedHash)
+        txid := s.attester.signAndSendAttestation(&latestAttestation.tx, latestAttestation.txunspent, sigs, s.server.latest.attestedHash)
         log.Printf("********** Attestation committed for txid: (%s)\n", txid)
         latestAttestation.txid = txid
         latestAttestation.state = ASTATE_UNCONFIRMED
