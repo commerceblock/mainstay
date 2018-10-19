@@ -7,7 +7,6 @@ import (
 )
 
 // Zmq publisher wrapper
-// Extends Publisher interface
 type PublisherZmq struct {
     socket  *zmq.Socket
 }

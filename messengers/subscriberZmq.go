@@ -8,7 +8,6 @@ import (
 )
 
 // Zmq subscriber wrapper
-// Extends Subscriber interface
 type SubscriberZmq struct {
     socket  *zmq.Socket
 }
