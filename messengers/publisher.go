@@ -2,6 +2,6 @@ package messengers
 
 // Publisher interface
 type Publisher interface {
-    SendMessage(string, string)
-    Close()
+	SendMessage(string, string)
+	Close()
 }

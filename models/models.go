@@ -2,43 +2,43 @@
 package models
 
 type Request struct {
-    Name      string    `json:"name"`
-    Id        string    `json:"id"`
+	Name string `json:"name"`
+	Id   string `json:"id"`
 }
 
 type Response struct {
-    Request   Request
-    Error     string    `json:"error"`
+	Request Request
+	Error   string `json:"error"`
 }
 type BlockResponse struct {
-    Response
-    Attested    bool    `json:"attested"`
+	Response
+	Attested bool `json:"attested"`
 }
 type BestBlockResponse struct {
-    Response
-    BlockHash   string    `json:"blockhash"`
+	Response
+	BlockHash string `json:"blockhash"`
 }
 type BestBlockHeightResponse struct {
-    Response
-    BlockHeight int32    `json:"blockheight"`
+	Response
+	BlockHeight int32 `json:"blockheight"`
 }
 type TransactionResponse struct {
-    Response
-    Attested    bool    `json:"attested"`
+	Response
+	Attested bool `json:"attested"`
 }
 type LatestAttestationResponse struct {
-    Response
-    TxHash      string    `json:"txhash"`
+	Response
+	TxHash string `json:"txhash"`
 }
 
 type Channel struct {
-    Requests    chan Request
-    Responses   chan interface{}
+	Requests  chan Request
+	Responses chan interface{}
 }
 
 func NewChannel() *Channel {
-    channel := &Channel{}
-    channel.Requests = make(chan Request)
-    channel.Responses = make(chan interface{})
-    return channel
+	channel := &Channel{}
+	channel.Requests = make(chan Request)
+	channel.Responses = make(chan interface{})
+	return channel
 }
