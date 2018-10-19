@@ -1,6 +1,20 @@
 package listener
 
-type Listener struct{}
+import (
+	"log"
+	"mainstay/clients"
 
-func (l Listener) GetNextHash() {
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+)
+
+type Listener struct {
+	clients.SidechainClient
+}
+
+func (l *Listener) GetNextHash() chainhash.Hash {
+	hash, err := l.SidechainClient.GetBestBlockHash()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return *hash
 }
