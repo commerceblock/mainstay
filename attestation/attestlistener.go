@@ -1,4 +1,4 @@
-package listener
+package attestation
 
 import (
 	"log"
@@ -17,4 +17,8 @@ func (l *Listener) GetNextHash() chainhash.Hash {
 		log.Fatal(err)
 	}
 	return *hash
+}
+
+func NewListener(client clients.SidechainClient) *Listener {
+	return &Listener{client}
 }
