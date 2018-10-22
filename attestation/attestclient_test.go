@@ -37,8 +37,8 @@ func TestAttestClient(t *testing.T) {
 		key := client.GetNextAttestationKey(oceanhash)
 		addr, _ := client.GetNextAttestationAddr(key, oceanhash)
 
-		tx := client.CreateAttestation(addr, unspent, true)
-		txid := client.SignAndSendAttestation(tx, [][]byte{}, lastHash)
+		tx := client.createAttestation(addr, unspent, true)
+		txid := client.signAndSendAttestation(tx, [][]byte{}, lastHash)
 		sideClientFake.Generate(1)
 
 		lastHash = oceanhash

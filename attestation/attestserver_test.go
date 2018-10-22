@@ -33,8 +33,8 @@ func TestAttestServer(t *testing.T) {
 	key := client.GetNextAttestationKey(sidehash)
 	addr, _ := client.GetNextAttestationAddr(key, sidehash)
 
-	tx := client.CreateAttestation(addr, unspent, true)
-	txid := client.SignAndSendAttestation(tx, [][]byte{}, chainhash.Hash{})
+	tx := client.createAttestation(addr, unspent, true)
+	txid := client.signAndSendAttestation(tx, [][]byte{}, chainhash.Hash{})
 	client.MainClient.Generate(1)
 
 	// Update latest in server
