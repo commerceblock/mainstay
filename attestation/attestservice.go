@@ -11,8 +11,8 @@ package attestation
 import (
 	"context"
 	"log"
-	"ocean-attestation/clients"
-	"ocean-attestation/models"
+	"mainstay/clients"
+	"mainstay/models"
 	"sync"
 	"time"
 

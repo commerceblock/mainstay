@@ -1,8 +1,8 @@
 package crypto
 
 import (
-	"ocean-attestation/clients"
-	"ocean-attestation/test"
+	"mainstay/clients"
+	"mainstay/test"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

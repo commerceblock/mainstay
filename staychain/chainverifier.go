@@ -3,8 +3,8 @@ package staychain
 import (
 	"encoding/hex"
 	"log"
-	"ocean-attestation/clients"
-	"ocean-attestation/crypto"
+	"mainstay/clients"
+	"mainstay/crypto"
 	"strings"
 
 	"github.com/btcsuite/btcd/btcec"

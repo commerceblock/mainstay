@@ -1,7 +1,7 @@
 package attestation
 
 import (
-	"ocean-attestation/models"
+	"mainstay/models"
 	"strconv"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"

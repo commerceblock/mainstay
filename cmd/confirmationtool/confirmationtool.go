@@ -4,9 +4,9 @@ package main
 import (
 	"flag"
 	"log"
-	"ocean-attestation/clients"
-	"ocean-attestation/conf"
-	"ocean-attestation/staychain"
+	"mainstay/clients"
+	"mainstay/conf"
+	"mainstay/staychain"
 	"os"
 	"time"
 
@@ -19,7 +19,7 @@ import (
 
 const MAIN_NAME = "bitcoin"
 const SIDE_NAME = "ocean"
-const CONF_PATH = "/src/ocean-attestation/cmd/confirmationtool/conf.json"
+const CONF_PATH = "/src/mainstay/cmd/confirmationtool/conf.json"
 const DEFAULT_TX = "bf41c0da8047b1416d5ca680e2643967b27537cdf9a41527034698c336b55313"
 
 var (

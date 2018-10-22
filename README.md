@@ -1,5 +1,5 @@
-# ocean-attestation
-The ocean-attestation repository is an application that implements the [Mainstay protocol](https://www.commerceblock.com/wp-content/uploads/2018/03/commerceblock-mainstay-whitepaper.pdf) designed by [CommerceBlock](https://www.commerceblock.com). It is a Go daemon performing attestations of the [Ocean](https://github.com/commerceblock/ocean) network to Bitcoin. It also includes a Confirmation tool that can be run in parallel to the Ocean/Bitcoin networks and confirm these attestations.
+# mainstay
+The mainstay repository is an application that implements the [Mainstay protocol](https://www.commerceblock.com/wp-content/uploads/2018/03/commerceblock-mainstay-whitepaper.pdf) designed by [CommerceBlock](https://www.commerceblock.com). It is a Go daemon performing attestations of the [Ocean](https://github.com/commerceblock/ocean) network to Bitcoin. It also includes a Confirmation tool that can be run in parallel to the Ocean/Bitcoin networks and confirm these attestations.
 
 ## Prerequisites
 * Go (https://github.com/golang)
@@ -14,7 +14,7 @@ The ocean-attestation repository is an application that implements the [Mainstay
 
 - Regtest Demo
     - Start the ocean-demo `python ocean-demo/PROTOCOLS/demo.py`
-    - Run `ocean-attestation -regtest`
+    - Run `mainstay -regtest`
 
 - Testnet Mode
 
@@ -24,10 +24,10 @@ The ocean-attestation repository is an application that implements the [Mainstay
 
     - The `TX_HASH` should be included in the genesis block of the Ocean network using the conf option `attestationhash`. Initiate the Ocean testnet network and add connection details (actual value or ENV variable) to one of it's nodes in `conf/conf.json`.
 
-    - Run `ocean-attestation -tx TX_HASH`
+    - Run `mainstay -tx TX_HASH`
 
 - Unit Testing
-    - `/$GOPATH/src/ocean-attestation/run-tests.sh`
+    - `/$GOPATH/src/mainstay/run-tests.sh`
 
 ### Confirmation Tool
 

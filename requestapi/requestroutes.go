@@ -2,8 +2,8 @@ package requestapi
 
 import (
 	"log"
+	"mainstay/models"
 	"net/http"
-	"ocean-attestation/models"
 	"time"
 
 	"github.com/gorilla/mux"

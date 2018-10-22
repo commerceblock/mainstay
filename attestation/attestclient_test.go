@@ -1,8 +1,8 @@
 package attestation
 
 import (
-	"ocean-attestation/clients"
-	"ocean-attestation/test"
+	"mainstay/clients"
+	"mainstay/test"
 	"testing"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"

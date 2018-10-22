@@ -1,7 +1,7 @@
 #!/bin/bash
 
-alias dir="$GOPATH/src/ocean-attestation"
+alias dir="$GOPATH/src/mainstay"
 
 # run tests sequentially
-cd $GOPATH/src/ocean-attestation
+cd $GOPATH/src/mainstay
 go test -v -p=1 ./...

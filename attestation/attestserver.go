@@ -2,8 +2,8 @@ package attestation
 
 import (
 	"log"
-	"ocean-attestation/clients"
-	"ocean-attestation/models"
+	"mainstay/clients"
+	"mainstay/models"
 	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"

@@ -2,9 +2,9 @@
 
 export API_HOST="$(uname -n):8080"
 
-if [[ "$1" == "ocean-attestation" ]]; then
+if [[ "$1" == "mainstay" ]]; then
     echo "Running attestation"
-    ocean-attestation -tx ${TX}
+    mainstay -tx ${TX}
 else
   $@
 fi

@@ -3,9 +3,9 @@ package requestapi
 import (
 	"bytes"
 	"encoding/json"
+	"mainstay/models"
 	"net/http"
 	"net/http/httptest"
-	"ocean-attestation/models"
 	"testing"
 )
 

@@ -12,7 +12,7 @@ import (
 
 // Client RPC connectivity and client related functionality
 
-const CONF_PATH = "/src/ocean-attestation/conf/conf.json"
+const CONF_PATH = "/src/mainstay/conf/conf.json"
 
 // Get default conf from local file
 func GetConfFile(filepath string) []byte {

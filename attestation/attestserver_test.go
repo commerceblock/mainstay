@@ -2,9 +2,9 @@ package attestation
 
 import (
 	"log"
-	"ocean-attestation/clients"
-	"ocean-attestation/models"
-	"ocean-attestation/test"
+	"mainstay/clients"
+	"mainstay/models"
+	"mainstay/test"
 	"testing"
 	"time"
 

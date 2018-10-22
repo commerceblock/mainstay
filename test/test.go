@@ -3,8 +3,8 @@ package test
 
 import (
 	"log"
-	"ocean-attestation/clients"
-	"ocean-attestation/conf"
+	"mainstay/clients"
+	"mainstay/conf"
 	"os"
 	"os/exec"
 
@@ -15,10 +15,10 @@ import (
 )
 
 // For regtest attestation demonstration
-const DEMO_INIT_PATH = "/src/ocean-attestation/test/demo-init.sh"
+const DEMO_INIT_PATH = "/src/mainstay/test/demo-init.sh"
 
 // For unit-testing
-const TEST_INIT_PATH = "/src/ocean-attestation/test/test-init.sh"
+const TEST_INIT_PATH = "/src/mainstay/test/test-init.sh"
 
 var testConf = []byte(`
 {

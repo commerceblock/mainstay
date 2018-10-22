@@ -2,8 +2,8 @@ package attestation
 
 import (
 	"log"
-	"ocean-attestation/clients"
-	"ocean-attestation/crypto"
+	"mainstay/clients"
+	"mainstay/crypto"
 	"time"
 
 	"github.com/btcsuite/btcd/btcjson"
