@@ -32,12 +32,10 @@ type AttestService struct {
 	ctx             context.Context
 	wg              *sync.WaitGroup
 	config          *confpkg.Config
-
     attester        *AttestClient
 	server          *AttestServer
-
+    listener        *AttestListener
     reqServiceChan  *models.Channel
-
 	publisher       *messengers.PublisherZmq
 	subscribers     []*messengers.SubscriberZmq
 }
@@ -57,6 +55,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
 
 	latestAttestation = NewAttestation(chainhash.Hash{}, chainhash.Hash{}, ASTATE_INIT)
 	server := NewAttestServer(ctx, wg, config.OceanClient(), *latestAttestation)
+    listener := NewAttestListener(ctx, wg, config.OceanClient())
 
 	// Initialise publisher for sending new hashes and txs
 	// and subscribers to receive sig responses
@@ -69,7 +68,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
 	}
 	attestDelay = 30 * time.Second // add some delay for subscribers to have time to set up
 
-	return &AttestService{ctx, wg, config, attester, server, channel, publisher, subscribers}
+	return &AttestService{ctx, wg, config, attester, server, listener, channel, publisher, subscribers}
 }
 
 // Run Attest Service
@@ -79,6 +78,9 @@ func (s *AttestService) Run() {
     s.wg.Add(1)
     go s.server.Run()
 
+    s.wg.Add(1)
+    go s.listener.Run()
+
 	s.wg.Add(1)
 	go func() { //Waiting for requests from the request service and pass to server for response
 		defer s.wg.Done()
@@ -87,8 +89,9 @@ func (s *AttestService) Run() {
 			case <-s.ctx.Done():
 				return
 			case req := <-s.reqServiceChan.Requests:
-                if false /* to change for listener */ {
-                    log.Printf("Commitment request")
+                if req.Name == "CommitmentRequest" {
+                    // if new commitment, send to listener
+                    s.listener.requestChan <- models.RequestWithResponseChannel{req, s.reqServiceChan.Responses}
                 } else {
                     // send request to server channel and pass reponse channel
                     s.server.requestChan <- models.RequestWithResponseChannel{req, s.reqServiceChan.Responses}
@@ -172,8 +175,12 @@ func (s *AttestService) doAttestation() {
 			log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.txid.String(), latestAttestation.attestedHash.String())
 		} else {
 			log.Println("*AttestService* NEW ATTESTATION")
-			clientListener := NewListener(s.config.OceanClient())
-			hash := clientListener.GetNextHash()
+
+            // request latest hash from listener and await response
+            hashChan := make(chan interface{})
+            s.listener.latestChan <- models.RequestWithResponseChannel{models.Request{}, hashChan}
+            hash := (<- hashChan).(chainhash.Hash)
+
 			log.Printf("********** hash: %s\n", hash.String())
 			if hash == latestAttestation.attestedHash { // skip attestation if same client hash
 				log.Printf("********** Skipping attestation - Client hash already attested")

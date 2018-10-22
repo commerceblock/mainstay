@@ -6,14 +6,14 @@ import (
 	"testing"
 )
 
-func TestGetNextHash(t *testing.T) {
+func TestgetNextHash(t *testing.T) {
 	test := test.NewTest(false, false)
 	testConfig := test.Config
 	var sideClientFake *clients.SidechainClientFake
 	sideClientFake = testConfig.OceanClient().(*clients.SidechainClientFake)
-	var listener = NewListener(sideClientFake)
+	var listener = NewAttestListener(nil, nil, sideClientFake)
 	hash, _ := sideClientFake.GetBestBlockHash()
-	if listener.GetNextHash() != *hash {
-		t.Errorf("GetNextHash() bad return hash")
+	if listener.getNextHash() != *hash {
+		t.Errorf("getNextHash() bad return hash")
 	}
 }
