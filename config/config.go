@@ -15,8 +15,10 @@ const SIDE_CHAIN_NAME = "ocean"
 const CONF_PATH = "/src/mainstay/config/conf.json"
 
 const MAIN_PUBLISHER_PORT = 5000
+const MAIN_LISTENER_PORT = 6000
 const TOPIC_NEW_HASH = "H"
 const TOPIC_NEW_TX = "T"
+const TOPIC_CONFIRMED_HASH = "C"
 const TOPIC_KEYS = "K"
 const TOPIC_SIGS = "S"
 

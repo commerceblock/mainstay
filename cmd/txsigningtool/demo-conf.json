@@ -1,0 +1,17 @@
+{
+    "main": {
+        "rpcurl": "localhost:18453",
+        "rpcuser": "user",
+        "rpcpass": "pass",
+        "chain": "regtest"
+    },
+    "ocean": {
+        "rpcurl": "",
+        "rpcuser": "",
+        "rpcpass": "",
+        "chain": ""
+    },
+    "misc": {
+        "multisignodes": ""
+    }
+}

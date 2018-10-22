@@ -30,6 +30,7 @@ func parseFlags() {
 	flag.BoolVar(&isRegtest, "regtest", false, "Use regtest wallet configuration instead of user wallet")
 	flag.StringVar(&tx0, "tx", "", "Tx id for genesis attestation transaction")
 	flag.StringVar(&pk0, "pk", "", "Main client pk for genesis attestation transaction")
+	flag.StringVar(&script, "script", "", "Redeem script in case multisig is used")
 	flag.Parse()
 
 	if (tx0 == "" || pk0 == "") && !isRegtest {
@@ -49,6 +50,7 @@ func init() {
 		mainConfig = config.NewConfig(false)
 		mainConfig.SetInitTX(tx0)
 		mainConfig.SetInitPK(pk0)
+		mainConfig.SetMultisigScript(script)
 	}
 
 	apiHost = os.Getenv("API_HOST")

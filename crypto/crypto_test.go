@@ -64,4 +64,22 @@ func TestCrypto(t *testing.T) {
 	msAddrTest, msTest := CreateMultisig([]*btcec.PublicKey{msPubTest[0], msPubTest[1]}, nSigs, mainChainCfg)
 	assert.Equal(t, multisigAddr, msAddrTest.String())
 	assert.Equal(t, multisig, msTest)
+
+	// Test ParseScriptSig and CreateScriptSig
+	scriptSig := "00473044022077607e068a5e4570f28430e723a3292d2c01d798df0758978a8cbc1d045aa230022000d5f85d071e697369c7c4d6e3520aa719f728ed5b511f8aa4eb93ceb615ba6501473044022077607e068a5e4570f28430e723a3292d2c01d798df0758978a8cbc1d045aa230022000d5f85d071e697369c7c4d6e3520aa719f728ed5b511f8aa4eb93ceb615ba650247512103c67926d6c06af1b6536ed189889d0adf02b7119bbe7a9f95498eff6417341c9321039596c67851f22774aa6c159b31f1ebf6581038e3573fc5710bf3d91c328679e852ae"
+	sig1 := "3044022077607e068a5e4570f28430e723a3292d2c01d798df0758978a8cbc1d045aa230022000d5f85d071e697369c7c4d6e3520aa719f728ed5b511f8aa4eb93ceb615ba6501"
+	sig2 := "3044022077607e068a5e4570f28430e723a3292d2c01d798df0758978a8cbc1d045aa230022000d5f85d071e697369c7c4d6e3520aa719f728ed5b511f8aa4eb93ceb615ba6502"
+	redeemScript := "512103c67926d6c06af1b6536ed189889d0adf02b7119bbe7a9f95498eff6417341c9321039596c67851f22774aa6c159b31f1ebf6581038e3573fc5710bf3d91c328679e852ae"
+	scriptSigBytes, _ := hex.DecodeString(scriptSig)
+	sigsTest, redeemTest := ParseScriptSig(scriptSigBytes)
+	assert.Equal(t, 2, len(sigsTest))
+	assert.Equal(t, redeemScript, hex.EncodeToString(redeemTest))
+	assert.Equal(t, sig1, hex.EncodeToString(sigsTest[0]))
+	assert.Equal(t, sig2, hex.EncodeToString(sigsTest[1]))
+
+	sig1Bytes, _ := hex.DecodeString(sig1)
+	sig2Bytes, _ := hex.DecodeString(sig2)
+	redeemScriptBytes, _ := hex.DecodeString(redeemScript)
+	scriptSigTest := CreateScriptSig([][]byte{sig1Bytes, sig2Bytes}, redeemScriptBytes)
+	assert.Equal(t, scriptSig, hex.EncodeToString(scriptSigTest))
 }

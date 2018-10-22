@@ -23,7 +23,7 @@ import (
 )
 
 // Waiting time between attestations and/or attestation confirmation attempts
-const ATTEST_WAIT_TIME = 5
+const ATTEST_WAIT_TIME = 10
 
 // AttestationService structure
 // Encapsulates Attest Server, Attest Client
