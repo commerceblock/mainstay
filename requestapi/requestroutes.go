@@ -23,37 +23,37 @@ var routes = []Route{
 		"Index",
 		"GET",
 		"/api/",
-		Index,
+		HandleIndex,
 	},
 	Route{
 		"Block",
 		"GET",
 		"/api/block/{blockId}",
-		Block,
+		HandleBlock,
 	},
 	Route{
 		"BestBlock",
 		"GET",
 		"/api/bestblock/",
-		BestBlock,
+		HandleBestBlock,
 	},
 	Route{
 		"BestBlockHeight",
 		"GET",
 		"/api/bestblockheight/",
-		BestBlockHeight,
+		HandleBestBlockHeight,
 	},
 	Route{
 		"Transaction",
 		"GET",
 		"/api/transaction/{transactionId}",
-		Transaction,
+		HandleTransaction,
 	},
 	Route{
 		"LatestAttestation",
 		"GET",
 		"/api/latestattestation/",
-		LatestAttestation,
+		HandleLatestAttestation,
 	},
 }
 
