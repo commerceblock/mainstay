@@ -177,8 +177,8 @@ func (s *AttestService) doAttestation() {
 		log.Printf("*AttestService* COLLECTING PUBKEYS\n")
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
-		key := s.attester.getNextAttestationKey(latestAttestation.attestedHash)
-		paytoaddr, script := s.attester.getNextAttestationAddr(key, latestAttestation.attestedHash)
+		key := s.attester.GetNextAttestationKey(latestAttestation.attestedHash)
+		paytoaddr, script := s.attester.GetNextAttestationAddr(key, latestAttestation.attestedHash)
 
 		success, txunspent := s.attester.findLastUnspent()
 		if success {
@@ -199,25 +199,18 @@ func (s *AttestService) doAttestation() {
 	case ASTATE_COLLECTING_SIGS:
 		log.Printf("*AttestService* COLLECTING SIGS\n")
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
-
 		// Read sigs using subscribers
+		var sigs [][]byte
 		sockets, _ := poller.Poll(-1)
 		for _, socket := range sockets {
 			for _, sub := range s.subscribers {
 				if sub.Socket() == socket.Socket {
 					_, msg := sub.ReadMessage()
-					log.Printf("********** received signature: %s \n", msg)
+					sigs = append(sigs, msg)
 				}
 			}
 		}
-
-		//
-		// combine sigs
-		// if fail - restart
-		//
-		var sigs []string
-
-		txid := s.attester.signAndSendAttestation(&latestAttestation.tx, latestAttestation.txunspent, sigs, s.server.latest.attestedHash)
+		txid := s.attester.signAndSendAttestation(&latestAttestation.tx, sigs, s.server.latest.attestedHash)
 		log.Printf("********** Attestation committed for txid: (%s)\n", txid)
 		latestAttestation.txid = txid
 		latestAttestation.state = ASTATE_UNCONFIRMED
