@@ -146,40 +146,40 @@ func CreateMultisig(pubkeys []*btcec.PublicKey, nSigs int, chainCfg *chaincfg.Pa
 // Parse scriptSig and return sigs and redeemScript
 func ParseScriptSig(scriptSig []byte) ([][]byte, []byte) {
 
-    if len(scriptSig) == 0 {
-        return [][]byte{}, []byte{}
-    }
+	if len(scriptSig) == 0 {
+		return [][]byte{}, []byte{}
+	}
 
-    var scripts [][]byte
-    it := 1
-    for {
-        scriptSize := scriptSig[it]
-        script := scriptSig[it+1:it+1+int(scriptSize)]
-        scripts = append(scripts, script)
+	var scripts [][]byte
+	it := 1
+	for {
+		scriptSize := scriptSig[it]
+		script := scriptSig[it+1 : it+1+int(scriptSize)]
+		scripts = append(scripts, script)
 
-        it += 1 + int(scriptSize)
+		it += 1 + int(scriptSize)
 
-        if len(scriptSig) <= it {
-            break
-        }
-    }
+		if len(scriptSig) <= it {
+			break
+		}
+	}
 
-    return scripts[:len(scripts)-1], scripts[len(scripts)-1]
+	return scripts[:len(scripts)-1], scripts[len(scripts)-1]
 }
 
 // Create scriptSig from sigs and redeemScript
 func CreateScriptSig(sigs [][]byte, script []byte) []byte {
 
-    var scriptSig []byte
-    scriptSig = append(scriptSig, byte(0))
+	var scriptSig []byte
+	scriptSig = append(scriptSig, byte(0))
 
-    for _, sig := range sigs {
-        scriptSig = append(scriptSig, byte(len(sig)))
-        scriptSig = append(scriptSig, sig...)
-    }
+	for _, sig := range sigs {
+		scriptSig = append(scriptSig, byte(len(sig)))
+		scriptSig = append(scriptSig, sig...)
+	}
 
-    scriptSig = append(scriptSig, byte(len(script)))
-    scriptSig = append(scriptSig, script...)
+	scriptSig = append(scriptSig, byte(len(script)))
+	scriptSig = append(scriptSig, script...)
 
-    return scriptSig
+	return scriptSig
 }
