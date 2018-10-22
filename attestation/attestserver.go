@@ -1,9 +1,9 @@
 package attestation
 
 import (
+	"context"
 	"log"
-    "sync"
-    "context"
+	"sync"
 
 	"mainstay/clients"
 	"mainstay/models"
@@ -13,10 +13,11 @@ import (
 // Stores information on the latest attestation
 // Responds to external API requests handled by RequestApi
 type AttestServer struct {
-    ctx         context.Context
-    wg          *sync.WaitGroup
-    requestChan chan models.RequestWithResponseChannel
-    updateChan  chan Attestation
+	ctx          context.Context
+	wg           *sync.WaitGroup
+	requestChan  chan models.RequestWithResponseChannel
+	latestChan   chan models.RequestWithResponseChannel
+	updateChan   chan Attestation
 	latest       Attestation
 	latestHeight int32
 	sideClient   clients.SidechainClient
@@ -24,9 +25,10 @@ type AttestServer struct {
 
 // NewAttestServer returns a pointer to an AttestServer instance
 func NewAttestServer(ctx context.Context, wg *sync.WaitGroup, rpcSide clients.SidechainClient, latest Attestation) *AttestServer {
-    reqChan := make(chan models.RequestWithResponseChannel)
-    updChan := make(chan Attestation)
-	return &AttestServer{ctx, wg, reqChan, updChan, latest, 0, rpcSide}
+	reqChan := make(chan models.RequestWithResponseChannel)
+	latestChan := make(chan models.RequestWithResponseChannel)
+	updChan := make(chan Attestation)
+	return &AttestServer{ctx, wg, reqChan, latestChan, updChan, latest, 0, rpcSide}
 }
 
 // Update information on the latest attestation and sidechain height
@@ -60,16 +62,18 @@ func (s *AttestServer) Respond(req models.Request) interface{} {
 
 // Main attest server method listening to remote requests and updates
 func (s *AttestServer) Run() {
-    defer s.wg.Done()
+	defer s.wg.Done()
 
-    for {
-        select {
-        case <-s.ctx.Done():
-            return
-        case req := <-s.requestChan:
-            req.Response <- s.Respond(req.Request)
-        case update := <-s.updateChan:
-            s.UpdateLatest(update)
-        }
-    }
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case req := <-s.requestChan:
+			req.Response <- s.Respond(req.Request)
+		case latest := <-s.latestChan:
+			latest.Response <- s.latest
+		case update := <-s.updateChan:
+			s.UpdateLatest(update)
+		}
+	}
 }
