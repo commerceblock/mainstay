@@ -21,7 +21,7 @@ func TestRequestService(t *testing.T) {
 
 	router := NewRouter(channel)
 
-	r, err := http.NewRequest("GET", "/bestblock/", nil)
+	r, err := http.NewRequest("GET", "/api/bestblock/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

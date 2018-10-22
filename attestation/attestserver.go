@@ -40,15 +40,15 @@ func (s *AttestServer) UpdateLatest(tx Attestation) {
 // Respond returns appropriate response based on request type
 func (s *AttestServer) Respond(req models.Request) interface{} {
 	switch req.Name {
-	case "Block":
+	case ROUTE_BLOCK:
 		return s.BlockResponse(req)
-	case "BestBlock":
+	case ROUTE_BEST_BLOCK:
 		return s.BestBlockResponse(req)
-	case "BestBlockHeight":
+	case ROUTE_BEST_BLOCK_HEIGHT:
 		return s.BestBlockHeightResponse(req)
-	case "LatestAttestation":
+	case ROUTE_LATEST_ATTESTATION:
 		return s.LatestAttestation(req)
-	case "Transaction":
+	case ROUTE_TRANSACTION:
 		return s.TransactionResponse(req)
 	default:
 		return models.Response{req, "**AttestServer** Non supported request type"}
