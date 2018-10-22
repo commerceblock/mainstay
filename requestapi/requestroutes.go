@@ -12,8 +12,10 @@ import (
 const ROUTE_BEST_BLOCK = "BestBlock"
 const ROUTE_BEST_BLOCK_HEIGHT = "BestBlockHeight"
 const ROUTE_BLOCK = "Block"
+const ROUTE_COMMITMENT_SEND = "CommitmentSend"
 const ROUTE_INDEX = "Index"
 const ROUTE_LATEST_ATTESTATION = "LatestAttestation"
+const ROUTE_SERVER_VERIFY = "HandleServerVerify"
 const ROUTE_TRANSACTION = "Transaction"
 
 // Route structure
@@ -44,6 +46,12 @@ var routes = []Route{
 		"/api/block/{blockId}",
 		HandleBlock,
 	},
+	// Route{
+	// 	ROUTE_COMMITMENT_SEND,
+	// 	"POST",
+	// 	"/api/commitment/send/{clientId,hash,height}",
+	// 	HandleCommitmentSend,
+	// },
 	Route{
 		ROUTE_INDEX,
 		"GET",
@@ -55,6 +63,12 @@ var routes = []Route{
 		"GET",
 		"/api/latestattestation/",
 		HandleLatestAttestation,
+	},
+	Route{
+		ROUTE_SERVER_VERIFY,
+		"GET",
+		"/api/server/verify/{hash}",
+		HandleServerVerify,
 	},
 	Route{
 		ROUTE_TRANSACTION,
