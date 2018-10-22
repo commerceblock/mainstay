@@ -4,35 +4,33 @@ package main
 import (
 	"context"
 	"flag"
-    "os"
-    "os/signal"
-    "sync"
-    "log"
-    "time"
-
-    "mainstay/attestation"
-    "mainstay/config"
-    "mainstay/models"
-    "mainstay/requestapi"
-    "mainstay/test"
+	"log"
+	"mainstay/attestation"
+	"mainstay/config"
+	"mainstay/models"
+	"mainstay/requestapi"
+	"mainstay/test"
+	"os"
+	"os/signal"
+	"sync"
+	"time"
 )
 
 const DEFAULT_API_HOST = "localhost:8080"
 
 var (
-	tx0                     string
-    pk0                     string
-    script                  string
-	isRegtest               bool
-    apiHost                 string
-    mainConfig              *config.Config
+	tx0        string
+	pk0        string
+	isRegtest  bool
+	apiHost    string
+	mainConfig *config.Config
 )
 
 func parseFlags() {
 	flag.BoolVar(&isRegtest, "regtest", false, "Use regtest wallet configuration instead of user wallet")
 	flag.StringVar(&tx0, "tx", "", "Tx id for genesis attestation transaction")
-    flag.StringVar(&pk0, "pk", "", "Main client pk for genesis attestation transaction")
-    flag.StringVar(&script, "script", "", "Redeem script in case multisig is used")
+	flag.StringVar(&pk0, "pk", "", "Main client pk for genesis attestation transaction")
+	flag.StringVar(&script, "script", "", "Redeem script in case multisig is used")
 	flag.Parse()
 
 	if (tx0 == "" || pk0 == "") && !isRegtest {
@@ -44,21 +42,21 @@ func parseFlags() {
 func init() {
 	parseFlags()
 
-    if isRegtest {
-        test := test.NewTest(true, true)
-        mainConfig = test.Config
-        log.Printf("Running regtest mode with -tx=%s\n", mainConfig.InitTX())
-    } else {
-        mainConfig = config.NewConfig(false)
-        mainConfig.SetInitTX(tx0)
-        mainConfig.SetInitPK(pk0)
-        mainConfig.SetMultisigScript(script)
-    }
+	if isRegtest {
+		test := test.NewTest(true, true)
+		mainConfig = test.Config
+		log.Printf("Running regtest mode with -tx=%s\n", mainConfig.InitTX())
+	} else {
+		mainConfig = config.NewConfig(false)
+		mainConfig.SetInitTX(tx0)
+		mainConfig.SetInitPK(pk0)
+		mainConfig.SetMultisigScript(script)
+	}
 
-    apiHost = os.Getenv("API_HOST")
-    if apiHost == "" {
-        apiHost = DEFAULT_API_HOST
-    }
+	apiHost = os.Getenv("API_HOST")
+	if apiHost == "" {
+		apiHost = DEFAULT_API_HOST
+	}
 }
 
 func main() {
@@ -87,21 +85,21 @@ func main() {
 		}
 	}()
 
-    if isRegtest { // In regtest demo mode generate main client blocks automatically
-        wg.Add(1)
-        go func() {
-            defer wg.Done()
-            for {
-                newBlockTimer := time.NewTimer(60 * time.Second)
-                select {
-                    case <-ctx.Done():
-                        return
-                    case <-newBlockTimer.C:
-                        mainConfig.MainClient().Generate(1)
-                }
-            }
-        }()
-    }
+	if isRegtest { // In regtest demo mode generate main client blocks automatically
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				newBlockTimer := time.NewTimer(60 * time.Second)
+				select {
+				case <-ctx.Done():
+					return
+				case <-newBlockTimer.C:
+					mainConfig.MainClient().Generate(1)
+				}
+			}
+		}()
+	}
 
 	wg.Add(1)
 	go requestService.Run()

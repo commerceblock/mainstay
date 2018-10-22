@@ -2,13 +2,12 @@
 package test
 
 import (
-    "os/exec"
-    "os"
-    "log"
+	"log"
+	"mainstay/config"
+	"os"
+	"os/exec"
 
-    "mainstay/config"
-
-    "github.com/btcsuite/btcd/btcjson"
+	"github.com/btcsuite/btcd/btcjson"
 )
 
 // For regtest attestation demonstration
@@ -39,60 +38,62 @@ var testConf = []byte(`
 
 // test parameters for a 1-2 multisig redeemScript and P2SH address
 const SCRIPT = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332102f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e7552ae"
+
 // address - "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB"
 
 const PRIV_MAIN = "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz"
+
 // address - "2N9z6a8BQB1xWmesCJcBWZm1R3f1PZcwrGz"
 // pubkey - "03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33"
 
 const PRIV_CLIENT = "cSS9R4XPpajhqy28hcfHEzEzAbyWDqBaGZR4xtV7Jg8TixSWee1x"
+
 // address - "2MyC1i1FGy6MZWyMgmZXku4gdWZxWCRa6RL"
 // pubkey -  "02f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e75"
-
 
 // Test structure
 // Set up testing environment for use by regtest demo or unit tests
 type Test struct {
-    Config      *config.Config
+	Config *config.Config
 }
 
 // NewTest returns a pointer to a Test instance
 func NewTest(logOutput bool, isRegtest bool) *Test {
-    // Run init test script that sets up bitcoin and ocean
-    var initPath string
-    if (isRegtest) { // for running the demon in regtest mode along with ocean demo
-        initPath = os.Getenv("GOPATH") + DEMO_INIT_PATH
-    } else { // for running unit tests
-        initPath = os.Getenv("GOPATH") + TEST_INIT_PATH
-    }
+	// Run init test script that sets up bitcoin and ocean
+	var initPath string
+	if isRegtest { // for running the demon in regtest mode along with ocean demo
+		initPath = os.Getenv("GOPATH") + DEMO_INIT_PATH
+	} else { // for running unit tests
+		initPath = os.Getenv("GOPATH") + TEST_INIT_PATH
+	}
 
-    cmd := exec.Command("/bin/sh", initPath)
-    output, err := cmd.Output()
-    if err != nil {
-        log.Fatal(err)
-    }
-    if (logOutput) {
-        log.Println(string(output))
-    }
+	cmd := exec.Command("/bin/sh", initPath)
+	output, err := cmd.Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if logOutput {
+		log.Println(string(output))
+	}
 
-    // if not a regtest, then unittest
-    config := config.NewConfig(!isRegtest, testConf)
+	// if not a regtest, then unittest
+	config := config.NewConfig(!isRegtest, testConf)
 
-    // Get first unspent as initial TX for attestation chain
-    unspent, errUnspent := config.MainClient().ListUnspent()
-    if errUnspent != nil {
-        log.Fatal(errUnspent)
-    }
-    var tx0 btcjson.ListUnspentResult
-    for _, vout := range unspent {
-        if (vout.Amount > 50) { // skip regtest txs
-            tx0 = vout
-        }
-    }
+	// Get first unspent as initial TX for attestation chain
+	unspent, errUnspent := config.MainClient().ListUnspent()
+	if errUnspent != nil {
+		log.Fatal(errUnspent)
+	}
+	var tx0 btcjson.ListUnspentResult
+	for _, vout := range unspent {
+		if vout.Amount > 50 { // skip regtest txs
+			tx0 = vout
+		}
+	}
 
-    config.SetInitTX(tx0.TxID)
-    config.SetInitPK(PRIV_MAIN)
-    config.SetMultisigScript(SCRIPT)
+	config.SetInitTX(tx0.TxID)
+	config.SetInitPK(PRIV_MAIN)
+	config.SetMultisigScript(SCRIPT)
 
-    return &Test{config}
+	return &Test{config}
 }
