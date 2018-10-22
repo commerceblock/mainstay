@@ -34,11 +34,11 @@ func TestAttestClient(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		// Generate attestation transaction with the unspent vout
 		oceanhash := clientListener.GetNextHash()
-		key := client.getNextAttestationKey(oceanhash)
-		addr, _ := client.getNextAttestationAddr(key, oceanhash)
+		key := client.GetNextAttestationKey(oceanhash)
+		addr, _ := client.GetNextAttestationAddr(key, oceanhash)
 
-		tx := client.createAttestation(addr, unspent, true)
-		txid := client.signAndSendAttestation(tx, unspent, []string{}, lastHash)
+		tx := client.CreateAttestation(addr, unspent, true)
+		txid := client.SignAndSendAttestation(tx, [][]byte{}, lastHash)
 		sideClientFake.Generate(1)
 
 		lastHash = oceanhash
@@ -52,7 +52,7 @@ func TestAttestClient(t *testing.T) {
 		assert.Equal(t, oceanhash, unconfirmed.attestedHash)
 
 		// Verify no more unconfirmed transactions after new block generation
-		client.mainClient.Generate(1)
+		client.MainClient.Generate(1)
 		unconfRe, unconftxRe := client.getUnconfirmedTx()
 		*unconfirmed = unconftxRe
 		assert.Equal(t, false, unconfRe)
@@ -75,7 +75,7 @@ func TestAttestClient(t *testing.T) {
 		txhash, _ := chainhash.NewHashFromStr(txid)
 		assert.Equal(t, client.verifyTxOnSubchain(*txhash), true)
 
-		txraw, err := client.mainClient.GetRawTransaction(txhash)
+		txraw, err := client.MainClient.GetRawTransaction(txhash)
 		if err != nil {
 			t.Fail()
 		}
