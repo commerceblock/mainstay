@@ -20,7 +20,7 @@ func TestAttestServer(t *testing.T) {
 	sideClientFake = testConfig.OceanClient().(*clients.SidechainClientFake)
 
 	latestTx := NewAttestation(chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION)
-	server := NewAttestServer(sideClientFake, *latestTx, testConfig.InitTX())
+	server := NewAttestServer(nil, nil, sideClientFake, *latestTx)
 	client := NewAttestClient(testConfig)
 
 	// Generate blocks in side chain

@@ -2,28 +2,31 @@ package attestation
 
 import (
 	"log"
+    "sync"
+    "context"
+
 	"mainstay/clients"
 	"mainstay/models"
-
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 // AttestServer structure
 // Stores information on the latest attestation
 // Responds to external API requests handled by RequestApi
 type AttestServer struct {
+    ctx         context.Context
+    wg          *sync.WaitGroup
+    requestChan chan models.RequestWithResponseChannel
+    updateChan  chan Attestation
 	latest       Attestation
 	latestHeight int32
 	sideClient   clients.SidechainClient
 }
 
 // NewAttestServer returns a pointer to an AttestServer instance
-func NewAttestServer(rpcSide clients.SidechainClient, latest Attestation, tx0 string) *AttestServer {
-	tx0hash, err := chainhash.NewHashFromStr(tx0)
-	if err != nil {
-		log.Fatal("*AttestServer* Incorrect tx hash for initial transaction")
-	}
-	return &AttestServer{*NewAttestation(*tx0hash, chainhash.Hash{}, ASTATE_CONFIRMED), 0, rpcSide}
+func NewAttestServer(ctx context.Context, wg *sync.WaitGroup, rpcSide clients.SidechainClient, latest Attestation) *AttestServer {
+    reqChan := make(chan models.RequestWithResponseChannel)
+    updChan := make(chan Attestation)
+	return &AttestServer{ctx, wg, reqChan, updChan, latest, 0, rpcSide}
 }
 
 // Update information on the latest attestation and sidechain height
@@ -53,4 +56,20 @@ func (s *AttestServer) Respond(req models.Request) interface{} {
 	default:
 		return models.Response{req, "**AttestServer** Non supported request type"}
 	}
+}
+
+// Main attest server method listening to remote requests and updates
+func (s *AttestServer) Run() {
+    defer s.wg.Done()
+
+    for {
+        select {
+        case <-s.ctx.Done():
+            return
+        case req := <-s.requestChan:
+            req.Response <- s.Respond(req.Request)
+        case update := <-s.updateChan:
+            s.UpdateLatest(update)
+        }
+    }
 }

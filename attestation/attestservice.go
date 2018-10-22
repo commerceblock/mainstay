@@ -29,14 +29,17 @@ const ATTEST_WAIT_TIME = 10
 // Encapsulates Attest Server, Attest Client
 // and a channel for reading requests and writing responses
 type AttestService struct {
-	ctx         context.Context
-	wg          *sync.WaitGroup
-	config      *confpkg.Config
-	attester    *AttestClient
-	server      *AttestServer
-	channel     *models.Channel
-	publisher   *messengers.PublisherZmq
-	subscribers []*messengers.SubscriberZmq
+	ctx             context.Context
+	wg              *sync.WaitGroup
+	config          *confpkg.Config
+
+    attester        *AttestClient
+	server          *AttestServer
+
+    reqServiceChan  *models.Channel
+
+	publisher       *messengers.PublisherZmq
+	subscribers     []*messengers.SubscriberZmq
 }
 
 var latestAttestation *Attestation // hold latest state
@@ -53,7 +56,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
 	attester := NewAttestClient(config)
 
 	latestAttestation = NewAttestation(chainhash.Hash{}, chainhash.Hash{}, ASTATE_INIT)
-	server := NewAttestServer(config.OceanClient(), *latestAttestation, config.InitTX())
+	server := NewAttestServer(ctx, wg, config.OceanClient(), *latestAttestation)
 
 	// Initialise publisher for sending new hashes and txs
 	// and subscribers to receive sig responses
@@ -73,6 +76,9 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
 func (s *AttestService) Run() {
 	defer s.wg.Done()
 
+    s.wg.Add(1)
+    go s.server.Run()
+
 	s.wg.Add(1)
 	go func() { //Waiting for requests from the request service and pass to server for response
 		defer s.wg.Done()
@@ -80,8 +86,13 @@ func (s *AttestService) Run() {
 			select {
 			case <-s.ctx.Done():
 				return
-			case req := <-s.channel.Requests:
-				s.channel.Responses <- s.server.Respond(req)
+			case req := <-s.reqServiceChan.Requests:
+                if false /* to change for listener */ {
+                    log.Printf("Commitment request")
+                } else {
+                    // send request to server channel and pass reponse channel
+                    s.server.requestChan <- models.RequestWithResponseChannel{req, s.reqServiceChan.Responses}
+                }
 			}
 		}
 	}()
@@ -127,12 +138,12 @@ func (s *AttestService) doAttestation() {
 		unconfirmed, unconfirmedTx := s.attester.getUnconfirmedTx()
 		if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
 			*latestAttestation = unconfirmedTx
-			s.server.UpdateLatest(*latestAttestation)
+            s.server.updateChan <- *latestAttestation
 		} else {
 			success, txunspent := s.attester.findLastUnspent()
 			if success {
 				txunspentHash, _ := chainhash.NewHashFromStr(txunspent.TxID)
-				s.server.UpdateLatest(*NewAttestation(*txunspentHash, s.attester.getTxAttestedHash(*txunspentHash), ASTATE_CONFIRMED))
+				s.server.updateChan <- *NewAttestation(*txunspentHash, s.attester.getTxAttestedHash(*txunspentHash), ASTATE_CONFIRMED)
 				latestAttestation.state = ASTATE_NEW_ATTESTATION
 			} else {
 				log.Println("*AttestService* No unconfirmed (mempool) or unspent tx found. Sleeping...")
@@ -149,8 +160,7 @@ func (s *AttestService) doAttestation() {
 			latestAttestation.latestTime = time.Now()
 			latestAttestation.state = ASTATE_CONFIRMED
 			log.Printf("********** Attestation confirmed for txid: (%s)\n", latestAttestation.txid.String())
-			s.server.UpdateLatest(*latestAttestation)
-			log.Printf("********** Updated latest attested height %d\n", s.server.latestHeight)
+			s.server.updateChan <- *latestAttestation
 			attestDelay = time.Duration(0) * time.Second
 		}
 	case ASTATE_CONFIRMED, ASTATE_NEW_ATTESTATION:
@@ -200,7 +210,9 @@ func (s *AttestService) doAttestation() {
 		log.Printf("*AttestService* COLLECTING SIGS\n")
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 		// Read sigs using subscribers
+
 		var sigs [][]byte
+
 		sockets, _ := poller.Poll(-1)
 		for _, socket := range sockets {
 			for _, sub := range s.subscribers {
@@ -211,6 +223,7 @@ func (s *AttestService) doAttestation() {
 			}
 		}
 		txid := s.attester.signAndSendAttestation(&latestAttestation.tx, sigs, s.server.latest.attestedHash)
+
 		log.Printf("********** Attestation committed for txid: (%s)\n", txid)
 		latestAttestation.txid = txid
 		latestAttestation.state = ASTATE_UNCONFIRMED

@@ -31,6 +31,12 @@ type LatestAttestationResponse struct {
 	TxHash string `json:"txhash"`
 }
 
+
+type RequestWithResponseChannel struct {
+    Request  Request
+    Response chan interface{}
+}
+
 type Channel struct {
 	Requests  chan Request
 	Responses chan interface{}
