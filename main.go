@@ -4,18 +4,17 @@ package main
 import (
 	"context"
 	"flag"
-    "os"
-    "os/signal"
-    "sync"
-    "log"
-    "time"
-
-    "ocean-attestation/attestation"
-    "ocean-attestation/conf"
-    "ocean-attestation/models"
-    "ocean-attestation/requestapi"
-    "ocean-attestation/test"
-    "ocean-attestation/clients"
+	"log"
+	"ocean-attestation/attestation"
+	"ocean-attestation/clients"
+	"ocean-attestation/conf"
+	"ocean-attestation/models"
+	"ocean-attestation/requestapi"
+	"ocean-attestation/test"
+	"os"
+	"os/signal"
+	"sync"
+	"time"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/rpcclient"
@@ -26,12 +25,12 @@ const MAIN_NAME = "main"
 const OCEAN_NAME = "ocean"
 
 var (
-	genesisTX               string
-	mainClient              *rpcclient.Client
-    oceanClient             clients.SidechainClient
-	mainChainCfg            *chaincfg.Params
-	isRegtest               bool
-    apiHost                 string
+	genesisTX    string
+	mainClient   *rpcclient.Client
+	oceanClient  clients.SidechainClient
+	mainChainCfg *chaincfg.Params
+	isRegtest    bool
+	apiHost      string
 )
 
 func parseFlags() {
@@ -52,18 +51,18 @@ func init() {
 		mainClient = test.Btc
 		oceanClient = test.GetSidechainClient()
 		mainChainCfg = test.BtcConfig
-        genesisTX = test.Tx0hash
-        log.Printf("Running regtest mode with -tx=%s\n", genesisTX)
+		genesisTX = test.Tx0hash
+		log.Printf("Running regtest mode with -tx=%s\n", genesisTX)
 	} else {
 		mainClient = conf.GetRPC(MAIN_NAME)
 		oceanClient = clients.NewSidechainClientOcean(conf.GetRPC(OCEAN_NAME))
 		mainChainCfg = conf.GetChainCfgParams(MAIN_NAME)
 	}
 
-    apiHost = os.Getenv("API_HOST")
-    if apiHost == "" {
-        apiHost = DEFAULT_API_HOST
-    }
+	apiHost = os.Getenv("API_HOST")
+	if apiHost == "" {
+		apiHost = DEFAULT_API_HOST
+	}
 }
 
 func main() {
@@ -92,21 +91,21 @@ func main() {
 		}
 	}()
 
-    if isRegtest { // In regtest demo mode generate main client blocks automatically
-        wg.Add(1)
-        go func() {
-            defer wg.Done()
-            for {
-                newBlockTimer := time.NewTimer(60 * time.Second)
-                select {
-                    case <-ctx.Done():
-                        return
-                    case <-newBlockTimer.C:
-                        mainClient.Generate(1)
-                }
-            }
-        }()
-    }
+	if isRegtest { // In regtest demo mode generate main client blocks automatically
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				newBlockTimer := time.NewTimer(60 * time.Second)
+				select {
+				case <-ctx.Done():
+					return
+				case <-newBlockTimer.C:
+					mainClient.Generate(1)
+				}
+			}
+		}()
+	}
 
 	wg.Add(1)
 	go requestService.Run()

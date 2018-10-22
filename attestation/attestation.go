@@ -1,9 +1,9 @@
 package attestation
 
 import (
-    "time"
+	"time"
 
-    "github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 // Attestation structure
@@ -11,8 +11,8 @@ import (
 // and the information on the sidechain hash attested
 // Attestation is unconfirmed until included in a mainchain block
 type Attestation struct {
-    txid            chainhash.Hash
-    attestedHash    chainhash.Hash
-    confirmed       bool
-    latestTime      time.Time
+	txid         chainhash.Hash
+	attestedHash chainhash.Hash
+	confirmed    bool
+	latestTime   time.Time
 }
