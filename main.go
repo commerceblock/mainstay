@@ -21,6 +21,7 @@ const DEFAULT_API_HOST = "localhost:8080"
 var (
 	tx0        string
 	pk0        string
+    script     string
 	isRegtest  bool
 	apiHost    string
 	mainConfig *config.Config
