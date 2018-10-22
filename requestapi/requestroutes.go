@@ -9,6 +9,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const ROUTE_BEST_BLOCK = "BestBlock"
+const ROUTE_BEST_BLOCK_HEIGHT = "BestBlockHeight"
+const ROUTE_BLOCK = "Block"
+const ROUTE_INDEX = "Index"
+const ROUTE_LATEST_ATTESTATION = "LatestAttestation"
+const ROUTE_TRANSACTION = "Transaction"
+
 // Route structure
 // Routing for http requests to request service
 type Route struct {
@@ -20,40 +27,40 @@ type Route struct {
 
 var routes = []Route{
 	Route{
-		"Index",
-		"GET",
-		"/api/",
-		HandleIndex,
-	},
-	Route{
-		"Block",
-		"GET",
-		"/api/block/{blockId}",
-		HandleBlock,
-	},
-	Route{
-		"BestBlock",
+		ROUTE_BEST_BLOCK,
 		"GET",
 		"/api/bestblock/",
 		HandleBestBlock,
 	},
 	Route{
-		"BestBlockHeight",
+		ROUTE_BEST_BLOCK_HEIGHT,
 		"GET",
 		"/api/bestblockheight/",
 		HandleBestBlockHeight,
 	},
 	Route{
-		"Transaction",
+		ROUTE_BLOCK,
 		"GET",
-		"/api/transaction/{transactionId}",
-		HandleTransaction,
+		"/api/block/{blockId}",
+		HandleBlock,
 	},
 	Route{
-		"LatestAttestation",
+		ROUTE_INDEX,
+		"GET",
+		"/api/",
+		HandleIndex,
+	},
+	Route{
+		ROUTE_LATEST_ATTESTATION,
 		"GET",
 		"/api/latestattestation/",
 		HandleLatestAttestation,
+	},
+	Route{
+		ROUTE_TRANSACTION,
+		"GET",
+		"/api/transaction/{transactionId}",
+		HandleTransaction,
 	},
 }
 
