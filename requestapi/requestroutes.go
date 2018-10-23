@@ -9,15 +9,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const ROUTE_BEST_BLOCK = "BestBlock"
-const ROUTE_BEST_BLOCK_HEIGHT = "BestBlockHeight"
-const ROUTE_BLOCK = "Block"
-const ROUTE_COMMITMENT_SEND = "CommitmentSend"
-const ROUTE_INDEX = "Index"
-const ROUTE_LATEST_ATTESTATION = "LatestAttestation"
-const ROUTE_SERVER_VERIFY = "HandleServerVerify"
-const ROUTE_TRANSACTION = "Transaction"
-
 // Route structure
 // Routing for http requests to request service
 type Route struct {
@@ -29,49 +20,49 @@ type Route struct {
 
 var routes = []Route{
 	Route{
-		ROUTE_BEST_BLOCK,
+		models.ROUTE_BEST_BLOCK,
 		"GET",
 		"/api/bestblock/",
 		HandleBestBlock,
 	},
 	Route{
-		ROUTE_BEST_BLOCK_HEIGHT,
+		models.ROUTE_BEST_BLOCK_HEIGHT,
 		"GET",
 		"/api/bestblockheight/",
 		HandleBestBlockHeight,
 	},
 	Route{
-		ROUTE_BLOCK,
+		models.ROUTE_BLOCK,
 		"GET",
 		"/api/block/{blockId}",
 		HandleBlock,
 	},
 	Route{
-		ROUTE_COMMITMENT_SEND,
+		models.ROUTE_COMMITMENT_SEND,
 		"POST",
 		"/api/commitment/send/{clientId,hash,height}",
 		HandleCommitmentSend,
 	},
 	Route{
-		ROUTE_INDEX,
+		models.ROUTE_INDEX,
 		"GET",
 		"/api/",
 		HandleIndex,
 	},
 	Route{
-		ROUTE_LATEST_ATTESTATION,
+		models.ROUTE_LATEST_ATTESTATION,
 		"GET",
 		"/api/latestattestation/",
 		HandleLatestAttestation,
 	},
 	Route{
-		ROUTE_SERVER_VERIFY,
+		models.ROUTE_SERVER_VERIFY,
 		"GET",
 		"/api/server/verify/{hash}",
 		HandleServerVerify,
 	},
 	Route{
-		ROUTE_TRANSACTION,
+		models.ROUTE_TRANSACTION,
 		"GET",
 		"/api/transaction/{transactionId}",
 		HandleTransaction,

@@ -177,8 +177,8 @@ func (s *AttestService) doAttestation() {
 		log.Printf("*AttestService* COLLECTING PUBKEYS\n")
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
-		key := s.attester.getNextAttestationKey(latestAttestation.attestedHash)
-		paytoaddr, script := s.attester.getNextAttestationAddr(key, latestAttestation.attestedHash)
+		key := s.attester.GetNextAttestationKey(latestAttestation.attestedHash)
+		paytoaddr, script := s.attester.GetNextAttestationAddr(key, latestAttestation.attestedHash)
 
 		success, txunspent := s.attester.findLastUnspent()
 		if success {
