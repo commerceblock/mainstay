@@ -1,10 +1,8 @@
 /*
 Package attestation implements the MainStay protocol.
 
-Implemented using an Attestation Service structure that runs multiple concurrent processes:
+Implemented using an Attestation Service structure that runs a main processes:
     - AttestClient that handles generating attestations and maintaining communication a bitcoin wallet
-    - AttestServer that handles responding to API requests
-    - A Requests channel to receive requests from requestapi
 */
 package attestation
 
@@ -15,6 +13,7 @@ import (
 	confpkg "mainstay/config"
 	"mainstay/messengers"
 	"mainstay/models"
+	"mainstay/server"
 	"sync"
 	"time"
 
@@ -29,31 +28,29 @@ const ATTEST_WAIT_TIME = 10
 // Encapsulates Attest Server, Attest Client
 // and a channel for reading requests and writing responses
 type AttestService struct {
-	ctx            context.Context
-	wg             *sync.WaitGroup
-	config         *confpkg.Config
-	attester       *AttestClient
-	server         *AttestServer
-	reqServiceChan *models.Channel
-	publisher      *messengers.PublisherZmq
-	subscribers    []*messengers.SubscriberZmq
+	ctx         context.Context
+	wg          *sync.WaitGroup
+	config      *confpkg.Config
+	attester    *AttestClient
+	server      *server.Server
+	publisher   *messengers.PublisherZmq
+	subscribers []*messengers.SubscriberZmq
 }
 
-var latestAttestation *Attestation // hold latest state
-var attestDelay time.Duration      // initially 0 delay
+var latestAttestation *models.Attestation // hold latest state
+var attestDelay time.Duration             // initially 0 delay
 
 var poller *zmq.Poller // poller to add all subscriber/publisher sockets
 
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.Channel, config *confpkg.Config) *AttestService {
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, config *confpkg.Config) *AttestService {
 	if len(config.InitTX()) != 64 {
 		log.Fatal("Incorrect txid size")
 	}
 	attester := NewAttestClient(config)
 
-	latestAttestation = NewAttestation(chainhash.Hash{}, chainhash.Hash{}, ASTATE_INIT)
-	server := NewAttestServer(ctx, wg, config.OceanClient(), *latestAttestation)
+	latestAttestation = models.NewAttestation(chainhash.Hash{}, chainhash.Hash{}, models.ASTATE_INIT)
 
 	// Initialise publisher for sending new hashes and txs
 	// and subscribers to receive sig responses
@@ -66,28 +63,12 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
 	}
 	attestDelay = 30 * time.Second // add some delay for subscribers to have time to set up
 
-	return &AttestService{ctx, wg, config, attester, server, channel, publisher, subscribers}
+	return &AttestService{ctx, wg, config, attester, server, publisher, subscribers}
 }
 
 // Run Attest Service
 func (s *AttestService) Run() {
 	defer s.wg.Done()
-
-	s.wg.Add(1)
-	go s.server.Run()
-
-	s.wg.Add(1)
-	go func() { //Waiting for requests from the request service and pass to server for response
-		defer s.wg.Done()
-		for {
-			select {
-			case <-s.ctx.Done():
-				return
-			case req := <-s.reqServiceChan.Requests:
-				s.server.requestChan <- models.RequestWithResponseChannel{req, s.reqServiceChan.Responses}
-			}
-		}
-	}()
 
 	for { //Doing attestations using attestation client and waiting for transaction confirmation
 		timer := time.NewTimer(attestDelay)
@@ -122,88 +103,88 @@ func (s *AttestService) Run() {
 // - Collect signatures, combine them and sign the attestation transaction
 // - If successful propagate the transaction and set state to unconfirmed
 func (s *AttestService) doAttestation() {
-	switch latestAttestation.state {
-	case ASTATE_INIT:
+	switch latestAttestation.State {
+	case models.ASTATE_INIT:
 		log.Println("*AttestService* INIT ATTESTATION CLIENT AND SERVER")
 		// find the state of the attestation
 		// when a DB is put in place, these information will be collected from there
 		unconfirmed, unconfirmedTx := s.attester.getUnconfirmedTx()
 		if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
 			*latestAttestation = unconfirmedTx
-			s.server.updateChan <- *latestAttestation
+			s.server.UpdateChan() <- *latestAttestation
 		} else {
 			success, txunspent := s.attester.findLastUnspent()
 			if success {
 				txunspentHash, _ := chainhash.NewHashFromStr(txunspent.TxID)
-				s.server.updateChan <- *NewAttestation(*txunspentHash, s.attester.getTxAttestedHash(*txunspentHash), ASTATE_CONFIRMED)
-				latestAttestation.state = ASTATE_NEW_ATTESTATION
+				s.server.UpdateChan() <- *models.NewAttestation(*txunspentHash, s.attester.getTxAttestedHash(*txunspentHash), models.ASTATE_CONFIRMED)
+				latestAttestation.State = models.ASTATE_NEW_ATTESTATION
 			} else {
 				log.Println("*AttestService* No unconfirmed (mempool) or unspent tx found. Sleeping...")
 				attestDelay = time.Duration(ATTEST_WAIT_TIME*10) * time.Second // add wait time
 			}
 		}
-	case ASTATE_UNCONFIRMED:
-		log.Printf("*AttestService* AWAITING CONFIRMATION \ntxid: (%s)\nhash: (%s)\n", latestAttestation.txid.String(), latestAttestation.attestedHash.String())
-		newTx, err := s.config.MainClient().GetTransaction(&latestAttestation.txid)
+	case models.ASTATE_UNCONFIRMED:
+		log.Printf("*AttestService* AWAITING CONFIRMATION \ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.AttestedHash.String())
+		newTx, err := s.config.MainClient().GetTransaction(&latestAttestation.Txid)
 		if err != nil {
 			log.Fatal(err)
 		}
 		if newTx.BlockHash != "" {
-			latestAttestation.latestTime = time.Now()
-			latestAttestation.state = ASTATE_CONFIRMED
-			log.Printf("********** Attestation confirmed for txid: (%s)\n", latestAttestation.txid.String())
-			s.server.updateChan <- *latestAttestation
+			latestAttestation.LatestTime = time.Now()
+			latestAttestation.State = models.ASTATE_CONFIRMED
+			log.Printf("********** Attestation confirmed for txid: (%s)\n", latestAttestation.Txid.String())
+			s.server.UpdateChan() <- *latestAttestation
 			attestDelay = time.Duration(0) * time.Second
 		}
-	case ASTATE_CONFIRMED, ASTATE_NEW_ATTESTATION:
+	case models.ASTATE_CONFIRMED, models.ASTATE_NEW_ATTESTATION:
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
 		unconfirmed, unconfirmedTx := s.attester.getUnconfirmedTx()
 		if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
 			*latestAttestation = unconfirmedTx
-			log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.txid.String(), latestAttestation.attestedHash.String())
+			log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.AttestedHash.String())
 		} else {
 			log.Println("*AttestService* NEW ATTESTATION")
 
 			// request latest hash from server and await response
 			hashChan := make(chan interface{})
-			s.server.getNextChan <- models.RequestWithResponseChannel{models.Request{}, hashChan}
+			s.server.GetNextChan() <- models.RequestWithResponseChannel{models.Request{}, hashChan}
 			hash := (<-hashChan).(chainhash.Hash)
 
 			log.Printf("********** hash: %s\n", hash.String())
-			if hash == latestAttestation.attestedHash { // skip attestation if same client hash
+			if hash == latestAttestation.AttestedHash { // skip attestation if same client hash
 				log.Printf("********** Skipping attestation - Client hash already attested")
 				return
 			}
 			// publish new attestation hash
 			log.Printf("%v\n", hash)
 			s.publisher.SendMessage(hash.CloneBytes(), confpkg.TOPIC_NEW_HASH)
-			latestAttestation = NewAttestation(chainhash.Hash{}, hash, ASTATE_COLLECTING_PUBKEYS) // update attestation state
+			latestAttestation = models.NewAttestation(chainhash.Hash{}, hash, models.ASTATE_COLLECTING_PUBKEYS) // update attestation state
 		}
-	case ASTATE_COLLECTING_PUBKEYS:
+	case models.ASTATE_COLLECTING_PUBKEYS:
 		log.Printf("*AttestService* COLLECTING PUBKEYS\n")
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
-		key := s.attester.GetNextAttestationKey(latestAttestation.attestedHash)
-		paytoaddr, script := s.attester.GetNextAttestationAddr(key, latestAttestation.attestedHash)
+		key := s.attester.GetNextAttestationKey(latestAttestation.AttestedHash)
+		paytoaddr, script := s.attester.GetNextAttestationAddr(key, latestAttestation.AttestedHash)
 
 		success, txunspent := s.attester.findLastUnspent()
 		if success {
-			latestAttestation.tx = *s.attester.createAttestation(paytoaddr, txunspent, false)
-			latestAttestation.txunspent = txunspent
-			latestAttestation.redeemScript = script
-			log.Printf("********** pre-sign txid: %s\n", latestAttestation.tx.TxHash().String())
+			latestAttestation.Tx = *s.attester.createAttestation(paytoaddr, txunspent, false)
+			latestAttestation.Txunspent = txunspent
+			latestAttestation.RedeemScript = script
+			log.Printf("********** pre-sign txid: %s\n", latestAttestation.Tx.TxHash().String())
 
 			// publish pre signed transaction
 			var txbytes bytes.Buffer
-			latestAttestation.tx.Serialize(&txbytes)
+			latestAttestation.Tx.Serialize(&txbytes)
 			s.publisher.SendMessage(txbytes.Bytes(), confpkg.TOPIC_NEW_TX)
 
-			latestAttestation.state = ASTATE_COLLECTING_SIGS // update attestation state
+			latestAttestation.State = models.ASTATE_COLLECTING_SIGS // update attestation state
 		} else {
 			log.Fatal("Attestation unsuccessful - No valid unspent found")
 		}
-	case ASTATE_COLLECTING_SIGS:
+	case models.ASTATE_COLLECTING_SIGS:
 		log.Printf("*AttestService* COLLECTING SIGS\n")
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 		// Read sigs using subscribers
@@ -222,12 +203,12 @@ func (s *AttestService) doAttestation() {
 
 		// request latest attestation from server and await response
 		latestChan := make(chan interface{})
-		s.server.getLatestChan <- models.RequestWithResponseChannel{models.Request{}, latestChan}
-		latest := (<-latestChan).(Attestation)
-		txid := s.attester.signAndSendAttestation(&latestAttestation.tx, sigs, latest.attestedHash)
+		s.server.GetLatestChan() <- models.RequestWithResponseChannel{models.Request{}, latestChan}
+		latest := (<-latestChan).(models.Attestation)
+		txid := s.attester.signAndSendAttestation(&latestAttestation.Tx, sigs, latest.AttestedHash)
 
 		log.Printf("********** Attestation committed for txid: (%s)\n", txid)
-		latestAttestation.txid = txid
-		latestAttestation.state = ASTATE_UNCONFIRMED
+		latestAttestation.Txid = txid
+		latestAttestation.State = models.ASTATE_UNCONFIRMED
 	}
 }

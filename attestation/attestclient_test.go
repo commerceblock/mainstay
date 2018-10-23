@@ -2,6 +2,7 @@ package attestation
 
 import (
 	"mainstay/clients"
+	"mainstay/models"
 	"mainstay/test"
 	"testing"
 
@@ -43,20 +44,20 @@ func TestAttestClient(t *testing.T) {
 		lastHash = *oceanhash
 
 		// Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
-		var unconfirmed *Attestation = &Attestation{}
+		var unconfirmed *models.Attestation = &models.Attestation{}
 		unconf, unconftx := client.getUnconfirmedTx() // new tx is unconfirmed
 		*unconfirmed = unconftx
 		assert.Equal(t, true, unconf)
-		assert.Equal(t, txid, unconfirmed.txid)
-		assert.Equal(t, *oceanhash, unconfirmed.attestedHash)
+		assert.Equal(t, txid, unconfirmed.Txid)
+		assert.Equal(t, *oceanhash, unconfirmed.AttestedHash)
 
 		// Verify no more unconfirmed transactions after new block generation
 		client.MainClient.Generate(1)
 		unconfRe, unconftxRe := client.getUnconfirmedTx()
 		*unconfirmed = unconftxRe
 		assert.Equal(t, false, unconfRe)
-		assert.Equal(t, chainhash.Hash{}, unconfirmed.txid) // new tx no longer unconfirmed
-		assert.Equal(t, chainhash.Hash{}, unconfirmed.attestedHash)
+		assert.Equal(t, chainhash.Hash{}, unconfirmed.Txid) // new tx no longer unconfirmed
+		assert.Equal(t, chainhash.Hash{}, unconfirmed.AttestedHash)
 		txs = append(txs, txid.String())
 
 		// Now check that the new unspent is the vout from the transaction just submitted

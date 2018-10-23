@@ -1,4 +1,4 @@
-package attestation
+package server
 
 import (
 	"log"
@@ -12,82 +12,74 @@ import (
 )
 
 // Attest Server Test
-func TestAttestServer(t *testing.T) {
+func TestServer(t *testing.T) {
 	// TEST INIT
 	test := test.NewTest(false, false)
 	testConfig := test.Config
 	var sideClientFake *clients.SidechainClientFake
 	sideClientFake = testConfig.OceanClient().(*clients.SidechainClientFake)
 
-	latestTx := NewAttestation(chainhash.Hash{}, chainhash.Hash{}, ASTATE_NEW_ATTESTATION)
-	server := NewAttestServer(nil, nil, sideClientFake, *latestTx)
-	client := NewAttestClient(testConfig)
+	server := NewServer(nil, nil, testConfig)
 
 	// Generate blocks in side chain
 	sideClientFake.Generate(10)
 
 	// Generate single attestation transaction
-	_, unspent := client.findLastUnspent()
 	sidehash := server.getNextHash()
-	key := client.GetNextAttestationKey(sidehash)
-	addr, _ := client.GetNextAttestationAddr(key, sidehash)
-
-	tx := client.createAttestation(addr, unspent, true)
-	txid := client.signAndSendAttestation(tx, [][]byte{}, chainhash.Hash{})
-	client.MainClient.Generate(1)
+	txid, _ := chainhash.NewHashFromStr("11111111111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 
 	// Update latest in server
-	latest := NewAttestation(txid, sidehash, ASTATE_CONFIRMED)
+	latest := models.NewAttestation(*txid, sidehash, models.ASTATE_CONFIRMED)
 	server.updateLatest(*latest)
-	assert.Equal(t, ASTATE_CONFIRMED, server.latest.state)
-	assert.Equal(t, txid, server.latest.txid)
-	assert.Equal(t, sidehash, server.latest.attestedHash)
+	assert.Equal(t, models.ASTATE_CONFIRMED, server.latestAttestation.State)
+	assert.Equal(t, *txid, server.latestAttestation.Txid)
+	assert.Equal(t, sidehash, server.latestAttestation.AttestedHash)
 	assert.Equal(t, int32(10), server.latestHeight)
 
-	bestblockhash, _ := client.sideClient.GetBestBlockHash()
+	bestblockhash, _ := server.sideClient.GetBestBlockHash()
 
 	// Test various models.Requests
 	req := models.Request{"BestBlock", ""}
-	resp1, _ := server.Respond(req).(models.BestBlockResponse)
+	resp1, _ := server.respond(req).(models.BestBlockResponse)
 	assert.Equal(t, "", resp1.Error)
 	assert.Equal(t, bestblockhash.String(), resp1.BlockHash)
 
 	req = models.Request{"BestBlockHeight", ""}
-	resp1b, _ := server.Respond(req).(models.BestBlockHeightResponse)
+	resp1b, _ := server.respond(req).(models.BestBlockHeightResponse)
 	assert.Equal(t, "", resp1b.Error)
 	assert.Equal(t, int32(10), resp1b.BlockHeight)
 
 	req = models.Request{"LatestAttestation", ""}
-	resp2, _ := server.Respond(req).(models.LatestAttestationResponse)
+	resp2, _ := server.respond(req).(models.LatestAttestationResponse)
 	assert.Equal(t, "", resp2.Error)
 	assert.Equal(t, txid.String(), resp2.TxHash)
 
 	req = models.Request{"Block", "1"}
-	resp3, _ := server.Respond(req).(models.BlockResponse)
+	resp3, _ := server.respond(req).(models.BlockResponse)
 	assert.Equal(t, "", resp3.Error)
 	assert.Equal(t, true, resp3.Attested)
 
 	req = models.Request{"Block", "11"}
-	resp4, _ := server.Respond(req).(models.BlockResponse)
+	resp4, _ := server.respond(req).(models.BlockResponse)
 	assert.Equal(t, "", resp4.Error)
 	assert.Equal(t, false, resp4.Attested)
 
 	req = models.Request{"WhenMoon", ""}
-	resp5, _ := server.Respond(req).(models.Response)
-	assert.Equal(t, "**AttestServer** Non supported request type", resp5.Error)
+	resp5, _ := server.respond(req).(models.Response)
+	assert.Equal(t, "**Server** Non supported request type", resp5.Error)
 
 	// Test models.Requests for the attested best block and a new generated block
 	sideClientFake.Generate(1)
-	bestblockhashnew, _ := client.sideClient.GetBestBlockHash()
+	bestblockhashnew, _ := server.sideClient.GetBestBlockHash()
 	assert.Equal(t, *bestblockhashnew, server.getNextHash())
 
 	req = models.Request{"Block", bestblockhash.String()}
-	resp6, _ := server.Respond(req).(models.BlockResponse)
+	resp6, _ := server.respond(req).(models.BlockResponse)
 	assert.Equal(t, "", resp6.Error)
 	assert.Equal(t, true, resp6.Attested)
 
 	req = models.Request{"Block", bestblockhashnew.String()}
-	resp7, _ := server.Respond(req).(models.BlockResponse)
+	resp7, _ := server.respond(req).(models.BlockResponse)
 	assert.Equal(t, "", resp7.Error)
 	assert.Equal(t, false, resp7.Attested)
 
@@ -104,12 +96,12 @@ func TestAttestServer(t *testing.T) {
 	txNotAttested := blocktxsnew[0]
 
 	req = models.Request{"Transaction", txAttested}
-	resp8, _ := server.Respond(req).(models.TransactionResponse)
+	resp8, _ := server.respond(req).(models.TransactionResponse)
 	assert.Equal(t, "", resp8.Error)
 	assert.Equal(t, true, resp8.Attested)
 
 	req = models.Request{"Transaction", txNotAttested}
-	resp9, _ := server.Respond(req).(models.TransactionResponse)
+	resp9, _ := server.respond(req).(models.TransactionResponse)
 	assert.Equal(t, "", resp9.Error)
 	assert.Equal(t, false, resp9.Attested)
 }

@@ -1,4 +1,4 @@
-package attestation
+package models
 
 import (
 	"time"
@@ -27,16 +27,21 @@ const (
 // and the information on the sidechain hash attested
 // Attestation is unconfirmed until included in a mainchain block
 type Attestation struct {
-	txid         chainhash.Hash
-	attestedHash chainhash.Hash
-	state        AttestationState
-	latestTime   time.Time
-	tx           wire.MsgTx
-	txunspent    btcjson.ListUnspentResult
-	redeemScript string
+	Txid         chainhash.Hash
+	AttestedHash chainhash.Hash
+	State        AttestationState
+	LatestTime   time.Time
+	Tx           wire.MsgTx
+	Txunspent    btcjson.ListUnspentResult
+	RedeemScript string
 }
 
 // Attestation constructor for defaulting some values
 func NewAttestation(txid chainhash.Hash, hash chainhash.Hash, state AttestationState) *Attestation {
 	return &Attestation{txid, hash, state, time.Now(), wire.MsgTx{}, btcjson.ListUnspentResult{}, ""}
+}
+
+// Attestation constructor for defaulting all values
+func NewAttestationDefault() *Attestation {
+	return &Attestation{chainhash.Hash{}, chainhash.Hash{}, ASTATE_INIT, time.Now(), wire.MsgTx{}, btcjson.ListUnspentResult{}, ""}
 }
