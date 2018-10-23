@@ -80,7 +80,7 @@ func (s *AttestService) Run() {
 			select {
 			case <-s.ctx.Done():
 				return
-			case req := <-s.channel.Requests:
+			case req := <-s.channel.RequestGet:
 				s.channel.Responses <- s.server.Respond(req)
 			}
 		}

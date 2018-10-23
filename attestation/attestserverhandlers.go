@@ -10,7 +10,7 @@ import (
 // Response handlers for requests send to AttestServer
 
 // BlockResponse handles response to whether a Block (heigh or hash) has been attested
-func (s *AttestServer) BlockResponse(req models.Request) models.BlockResponse {
+func (s *AttestServer) BlockResponse(req models.RequestGet_s) models.BlockResponse {
 	res := models.Response{""}
 	var height int32
 	if len(req.Id) == 64 {
@@ -38,7 +38,7 @@ func (s *AttestServer) BlockResponse(req models.Request) models.BlockResponse {
 }
 
 // TransactionResponse handles response to whether a specific Transaction id has been attested
-func (s *AttestServer) TransactionResponse(req models.Request) models.TransactionResponse {
+func (s *AttestServer) TransactionResponse(req models.RequestGet_s) models.TransactionResponse {
 	res := models.Response{""}
 	hash, err := chainhash.NewHashFromStr(req.Id)
 	if err != nil {
@@ -60,16 +60,16 @@ func (s *AttestServer) TransactionResponse(req models.Request) models.Transactio
 }
 
 // BestBlockResponse handles reponse to Best (latest) Block attested
-func (s *AttestServer) BestBlockResponse(req models.Request) models.BestBlockResponse {
+func (s *AttestServer) BestBlockResponse(req models.RequestGet_s) models.BestBlockResponse {
 	return models.BestBlockResponse{models.Response{""}, s.latest.attestedHash.String()}
 }
 
 // BestBlockHeightResponse handles reponse to Best (latest) Block height attested
-func (s *AttestServer) BestBlockHeightResponse(req models.Request) models.BestBlockHeightResponse {
+func (s *AttestServer) BestBlockHeightResponse(req models.RequestGet_s) models.BestBlockHeightResponse {
 	return models.BestBlockHeightResponse{models.Response{""}, s.latestHeight}
 }
 
 // LatestAttestation handles reponse to Latest Attestation Transaction id
-func (s *AttestServer) LatestAttestation(req models.Request) models.LatestAttestationResponse {
+func (s *AttestServer) LatestAttestation(req models.RequestGet_s) models.LatestAttestationResponse {
 	return models.LatestAttestationResponse{models.Response{""}, s.latest.txid.String()}
 }

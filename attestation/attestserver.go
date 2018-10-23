@@ -38,7 +38,7 @@ func (s *AttestServer) UpdateLatest(tx Attestation) {
 }
 
 // Respond returns appropriate response based on request type
-func (s *AttestServer) Respond(req models.Request) interface{} {
+func (s *AttestServer) Respond(req models.RequestGet_s) interface{} {
 	switch req.Name {
 	case models.ROUTE_BLOCK:
 		return s.BlockResponse(req)

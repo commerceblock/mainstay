@@ -14,8 +14,8 @@ import (
 // Is Block Attested request handler
 func HandleBlock(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
 	blockid := mux.Vars(r)["blockId"]
-	request := models.Request{Name: mux.CurrentRoute(r).GetName(), Id: blockid}
-	channel.Requests <- request     // put request in channel
+	request := models.RequestGet_s{Name: mux.CurrentRoute(r).GetName(), Id: blockid}
+	channel.RequestGet <- request   // put request in channel
 	response := <-channel.Responses // wait for response from attestation service
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		panic(err)
@@ -24,8 +24,8 @@ func HandleBlock(w http.ResponseWriter, r *http.Request, channel *models.Channel
 
 // Best Block request handler
 func HandleBestBlock(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
-	request := models.Request{Name: mux.CurrentRoute(r).GetName()}
-	channel.Requests <- request     // put request in channel
+	request := models.RequestGet_s{Name: mux.CurrentRoute(r).GetName()}
+	channel.RequestGet <- request   // put request in channel
 	response := <-channel.Responses // wait for response from attestation service
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		panic(err)
@@ -34,8 +34,8 @@ func HandleBestBlock(w http.ResponseWriter, r *http.Request, channel *models.Cha
 
 // Best Block Height request handler
 func HandleBestBlockHeight(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
-	request := models.Request{Name: mux.CurrentRoute(r).GetName()}
-	channel.Requests <- request     // put request in channel
+	request := models.RequestGet_s{Name: mux.CurrentRoute(r).GetName()}
+	channel.RequestGet <- request   // put request in channel
 	response := <-channel.Responses // wait for response from attestation service
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		panic(err)
@@ -65,8 +65,8 @@ func HandleIndex(w http.ResponseWriter, r *http.Request, channel *models.Channel
 
 // Latest Attestation request handler
 func HandleLatestAttestation(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
-	request := models.Request{Name: mux.CurrentRoute(r).GetName()}
-	channel.Requests <- request     // put request in channel
+	request := models.RequestGet_s{Name: mux.CurrentRoute(r).GetName()}
+	channel.RequestGet <- request   // put request in channel
 	response := <-channel.Responses // wait for response from attestation service
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		panic(err)
@@ -76,8 +76,8 @@ func HandleLatestAttestation(w http.ResponseWriter, r *http.Request, channel *mo
 // TODO:
 func HandleServerVerify(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
 	hash := mux.Vars(r)["hash"]
-	request := models.Request{Name: mux.CurrentRoute(r).GetName(), Id: hash}
-	channel.Requests <- request     // put request in channel
+	request := models.RequestGet_s{Name: mux.CurrentRoute(r).GetName(), Id: hash}
+	channel.RequestGet <- request   // put request in channel
 	response := <-channel.Responses // wait for response from attestation service
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		panic(err)
@@ -87,8 +87,8 @@ func HandleServerVerify(w http.ResponseWriter, r *http.Request, channel *models.
 // Is Transaction Attested request handler
 func HandleTransaction(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
 	transactionId := mux.Vars(r)["transactionId"]
-	request := models.Request{Name: mux.CurrentRoute(r).GetName(), Id: transactionId}
-	channel.Requests <- request     // put request in channel
+	request := models.RequestGet_s{Name: mux.CurrentRoute(r).GetName(), Id: transactionId}
+	channel.RequestGet <- request   // put request in channel
 	response := <-channel.Responses // wait for response from attestation service
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		panic(err)
