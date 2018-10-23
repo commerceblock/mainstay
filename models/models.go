@@ -10,9 +10,15 @@ type BestBlockResponse struct {
 	Response
 	BlockHash string `json:"blockhash"`
 }
+
 type BlockResponse struct {
 	Response
 	Attested bool `json:"attested"`
+}
+
+type CommintmentSend struct {
+	Response
+	Verified bool `json:"verified"`
 }
 
 type LatestAttestationResponse struct {

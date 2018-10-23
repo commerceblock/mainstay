@@ -46,12 +46,12 @@ var routes = []Route{
 		"/api/block/{blockId}",
 		HandleBlock,
 	},
-	// Route{
-	// 	ROUTE_COMMITMENT_SEND,
-	// 	"POST",
-	// 	"/api/commitment/send/{clientId,hash,height}",
-	// 	HandleCommitmentSend,
-	// },
+	Route{
+		ROUTE_COMMITMENT_SEND,
+		"POST",
+		"/api/commitment/send/{clientId,hash,height}",
+		HandleCommitmentSend,
+	},
 	Route{
 		ROUTE_INDEX,
 		"GET",

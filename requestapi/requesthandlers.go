@@ -42,16 +42,21 @@ func HandleBestBlockHeight(w http.ResponseWriter, r *http.Request, channel *mode
 	}
 }
 
-// TODO:
-// func HandleCommitmentSend(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
-// 	blockid := mux.Vars(r)["blockId"]
-// 	request := models.Request{Name: mux.CurrentRoute(r).GetName(), Id: blockid}
-// 	channel.Requests <- request     // put request in channel
-// 	response := <-channel.Responses // wait for response from attestation service
-// 	if err := json.NewEncoder(w).Encode(response); err != nil {
-// 		panic(err)
-// 	}
-// }
+// TODO: Add comment
+func HandleCommitmentSend(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
+	// 	clientid := mux.Vars(r)["clientId"]
+	// 	hash := mux.Vars(r)["hash"]
+	// 	height := mux.Vars(r)["height"]
+	// 	_ = clientid
+	// 	_ = hash
+	// 	_ = height
+	// 	request := models.Request{Name: mux.CurrentRoute(r).GetName(), Id: blockid, Hash: hash, }
+	// 	// channel.Requests <- request     // put request in channel
+	// 	// response := <-channel.Responses // wait for response from attestation service
+	// 	// if err := json.NewEncoder(w).Encode(response); err != nil {
+	// 	// 	panic(err)
+	// 	// }
+}
 
 // Index request handler
 func HandleIndex(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
@@ -71,7 +76,7 @@ func HandleLatestAttestation(w http.ResponseWriter, r *http.Request, channel *mo
 // TODO:
 func HandleServerVerify(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
 	hash := mux.Vars(r)["hash"]
-	request := models.Request{Name: mux.CurrentRoute(r).GetName(), Id: transactionId}
+	request := models.Request{Name: mux.CurrentRoute(r).GetName(), Id: hash}
 	channel.Requests <- request     // put request in channel
 	response := <-channel.Responses // wait for response from attestation service
 	if err := json.NewEncoder(w).Encode(response); err != nil {
