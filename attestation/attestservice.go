@@ -34,7 +34,6 @@ type AttestService struct {
 	config         *confpkg.Config
 	attester       *AttestClient
 	server         *AttestServer
-	listener       *AttestListener
 	reqServiceChan *models.Channel
 	publisher      *messengers.PublisherZmq
 	subscribers    []*messengers.SubscriberZmq
@@ -55,7 +54,6 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
 
 	latestAttestation = NewAttestation(chainhash.Hash{}, chainhash.Hash{}, ASTATE_INIT)
 	server := NewAttestServer(ctx, wg, config.OceanClient(), *latestAttestation)
-	listener := NewAttestListener(ctx, wg, config.OceanClient())
 
 	// Initialise publisher for sending new hashes and txs
 	// and subscribers to receive sig responses
@@ -68,7 +66,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, channel *models.C
 	}
 	attestDelay = 30 * time.Second // add some delay for subscribers to have time to set up
 
-	return &AttestService{ctx, wg, config, attester, server, listener, channel, publisher, subscribers}
+	return &AttestService{ctx, wg, config, attester, server, channel, publisher, subscribers}
 }
 
 // Run Attest Service
@@ -79,9 +77,6 @@ func (s *AttestService) Run() {
 	go s.server.Run()
 
 	s.wg.Add(1)
-	go s.listener.Run()
-
-	s.wg.Add(1)
 	go func() { //Waiting for requests from the request service and pass to server for response
 		defer s.wg.Done()
 		for {
@@ -89,13 +84,7 @@ func (s *AttestService) Run() {
 			case <-s.ctx.Done():
 				return
 			case req := <-s.reqServiceChan.Requests:
-				if req.Name == "CommitmentRequest" {
-					// if new commitment, send to listener
-					s.listener.requestChan <- models.RequestWithResponseChannel{req, s.reqServiceChan.Responses}
-				} else {
-					// send request to server channel and pass reponse channel
-					s.server.requestChan <- models.RequestWithResponseChannel{req, s.reqServiceChan.Responses}
-				}
+				s.server.requestChan <- models.RequestWithResponseChannel{req, s.reqServiceChan.Responses}
 			}
 		}
 	}()
@@ -176,9 +165,9 @@ func (s *AttestService) doAttestation() {
 		} else {
 			log.Println("*AttestService* NEW ATTESTATION")
 
-			// request latest hash from listener and await response
+			// request latest hash from server and await response
 			hashChan := make(chan interface{})
-			s.listener.latestChan <- models.RequestWithResponseChannel{models.Request{}, hashChan}
+			s.server.getNextChan <- models.RequestWithResponseChannel{models.Request{}, hashChan}
 			hash := (<-hashChan).(chainhash.Hash)
 
 			log.Printf("********** hash: %s\n", hash.String())
@@ -233,7 +222,7 @@ func (s *AttestService) doAttestation() {
 
 		// request latest attestation from server and await response
 		latestChan := make(chan interface{})
-		s.server.latestChan <- models.RequestWithResponseChannel{models.Request{}, latestChan}
+		s.server.getLatestChan <- models.RequestWithResponseChannel{models.Request{}, latestChan}
 		latest := (<-latestChan).(Attestation)
 		txid := s.attester.signAndSendAttestation(&latestAttestation.tx, sigs, latest.attestedHash)
 

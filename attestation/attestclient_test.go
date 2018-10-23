@@ -29,19 +29,18 @@ func TestAttestClient(t *testing.T) {
 	assert.Equal(t, txs[0], unspent.TxID)
 
 	lastHash := chainhash.Hash{}
-	clientListener := NewAttestListener(nil, nil, sideClientFake)
 	// Do 10 attestations
 	for i := 0; i < 10; i++ {
 		// Generate attestation transaction with the unspent vout
-		oceanhash := clientListener.getNextHash()
-		key := client.GetNextAttestationKey(oceanhash)
-		addr, _ := client.GetNextAttestationAddr(key, oceanhash)
+		oceanhash, _ := sideClientFake.GetBestBlockHash()
+		key := client.GetNextAttestationKey(*oceanhash)
+		addr, _ := client.GetNextAttestationAddr(key, *oceanhash)
 
 		tx := client.createAttestation(addr, unspent, true)
 		txid := client.signAndSendAttestation(tx, [][]byte{}, lastHash)
 		sideClientFake.Generate(1)
 
-		lastHash = oceanhash
+		lastHash = *oceanhash
 
 		// Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
 		var unconfirmed *Attestation = &Attestation{}
@@ -49,7 +48,7 @@ func TestAttestClient(t *testing.T) {
 		*unconfirmed = unconftx
 		assert.Equal(t, true, unconf)
 		assert.Equal(t, txid, unconfirmed.txid)
-		assert.Equal(t, oceanhash, unconfirmed.attestedHash)
+		assert.Equal(t, *oceanhash, unconfirmed.attestedHash)
 
 		// Verify no more unconfirmed transactions after new block generation
 		client.MainClient.Generate(1)

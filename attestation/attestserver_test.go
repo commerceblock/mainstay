@@ -28,8 +28,7 @@ func TestAttestServer(t *testing.T) {
 
 	// Generate single attestation transaction
 	_, unspent := client.findLastUnspent()
-	clientListener := NewAttestListener(nil, nil, sideClientFake)
-	sidehash := clientListener.getNextHash()
+	sidehash := server.getNextHash()
 	key := client.GetNextAttestationKey(sidehash)
 	addr, _ := client.GetNextAttestationAddr(key, sidehash)
 
@@ -39,7 +38,7 @@ func TestAttestServer(t *testing.T) {
 
 	// Update latest in server
 	latest := NewAttestation(txid, sidehash, ASTATE_CONFIRMED)
-	server.UpdateLatest(*latest)
+	server.updateLatest(*latest)
 	assert.Equal(t, ASTATE_CONFIRMED, server.latest.state)
 	assert.Equal(t, txid, server.latest.txid)
 	assert.Equal(t, sidehash, server.latest.attestedHash)
@@ -80,6 +79,7 @@ func TestAttestServer(t *testing.T) {
 	// Test models.Requests for the attested best block and a new generated block
 	sideClientFake.Generate(1)
 	bestblockhashnew, _ := client.sideClient.GetBestBlockHash()
+	assert.Equal(t, *bestblockhashnew, server.getNextHash())
 
 	req = models.Request{"Block", bestblockhash.String()}
 	resp6, _ := server.Respond(req).(models.BlockResponse)
