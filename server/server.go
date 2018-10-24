@@ -30,8 +30,12 @@ type Server struct {
 	getNextChan   chan models.RequestWithResponseChannel
 
 	latestAttestation models.Attestation
-	latestHeight      int32
-	sideClient        clients.SidechainClient
+	latestCommitment  chainhash.Hash
+	commitmentKeys    []string
+
+	// to remove soon
+	latestHeight int32
+	sideClient   clients.SidechainClient
 }
 
 // NewServer returns a pointer to an Server instance
@@ -40,7 +44,7 @@ func NewServer(ctx context.Context, wg *sync.WaitGroup, config *config.Config) *
 	rChan := make(chan models.RequestWithResponseChannel)
 	latestChan := make(chan models.RequestWithResponseChannel)
 	nextChan := make(chan models.RequestWithResponseChannel)
-	return &Server{ctx, wg, uChan, rChan, latestChan, nextChan, *models.NewAttestationDefault(), 0, config.OceanClient()}
+	return &Server{ctx, wg, uChan, rChan, latestChan, nextChan, *models.NewAttestationDefault(), chainhash.Hash{}, config.ClientKeys(), 0, config.OceanClient()}
 }
 
 // Return request channel to allow request service to push client requests
@@ -63,7 +67,7 @@ func (s *Server) GetNextChan() chan models.RequestWithResponseChannel {
 	return s.getNextChan
 }
 
-// Update information on the latest attestation and sidechain height
+// Update information on the latest attestation
 func (s *Server) updateLatest(tx models.Attestation) {
 	s.latestAttestation = tx
 	latestheight, err := s.sideClient.GetBlockHeight(&s.latestAttestation.AttestedHash)
@@ -74,25 +78,32 @@ func (s *Server) updateLatest(tx models.Attestation) {
 	}
 }
 
-// Return latest hash
-func (s *Server) getNextHash() chainhash.Hash {
+// Update latest commitment hash
+func (s *Server) updateCommitment() {
 	hash, err := s.sideClient.GetBestBlockHash()
 	if err != nil {
 		log.Fatal(err)
 	}
-	return *hash
+	s.latestCommitment = *hash
 }
 
 // Verify incoming client request
-func (s *Server) verifyCommitment(req models.Request) interface{} {
+func (s *Server) verifyCommitment(req models.Request) models.CommitmentResponse {
 
-	// read hash from request
-	// read id
-	// verify id
-	// update latest
-	// return ACK
+	res := models.Response{req, ""}
 
-	return nil
+	for _, key := range s.commitmentKeys {
+		if req.Id == key {
+
+			// TODO
+			// updateCommitment ()
+
+			return models.CommitmentResponse{res, true}
+		}
+	}
+
+	res.Error = "Invalid client identity: " + req.Id
+	return models.CommitmentResponse{res, false}
 }
 
 // Respond returns appropriate response based on request type
@@ -108,8 +119,6 @@ func (s *Server) respond(req models.Request) interface{} {
 		return s.LatestAttestation(req)
 	case "Transaction":
 		return s.TransactionResponse(req)
-	case "Commitment":
-		return s.verifyCommitment(req)
 	default:
 		return models.Response{req, "**Server** Non supported request type"}
 	}
@@ -125,12 +134,17 @@ func (s *Server) Run() {
 			return
 		case req := <-s.requestChan: // api requests
 			req.Response <- s.respond(req.Request)
+
+			// case req := <s.requestChan_POST: // commitment requests
+			//     req.Response <- s.verifyCommitment(req.Request)
+
 		case update := <-s.updateChan: // attestation service updates
 			s.updateLatest(update)
 		case latest := <-s.getLatestChan: // latest attestation request
 			latest.Response <- s.latestAttestation
 		case next := <-s.getNextChan: // next attestation hash request
-			next.Response <- s.getNextHash()
+			s.updateCommitment()
+			next.Response <- s.latestCommitment
 		}
 	}
 }
