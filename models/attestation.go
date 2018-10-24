@@ -3,7 +3,6 @@ package models
 import (
 	"time"
 
-	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 )
@@ -32,16 +31,14 @@ type Attestation struct {
 	State        AttestationState
 	LatestTime   time.Time
 	Tx           wire.MsgTx
-	Txunspent    btcjson.ListUnspentResult
-	RedeemScript string
 }
 
 // Attestation constructor for defaulting some values
 func NewAttestation(txid chainhash.Hash, hash chainhash.Hash, state AttestationState) *Attestation {
-	return &Attestation{txid, hash, state, time.Now(), wire.MsgTx{}, btcjson.ListUnspentResult{}, ""}
+	return &Attestation{txid, hash, state, time.Now(), wire.MsgTx{}}
 }
 
 // Attestation constructor for defaulting all values
 func NewAttestationDefault() *Attestation {
-	return &Attestation{chainhash.Hash{}, chainhash.Hash{}, ASTATE_INIT, time.Now(), wire.MsgTx{}, btcjson.ListUnspentResult{}, ""}
+	return &Attestation{chainhash.Hash{}, chainhash.Hash{}, ASTATE_INIT, time.Now(), wire.MsgTx{}}
 }

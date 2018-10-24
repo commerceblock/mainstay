@@ -3,7 +3,6 @@ package attestation
 import (
 	"encoding/hex"
 	"log"
-	"mainstay/clients"
 	confpkg "mainstay/config"
 	"mainstay/crypto"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 )
@@ -23,7 +21,6 @@ import (
 // and verifying that the correct chain of transactions is maintained
 type AttestClient struct {
 	MainClient   *rpcclient.Client
-	sideClient   clients.SidechainClient
 	MainChainCfg *chaincfg.Params
 	pk0          string
 	txid0        string
@@ -48,9 +45,9 @@ func NewAttestClient(config *confpkg.Config) *AttestClient {
 	multisig := config.MultisigScript()
 	if multisig != "" { // if multisig attestation, parse pubkeys
 		pubkeys, numOfSigs := crypto.ParseRedeemScript(config.MultisigScript())
-		return &AttestClient{config.MainClient(), config.OceanClient(), config.MainChainCfg(), pk, config.InitTX(), multisig, pubkeys, numOfSigs, pkWif}
+		return &AttestClient{config.MainClient(), config.MainChainCfg(), pk, config.InitTX(), multisig, pubkeys, numOfSigs, pkWif}
 	}
-	return &AttestClient{config.MainClient(), config.OceanClient(), config.MainChainCfg(), pk, config.InitTX(), multisig, []*btcec.PublicKey{}, 1, pkWif}
+	return &AttestClient{config.MainClient(), config.MainChainCfg(), pk, config.InitTX(), multisig, []*btcec.PublicKey{}, 1, pkWif}
 }
 
 // Get next attestation key by tweaking with latest hash
@@ -176,9 +173,9 @@ func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx, sigs [][]byte, 
 
 	// MultiSig case - combine sigs and create new scriptSig
 	if redeemScript != "" {
-		clientSigs, script := crypto.ParseScriptSig(signedMsgTx.TxIn[0].SignatureScript)
+		mySigs, script := crypto.ParseScriptSig(signedMsgTx.TxIn[0].SignatureScript)
 		if hex.EncodeToString(script) == redeemScript {
-			combinedSigs := append(clientSigs, sigs...)
+			combinedSigs := append(mySigs, sigs...)
 
 			// take only numOfSigs required
 			combinedScriptSig := crypto.CreateScriptSig(combinedSigs[:w.numOfSigs], script)
@@ -239,50 +236,4 @@ func (w *AttestClient) getUnconfirmedTx() (bool, chainhash.Hash) {
 		}
 	}
 	return false, chainhash.Hash{}
-}
-
-// Find the attested sidechain hash from a transaction, by testing for all sidechain hashes
-func (w *AttestClient) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
-	// Get latest block and block height from sidechain
-	latesthash, err := w.sideClient.GetBestBlockHash()
-	if err != nil {
-		log.Fatal(err)
-	}
-	latestheight, err := w.sideClient.GetBlockHeight(latesthash)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Get address from transaction
-	tx, err := w.MainClient.GetRawTransaction(&txid)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, addrs, _, errExtract := txscript.ExtractPkScriptAddrs(tx.MsgTx().TxOut[0].PkScript, w.MainChainCfg)
-	if errExtract != nil {
-		log.Fatal(errExtract)
-	}
-	addr := addrs[0]
-
-	tweakedPriv := crypto.TweakPrivKey(w.WalletPriv, latesthash.CloneBytes(), w.MainChainCfg)
-	addrTweaked, _ := w.GetNextAttestationAddr(tweakedPriv, *latesthash)
-	// Check first if the attestation came from the latest block
-	if addr.String() == addrTweaked.String() {
-		return *latesthash
-	}
-
-	// Iterate backwards through all sidechain hashes to find the block hash that was attested
-	for h := latestheight - 1; h >= 0; h-- {
-		hash, err := w.sideClient.GetBlockHash(int64(h))
-		if err != nil {
-			log.Fatal(err)
-		}
-		tweakedPriv := crypto.TweakPrivKey(w.WalletPriv, hash.CloneBytes(), w.MainChainCfg)
-		addrTweaked, _ := w.GetNextAttestationAddr(tweakedPriv, *hash)
-		if addr.String() == addrTweaked.String() {
-			return *hash
-		}
-	}
-
-	return chainhash.Hash{}
 }

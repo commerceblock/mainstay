@@ -11,6 +11,7 @@ import (
 	"context"
 	"log"
 	confpkg "mainstay/config"
+	"mainstay/crypto"
 	"mainstay/messengers"
 	"mainstay/models"
 	"mainstay/server"
@@ -18,6 +19,8 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/txscript"
+
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -38,6 +41,7 @@ type AttestService struct {
 }
 
 var latestAttestation *models.Attestation // hold latest state
+var latestCommitment chainhash.Hash       // hold latest commitment
 var attestDelay time.Duration             // initially 0 delay
 
 var poller *zmq.Poller // poller to add all subscriber/publisher sockets
@@ -110,14 +114,18 @@ func (s *AttestService) doAttestation() {
 		// when a DB is put in place, these information will be collected from there
 		unconfirmed, unconfirmedTxid := s.attester.getUnconfirmedTx()
 		if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
-			latestAttestation = models.NewAttestation(unconfirmedTxid, s.attester.getTxAttestedHash(unconfirmedTxid), models.ASTATE_UNCONFIRMED)
-			s.server.UpdateChan() <- *latestAttestation
+			latestAttestation = models.NewAttestation(unconfirmedTxid, s.getTxAttestedHash(unconfirmedTxid), models.ASTATE_UNCONFIRMED)
+			s.server.UpdateChan() <- *latestAttestation // send server update just to make sure it's up to date
 		} else {
 			success, txunspent := s.attester.findLastUnspent()
 			if success {
 				txunspentHash, _ := chainhash.NewHashFromStr(txunspent.TxID)
-				s.server.UpdateChan() <- *models.NewAttestation(*txunspentHash, s.attester.getTxAttestedHash(*txunspentHash), models.ASTATE_CONFIRMED)
-				latestAttestation.State = models.ASTATE_NEW_ATTESTATION
+				latestCommitment = s.getTxAttestedHash(*txunspentHash)
+				latestAttestation = models.NewAttestation(*txunspentHash, latestCommitment, models.ASTATE_CONFIRMED)
+
+				s.server.UpdateChan() <- *latestAttestation // send server update just to make sure it's up to date
+
+				s.publisher.SendMessage(latestCommitment.CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) // update clients
 			} else {
 				log.Println("*AttestService* No unconfirmed (mempool) or unspent tx found. Sleeping...")
 				attestDelay = time.Duration(ATTEST_WAIT_TIME*10) * time.Second // add wait time
@@ -132,16 +140,21 @@ func (s *AttestService) doAttestation() {
 		if newTx.BlockHash != "" {
 			latestAttestation.LatestTime = time.Now()
 			latestAttestation.State = models.ASTATE_CONFIRMED
+			latestCommitment = latestAttestation.AttestedHash
 			log.Printf("********** Attestation confirmed for txid: (%s)\n", latestAttestation.Txid.String())
-			s.server.UpdateChan() <- *latestAttestation
 			attestDelay = time.Duration(0) * time.Second
+
+			s.server.UpdateChan() <- *latestAttestation // update server
+
+			s.publisher.SendMessage(latestCommitment.CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) //update clients
 		}
 	case models.ASTATE_CONFIRMED, models.ASTATE_NEW_ATTESTATION:
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
 		unconfirmed, unconfirmedTxid := s.attester.getUnconfirmedTx()
 		if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
-			latestAttestation = models.NewAttestation(unconfirmedTxid, s.attester.getTxAttestedHash(unconfirmedTxid), models.ASTATE_UNCONFIRMED)
+			latestAttestation = models.NewAttestation(unconfirmedTxid, s.getTxAttestedHash(unconfirmedTxid), models.ASTATE_UNCONFIRMED)
+			s.server.UpdateChan() <- *latestAttestation
 			log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.AttestedHash.String())
 		} else {
 			log.Println("*AttestService* NEW ATTESTATION")
@@ -157,7 +170,6 @@ func (s *AttestService) doAttestation() {
 				return
 			}
 			// publish new attestation hash
-			log.Printf("%v\n", hash)
 			s.publisher.SendMessage(hash.CloneBytes(), confpkg.TOPIC_NEW_HASH)
 			latestAttestation = models.NewAttestation(chainhash.Hash{}, hash, models.ASTATE_COLLECTING_PUBKEYS) // update attestation state
 		}
@@ -166,13 +178,11 @@ func (s *AttestService) doAttestation() {
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
 		key := s.attester.GetNextAttestationKey(latestAttestation.AttestedHash)
-		paytoaddr, script := s.attester.GetNextAttestationAddr(key, latestAttestation.AttestedHash)
+		paytoaddr, _ := s.attester.GetNextAttestationAddr(key, latestAttestation.AttestedHash)
 
 		success, txunspent := s.attester.findLastUnspent()
 		if success {
 			latestAttestation.Tx = *s.attester.createAttestation(paytoaddr, txunspent, false)
-			latestAttestation.Txunspent = txunspent
-			latestAttestation.RedeemScript = script
 			log.Printf("********** pre-sign txid: %s\n", latestAttestation.Tx.TxHash().String())
 
 			// publish pre signed transaction
@@ -211,4 +221,54 @@ func (s *AttestService) doAttestation() {
 		latestAttestation.Txid = txid
 		latestAttestation.State = models.ASTATE_UNCONFIRMED
 	}
+}
+
+// THIS WILL BE REPLACED BY QUERYING SERVER FOR COMMITMENT OF CORRESPONDING TX
+
+// Find the attested sidechain hash from a transaction, by testing for all sidechain hashes
+func (s *AttestService) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
+	oceanClient := s.config.OceanClient()
+
+	// Get latest block and block height from sidechain
+	latesthash, err := oceanClient.GetBestBlockHash()
+	if err != nil {
+		log.Fatal(err)
+	}
+	latestheight, err := oceanClient.GetBlockHeight(latesthash)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Get address from transaction
+	tx, err := s.attester.MainClient.GetRawTransaction(&txid)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, addrs, _, errExtract := txscript.ExtractPkScriptAddrs(tx.MsgTx().TxOut[0].PkScript, s.attester.MainChainCfg)
+	if errExtract != nil {
+		log.Fatal(errExtract)
+	}
+	addr := addrs[0]
+
+	tweakedPriv := crypto.TweakPrivKey(s.attester.WalletPriv, latesthash.CloneBytes(), s.attester.MainChainCfg)
+	addrTweaked, _ := s.attester.GetNextAttestationAddr(tweakedPriv, *latesthash)
+	// Check first if the attestation came from the latest block
+	if addr.String() == addrTweaked.String() {
+		return *latesthash
+	}
+
+	// Iterate backwards through all sidechain hashes to find the block hash that was attested
+	for h := latestheight - 1; h >= 0; h-- {
+		hash, err := oceanClient.GetBlockHash(int64(h))
+		if err != nil {
+			log.Fatal(err)
+		}
+		tweakedPriv := crypto.TweakPrivKey(s.attester.WalletPriv, hash.CloneBytes(), s.attester.MainChainCfg)
+		addrTweaked, _ := s.attester.GetNextAttestationAddr(tweakedPriv, *hash)
+		if addr.String() == addrTweaked.String() {
+			return *hash
+		}
+	}
+
+	return chainhash.Hash{}
 }
