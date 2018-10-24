@@ -29,6 +29,7 @@ type Config struct {
 	mainClient     *rpcclient.Client
 	mainChainCfg   *chaincfg.Params
 	oceanClient    clients.SidechainClient
+	clientKeys     []string
 	multisigNodes  []string
 	initTX         string
 	initPK         string
@@ -48,6 +49,11 @@ func (c *Config) OceanClient() clients.SidechainClient {
 // Get Main Client Cfg
 func (c *Config) MainChainCfg() *chaincfg.Params {
 	return c.mainChainCfg
+}
+
+// Get Tx Signers host names
+func (c *Config) ClientKeys() []string {
+	return c.clientKeys
 }
 
 // Get Tx Signers host names
@@ -98,8 +104,9 @@ func NewConfig(isUnitTest bool, customConf ...[]byte) *Config {
 	mainClientCfg := GetChainCfgParams(MAIN_CHAIN_NAME, conf)
 	oceanClient := GetSidechainClient(isUnitTest, conf)
 
+	clientKeys := strings.Split(GetEnvFromConf("misc", "clientkeys", conf), ",")
 	multisignodes := strings.Split(GetEnvFromConf("misc", "multisignodes", conf), ",")
-	return &Config{mainClient, mainClientCfg, oceanClient, multisignodes, "", "", ""}
+	return &Config{mainClient, mainClientCfg, oceanClient, clientKeys, multisignodes, "", "", ""}
 }
 
 // Return SidechainClient depending on whether unit test config or actual config
