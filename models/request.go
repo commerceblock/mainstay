@@ -6,6 +6,8 @@ type RequestGet_s struct {
 }
 
 type RequestPost_s struct {
-	Name string `json:"name"`
-	Id   string `json:"id"`
+	Url    string `json:"url"`
+	Header string `json:"header"`
+	Name   string `json:"name"`
+	Id     string `json:"id"`
 }
