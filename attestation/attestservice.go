@@ -108,9 +108,9 @@ func (s *AttestService) doAttestation() {
 		log.Println("*AttestService* INIT ATTESTATION CLIENT AND SERVER")
 		// find the state of the attestation
 		// when a DB is put in place, these information will be collected from there
-		unconfirmed, unconfirmedTx := s.attester.getUnconfirmedTx()
+		unconfirmed, unconfirmedTxid := s.attester.getUnconfirmedTx()
 		if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
-			*latestAttestation = unconfirmedTx
+			latestAttestation = models.NewAttestation(unconfirmedTxid, s.attester.getTxAttestedHash(unconfirmedTxid), models.ASTATE_UNCONFIRMED)
 			s.server.UpdateChan() <- *latestAttestation
 		} else {
 			success, txunspent := s.attester.findLastUnspent()
@@ -139,9 +139,9 @@ func (s *AttestService) doAttestation() {
 	case models.ASTATE_CONFIRMED, models.ASTATE_NEW_ATTESTATION:
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
-		unconfirmed, unconfirmedTx := s.attester.getUnconfirmedTx()
+		unconfirmed, unconfirmedTxid := s.attester.getUnconfirmedTx()
 		if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
-			*latestAttestation = unconfirmedTx
+			latestAttestation = models.NewAttestation(unconfirmedTxid, s.attester.getTxAttestedHash(unconfirmedTxid), models.ASTATE_UNCONFIRMED)
 			log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.AttestedHash.String())
 		} else {
 			log.Println("*AttestService* NEW ATTESTATION")

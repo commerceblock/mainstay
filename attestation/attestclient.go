@@ -6,7 +6,6 @@ import (
 	"mainstay/clients"
 	confpkg "mainstay/config"
 	"mainstay/crypto"
-	"mainstay/models"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
@@ -228,18 +227,18 @@ func (w *AttestClient) findLastUnspent() (bool, btcjson.ListUnspentResult) {
 	return false, btcjson.ListUnspentResult{}
 }
 
-// Find any previously unconfirmed transactions in order to start attestation from there
-func (w *AttestClient) getUnconfirmedTx() (bool, models.Attestation) {
+// Find any previously unconfirmed transactions in the client
+func (w *AttestClient) getUnconfirmedTx() (bool, chainhash.Hash) {
 	mempool, err := w.MainClient.GetRawMempool()
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, hash := range mempool {
 		if w.verifyTxOnSubchain(*hash) {
-			return true, *models.NewAttestation(*hash, w.getTxAttestedHash(*hash), models.ASTATE_UNCONFIRMED)
+			return true, *hash
 		}
 	}
-	return false, *models.NewAttestation(chainhash.Hash{}, chainhash.Hash{}, models.ASTATE_NEW_ATTESTATION)
+	return false, chainhash.Hash{}
 }
 
 // Find the attested sidechain hash from a transaction, by testing for all sidechain hashes

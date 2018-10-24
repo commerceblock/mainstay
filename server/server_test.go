@@ -25,7 +25,8 @@ func TestServer(t *testing.T) {
 	sideClientFake.Generate(10)
 
 	// Generate single attestation transaction
-	sidehash := server.getNextHash()
+	server.updateCommitment()
+	sidehash := server.latestCommitment
 	txid, _ := chainhash.NewHashFromStr("11111111111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 
 	// Update latest in server
@@ -70,8 +71,9 @@ func TestServer(t *testing.T) {
 
 	// Test models.Requests for the attested best block and a new generated block
 	sideClientFake.Generate(1)
+	server.updateCommitment()
 	bestblockhashnew, _ := server.sideClient.GetBestBlockHash()
-	assert.Equal(t, *bestblockhashnew, server.getNextHash())
+	assert.Equal(t, *bestblockhashnew, server.latestCommitment)
 
 	req = models.Request{"Block", bestblockhash.String()}
 	resp6, _ := server.respond(req).(models.BlockResponse)

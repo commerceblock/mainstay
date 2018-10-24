@@ -45,19 +45,17 @@ func TestAttestClient(t *testing.T) {
 
 		// Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
 		var unconfirmed *models.Attestation = &models.Attestation{}
-		unconf, unconftx := client.getUnconfirmedTx() // new tx is unconfirmed
-		*unconfirmed = unconftx
+		unconf, unconfTxid := client.getUnconfirmedTx() // new tx is unconfirmed
+		unconfirmed = models.NewAttestation(unconfTxid, client.getTxAttestedHash(unconfTxid), models.ASTATE_UNCONFIRMED)
 		assert.Equal(t, true, unconf)
 		assert.Equal(t, txid, unconfirmed.Txid)
 		assert.Equal(t, *oceanhash, unconfirmed.AttestedHash)
 
 		// Verify no more unconfirmed transactions after new block generation
 		client.MainClient.Generate(1)
-		unconfRe, unconftxRe := client.getUnconfirmedTx()
-		*unconfirmed = unconftxRe
+		unconfRe, unconfTxidRe := client.getUnconfirmedTx()
 		assert.Equal(t, false, unconfRe)
-		assert.Equal(t, chainhash.Hash{}, unconfirmed.Txid) // new tx no longer unconfirmed
-		assert.Equal(t, chainhash.Hash{}, unconfirmed.AttestedHash)
+		assert.Equal(t, chainhash.Hash{}, unconfTxidRe) // new tx no longer unconfirmed
 		txs = append(txs, txid.String())
 
 		// Now check that the new unspent is the vout from the transaction just submitted
