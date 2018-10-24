@@ -44,21 +44,15 @@ func HandleBestBlockHeight(w http.ResponseWriter, r *http.Request, channel *mode
 
 // TODO: Add comment
 func HandleCommitmentSend(w http.ResponseWriter, r *http.Request, channel *models.Channel) {
-	// clientid := mux.Vars(r)["clientId"]
-	// hash := mux.Vars(r)["hash"]
-	// height := mux.Vars(r)["height"]
-	// _ = clientid
-	// _ = hash
-	// _ = height
-	// request := models.RequestPost_s{Name: mux.CurrentRoute(r).GetName(), Id: blockid, Hash: hash}
-	//
-	// println(request);
-	//
-	// channel.Requests <- request     // put request in channel
-	// response := <-channel.Responses // wait for response from attestation service
-	// if err := json.NewEncoder(w).Encode(response); err != nil {
-	// 	panic(err)
-	// }
+	clientid := mux.Vars(r)["clientId"]
+	hash := mux.Vars(r)["hash"]
+	height := mux.Vars(r)["height"]
+	request := models.RequestPost_s{Name: mux.CurrentRoute(r).GetName(), Id: clientid, Hash: hash, Height: height}
+	channel.RequestPost <- request  // put request in channel
+	response := <-channel.Responses // wait for response from attestation service
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		panic(err)
+	}
 }
 
 // Index request handler

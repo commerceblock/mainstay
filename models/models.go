@@ -1,6 +1,9 @@
 // Package models provides structs for request/reponse service communications.
 package models
 
+const GET = "GET"
+const POST = "POST"
+
 const ROUTE_BEST_BLOCK = "BestBlock"
 const ROUTE_BEST_BLOCK_HEIGHT = "BestBlockHeight"
 const ROUTE_BLOCK = "Block"
