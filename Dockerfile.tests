@@ -1,6 +1,6 @@
 FROM golang:1.10.3-stretch
 
-ENV PKG_VER 0.16.1
+ENV PKG_VER 0.17.0
 ENV PKG bitcoin-${PKG_VER}-x86_64-linux-gnu.tar.gz
 ENV PKG_URL https://bitcoincore.org/bin/bitcoin-core-${PKG_VER}/${PKG}
 
