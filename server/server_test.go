@@ -30,9 +30,8 @@ func TestServer(t *testing.T) {
 	txid, _ := chainhash.NewHashFromStr("11111111111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 
 	// Update latest in server
-	latest := models.NewAttestation(*txid, sidehash, models.ASTATE_CONFIRMED)
+	latest := models.NewAttestation(*txid, sidehash)
 	server.updateLatest(*latest)
-	assert.Equal(t, models.ASTATE_CONFIRMED, server.latestAttestation.State)
 	assert.Equal(t, *txid, server.latestAttestation.Txid)
 	assert.Equal(t, sidehash, server.latestAttestation.AttestedHash)
 	assert.Equal(t, int32(10), server.latestHeight)

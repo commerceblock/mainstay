@@ -47,7 +47,7 @@ func TestAttestClient(t *testing.T) {
 		// Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
 		var unconfirmed *models.Attestation = &models.Attestation{}
 		unconf, unconfTxid, _ := client.getUnconfirmedTx() // new tx is unconfirmed
-		unconfirmed = models.NewAttestation(unconfTxid, lastHash, models.ASTATE_UNCONFIRMED)
+		unconfirmed = models.NewAttestation(unconfTxid, lastHash)
 		assert.Equal(t, true, unconf)
 		assert.Equal(t, txid, unconfirmed.Txid)
 		assert.Equal(t, *oceanhash, unconfirmed.AttestedHash)
