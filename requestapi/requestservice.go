@@ -57,7 +57,7 @@ func (c *RequestService) Run() {
 			select {
 			case <-c.ctx.Done():
 				return
-			case req := <-c.channel.Requests:
+			case req := <-c.channel.RequestGet:
 				c.server.RequestChan() <- models.RequestWithResponseChannel{req, c.channel.Responses}
 			}
 		}

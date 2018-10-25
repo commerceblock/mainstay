@@ -90,7 +90,7 @@ func (s *Server) updateCommitment() {
 // Verify incoming client request
 func (s *Server) verifyCommitment(req models.Request) models.CommitmentResponse {
 
-	res := models.Response{req, ""}
+	res := models.Response{""}
 
 	for _, key := range s.commitmentKeys {
 		if req.Id == key {
@@ -107,21 +107,21 @@ func (s *Server) verifyCommitment(req models.Request) models.CommitmentResponse 
 }
 
 // Respond returns appropriate response based on request type
-func (s *Server) respond(req models.Request) interface{} {
-	switch req.Name {
-	case "Block":
-		return s.BlockResponse(req)
-	case "BestBlock":
-		return s.BestBlockResponse(req)
-	case "BestBlockHeight":
-		return s.BestBlockHeightResponse(req)
-	case "LatestAttestation":
-		return s.LatestAttestation(req)
-	case "Transaction":
-		return s.TransactionResponse(req)
-	default:
-		return models.Response{req, "**Server** Non supported request type"}
-	}
+func (s *Server) respond(req models.RequestGet_s) interface{} {
+    switch req.Name {
+    case models.NAME_BLOCK:
+        return s.BlockResponse(req)
+    case models.NAME_BEST_BLOCK:
+        return s.BestBlockResponse(req)
+    case models.NAME_BEST_BLOCK_HEIGHT:
+        return s.BestBlockHeightResponse(req)
+    case models.NAME_LATEST_ATTESTATION:
+        return s.LatestAttestation(req)
+    case models.NAME_TRANSACTION:
+        return s.TransactionResponse(req)
+    default:
+        return models.Response{"**Server** Non supported request type"}
+    }
 }
 
 // Main attest server method listening to remote requests and updates

@@ -182,7 +182,7 @@ func (s *AttestService) doAttestation() {
 
 			// request latest hash from server and await response
 			hashChan := make(chan interface{})
-			s.server.GetNextChan() <- models.RequestWithResponseChannel{models.Request{}, hashChan}
+			s.server.GetNextChan() <- models.RequestWithResponseChannel{models.RequestGet_s{}, hashChan}
 			hash := (<-hashChan).(chainhash.Hash)
 
 			log.Printf("********** hash: %s\n", hash.String())
@@ -264,7 +264,7 @@ func (s *AttestService) doAttestation() {
 
 		// request latest attestation from server and await response
 		latestChan := make(chan interface{})
-		s.server.GetLatestChan() <- models.RequestWithResponseChannel{models.Request{}, latestChan}
+		s.server.GetLatestChan() <- models.RequestWithResponseChannel{models.RequestGet_s{}, latestChan}
 		latest := (<-latestChan).(models.Attestation)
 
 		txid, attestationErr := s.attester.signAndSendAttestation(&latestAttestation.Tx, sigs, latest.AttestedHash)
