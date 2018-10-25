@@ -10,8 +10,8 @@ import (
 // Response handlers for requests send to AttestServer
 
 // BlockResponse handles response to whether a Block (heigh or hash) has been attested
-func (s *AttestServer) BlockResponse(req models.Request) models.BlockResponse {
-	res := models.Response{req, ""}
+func (s *AttestServer) BlockResponse(req models.RequestGet_s) models.BlockResponse {
+	res := models.Response{""}
 	var height int32
 	if len(req.Id) == 64 {
 		hash, err := chainhash.NewHashFromStr(req.Id)
@@ -38,9 +38,8 @@ func (s *AttestServer) BlockResponse(req models.Request) models.BlockResponse {
 }
 
 // TransactionResponse handles response to whether a specific Transaction id has been attested
-func (s *AttestServer) TransactionResponse(req models.Request) models.TransactionResponse {
-	res := models.Response{req, ""}
-
+func (s *AttestServer) TransactionResponse(req models.RequestGet_s) models.TransactionResponse {
+	res := models.Response{""}
 	hash, err := chainhash.NewHashFromStr(req.Id)
 	if err != nil {
 		res.Error = "Invalid request for transaction: " + req.Id
@@ -61,16 +60,16 @@ func (s *AttestServer) TransactionResponse(req models.Request) models.Transactio
 }
 
 // BestBlockResponse handles reponse to Best (latest) Block attested
-func (s *AttestServer) BestBlockResponse(req models.Request) models.BestBlockResponse {
-	return models.BestBlockResponse{models.Response{req, ""}, s.latest.attestedHash.String()}
+func (s *AttestServer) BestBlockResponse(req models.RequestGet_s) models.BestBlockResponse {
+	return models.BestBlockResponse{models.Response{""}, s.latest.attestedHash.String()}
 }
 
 // BestBlockHeightResponse handles reponse to Best (latest) Block height attested
-func (s *AttestServer) BestBlockHeightResponse(req models.Request) models.BestBlockHeightResponse {
-	return models.BestBlockHeightResponse{models.Response{req, ""}, s.latestHeight}
+func (s *AttestServer) BestBlockHeightResponse(req models.RequestGet_s) models.BestBlockHeightResponse {
+	return models.BestBlockHeightResponse{models.Response{""}, s.latestHeight}
 }
 
 // LatestAttestation handles reponse to Latest Attestation Transaction id
-func (s *AttestServer) LatestAttestation(req models.Request) models.LatestAttestationResponse {
-	return models.LatestAttestationResponse{models.Response{req, ""}, s.latest.txid.String()}
+func (s *AttestServer) LatestAttestation(req models.RequestGet_s) models.LatestAttestationResponse {
+	return models.LatestAttestationResponse{models.Response{""}, s.latest.txid.String()}
 }

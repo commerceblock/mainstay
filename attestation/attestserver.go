@@ -4,6 +4,7 @@ import (
 	"log"
 	"mainstay/clients"
 	"mainstay/models"
+	"mainstay/requestapi"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
@@ -38,19 +39,19 @@ func (s *AttestServer) UpdateLatest(tx Attestation) {
 }
 
 // Respond returns appropriate response based on request type
-func (s *AttestServer) Respond(req models.Request) interface{} {
+func (s *AttestServer) Respond(req models.RequestGet_s) interface{} {
 	switch req.Name {
-	case "Block":
+	case requestapi.NAME_BLOCK:
 		return s.BlockResponse(req)
-	case "BestBlock":
+	case requestapi.NAME_BEST_BLOCK:
 		return s.BestBlockResponse(req)
-	case "BestBlockHeight":
+	case requestapi.NAME_BEST_BLOCK_HEIGHT:
 		return s.BestBlockHeightResponse(req)
-	case "LatestAttestation":
+	case requestapi.NAME_LATEST_ATTESTATION:
 		return s.LatestAttestation(req)
-	case "Transaction":
+	case requestapi.NAME_TRANSACTION:
 		return s.TransactionResponse(req)
 	default:
-		return models.Response{req, "**AttestServer** Non supported request type"}
+		return models.Response{"**AttestServer** Non supported request type"}
 	}
 }
