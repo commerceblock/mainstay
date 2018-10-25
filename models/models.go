@@ -1,18 +1,6 @@
 // Package models provides structs for request/reponse service communications.
 package models
 
-const GET = "GET"
-const POST = "POST"
-
-const ROUTE_BEST_BLOCK = "BestBlock"
-const ROUTE_BEST_BLOCK_HEIGHT = "BestBlockHeight"
-const ROUTE_BLOCK = "Block"
-const ROUTE_COMMITMENT_SEND = "CommitmentSend"
-const ROUTE_INDEX = "Index"
-const ROUTE_LATEST_ATTESTATION = "LatestAttestation"
-const ROUTE_SERVER_VERIFY = "HandleServerVerify"
-const ROUTE_TRANSACTION = "Transaction"
-
 type BestBlockHeightResponse struct {
 	Response
 	BlockHeight int32 `json:"blockheight"`

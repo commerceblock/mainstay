@@ -9,6 +9,27 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const GET = "GET"
+const POST = "POST"
+
+const NAME_BEST_BLOCK = "BestBlock"
+const NAME_BEST_BLOCK_HEIGHT = "BestBlockHeight"
+const NAME_BLOCK = "Block"
+const NAME_COMMITMENT_SEND = "CommitmentSend"
+const NAME_INDEX = "Index"
+const NAME_LATEST_ATTESTATION = "LatestAttestation"
+const NAME_SERVER_VERIFY = "HandleServerVerify"
+const NAME_TRANSACTION = "Transaction"
+
+const ROUTE_BEST_BLOCK = "/api/bestblock/"
+const ROUTE_BEST_BLOCK_HEIGHT = "/api/bestblockheight/"
+const ROUTE_BLOCK = "/api/block/{blockId}"
+const ROUTE_COMMITMENT_SEND = "/api/commitment/send/"
+const ROUTE_INDEX = "/api/"
+const ROUTE_LATEST_ATTESTATION = "/api/latestattestation/"
+const ROUTE_SERVER_VERIFY = "/api/server/verify/{hash}"
+const ROUTE_TRANSACTION = "/api/transaction/{transactionId}"
+
 // Route structure
 // Routing for http requests to request service
 type Route struct {
@@ -20,51 +41,51 @@ type Route struct {
 
 var routes = []Route{
 	Route{
-		models.ROUTE_BEST_BLOCK,
-		"GET",
-		"/api/bestblock/",
+		NAME_BEST_BLOCK,
+		GET,
+		ROUTE_BEST_BLOCK,
 		HandleBestBlock,
 	},
 	Route{
-		models.ROUTE_BEST_BLOCK_HEIGHT,
-		"GET",
-		"/api/bestblockheight/",
+		NAME_BEST_BLOCK_HEIGHT,
+		GET,
+		ROUTE_BEST_BLOCK_HEIGHT,
 		HandleBestBlockHeight,
 	},
 	Route{
-		models.ROUTE_BLOCK,
-		"GET",
-		"/api/block/{blockId}",
+		NAME_BLOCK,
+		GET,
+		ROUTE_BLOCK,
 		HandleBlock,
 	},
 	Route{
-		models.ROUTE_COMMITMENT_SEND,
-		"POST",
-		"/api/commitment/send/{clientId,hash,height}",
+		NAME_COMMITMENT_SEND,
+		POST,
+		ROUTE_COMMITMENT_SEND,
 		HandleCommitmentSend,
 	},
 	Route{
-		models.ROUTE_INDEX,
-		"GET",
-		"/api/",
+		NAME_INDEX,
+		GET,
+		ROUTE_INDEX,
 		HandleIndex,
 	},
 	Route{
-		models.ROUTE_LATEST_ATTESTATION,
-		"GET",
-		"/api/latestattestation/",
+		NAME_LATEST_ATTESTATION,
+		GET,
+		ROUTE_LATEST_ATTESTATION,
 		HandleLatestAttestation,
 	},
 	Route{
-		models.ROUTE_SERVER_VERIFY,
-		"GET",
-		"/api/server/verify/{hash}",
+		NAME_SERVER_VERIFY,
+		GET,
+		ROUTE_SERVER_VERIFY,
 		HandleServerVerify,
 	},
 	Route{
-		models.ROUTE_TRANSACTION,
-		"GET",
-		"/api/transaction/{transactionId}",
+		NAME_TRANSACTION,
+		GET,
+		ROUTE_TRANSACTION,
 		HandleTransaction,
 	},
 }
