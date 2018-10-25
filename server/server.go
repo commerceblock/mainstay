@@ -88,7 +88,7 @@ func (s *Server) updateCommitment() {
 }
 
 // Verify incoming client request
-func (s *Server) verifyCommitment(req models.Request) models.CommitmentResponse {
+func (s *Server) verifyCommitment(req models.Request) models.CommitmentSendResponse {
 
 	res := models.Response{""}
 
@@ -98,30 +98,28 @@ func (s *Server) verifyCommitment(req models.Request) models.CommitmentResponse 
 			// TODO
 			// updateCommitment ()
 
-			return models.CommitmentResponse{res, true}
+			return models.CommitmentSendResponse{res, true}
 		}
 	}
 
 	res.Error = "Invalid client identity: " + req.Id
-	return models.CommitmentResponse{res, false}
+	return models.CommitmentSendResponse{res, false}
 }
 
 // Respond returns appropriate response based on request type
 func (s *Server) respond(req models.RequestGet_s) interface{} {
-    switch req.Name {
-    case models.NAME_BLOCK:
-        return s.BlockResponse(req)
-    case models.NAME_BEST_BLOCK:
-        return s.BestBlockResponse(req)
-    case models.NAME_BEST_BLOCK_HEIGHT:
-        return s.BestBlockHeightResponse(req)
-    case models.NAME_LATEST_ATTESTATION:
-        return s.LatestAttestation(req)
-    case models.NAME_TRANSACTION:
-        return s.TransactionResponse(req)
-    default:
-        return models.Response{"**Server** Non supported request type"}
-    }
+	switch req.Name {
+	case models.REQUEST_VERIFY_BLOCK:
+		return s.VerifyBlockResponse(req)
+	case models.REQUEST_BEST_BLOCK:
+		return s.BestBlockResponse(req)
+	case models.REQUEST_BEST_BLOCK_HEIGHT:
+		return s.BestBlockHeightResponse(req)
+	case models.REQUEST_LATEST_ATTESTATION:
+		return s.LatestAttestation(req)
+	default:
+		return models.Response{"**Server** Non supported request type"}
+	}
 }
 
 // Main attest server method listening to remote requests and updates

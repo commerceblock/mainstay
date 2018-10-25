@@ -9,7 +9,11 @@ import (
 	"testing"
 )
 
-func TestHandleBlock(t *testing.T) {
+func TestHandleIndex(t *testing.T) {
+	println("\x1B[33mNo Write Test, Just Declare\x1B[0m")
+}
+
+func TestHandleVerifyBlock(t *testing.T) {
 	println("\x1B[33mNo Write Test, Just Declare\x1B[0m")
 }
 
@@ -29,7 +33,7 @@ func TestHandleCommitmentSend(t *testing.T) {
 		_ = tmp.ClientId
 		_ = tmp.Hash
 		_ = tmp.Height
-		response := models.CommitmentSendResponce{models.Response{""}, true}
+		response := models.CommitmentSendResponse{models.Response{""}, true}
 		channel.Responses <- response
 	}()
 	router := NewRouter(channel)
@@ -54,18 +58,6 @@ func TestHandleCommitmentSend(t *testing.T) {
 
 }
 
-func TestHandleIndex(t *testing.T) {
-	println("\x1B[33mNo Write Test, Just Declare\x1B[0m")
-}
-
 func TestHandleLatestAttestation(t *testing.T) {
-	println("\x1B[33mNo Write Test, Just Declare\x1B[0m")
-}
-
-func TestHandleServerVerify(t *testing.T) {
-	println("\x1B[33mNo Write Test, Just Declare\x1B[0m")
-}
-
-func TestHandleTransaction(t *testing.T) {
 	println("\x1B[33mNo Write Test, Just Declare\x1B[0m")
 }

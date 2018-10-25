@@ -12,14 +12,14 @@ import (
 const GET = "GET"
 const POST = "POST"
 
-const ROUTE_BEST_BLOCK = "/api/bestblock/"
-const ROUTE_BEST_BLOCK_HEIGHT = "/api/bestblockheight/"
-const ROUTE_BLOCK = "/api/block/{blockId}"
-const ROUTE_COMMITMENT_SEND = "/api/commitment/send/"
-const ROUTE_INDEX = "/api/"
-const ROUTE_LATEST_ATTESTATION = "/api/latestattestation/"
-const ROUTE_SERVER_VERIFY = "/api/server/verify/{hash}"
-const ROUTE_TRANSACTION = "/api/transaction/{transactionId}"
+const (
+	ROUTE_INDEX              = "/"
+	ROUTE_VERIFY_BLOCK       = "/api/verifyblock/{blockId}"
+	ROUTE_BEST_BLOCK         = "/api/bestblock/"
+	ROUTE_BEST_BLOCK_HEIGHT  = "/api/bestblockheight/"
+	ROUTE_COMMITMENT_SEND    = "/api/commitment/send/"
+	ROUTE_LATEST_ATTESTATION = "/api/latestattestation/"
+)
 
 // Route structure
 // Routing for http requests to request service
@@ -32,52 +32,40 @@ type Route struct {
 
 var routes = []Route{
 	Route{
-		models.NAME_BEST_BLOCK,
-		GET,
-		ROUTE_BEST_BLOCK,
-		HandleBestBlock,
-	},
-	Route{
-		models.NAME_BEST_BLOCK_HEIGHT,
-		GET,
-		ROUTE_BEST_BLOCK_HEIGHT,
-		HandleBestBlockHeight,
-	},
-	Route{
-		models.NAME_BLOCK,
-		GET,
-		ROUTE_BLOCK,
-		HandleBlock,
-	},
-	Route{
-		models.NAME_COMMITMENT_SEND,
-		POST,
-		ROUTE_COMMITMENT_SEND,
-		HandleCommitmentSend,
-	},
-	Route{
-		models.NAME_INDEX,
+		models.REQUEST_INDEX,
 		GET,
 		ROUTE_INDEX,
 		HandleIndex,
 	},
 	Route{
-		models.NAME_LATEST_ATTESTATION,
+		models.REQUEST_BEST_BLOCK,
+		GET,
+		ROUTE_BEST_BLOCK,
+		HandleBestBlock,
+	},
+	Route{
+		models.REQUEST_BEST_BLOCK_HEIGHT,
+		GET,
+		ROUTE_BEST_BLOCK_HEIGHT,
+		HandleBestBlockHeight,
+	},
+	Route{
+		models.REQUEST_VERIFY_BLOCK,
+		GET,
+		ROUTE_VERIFY_BLOCK,
+		HandleVerifyBlock,
+	},
+	Route{
+		models.REQUEST_LATEST_ATTESTATION,
 		GET,
 		ROUTE_LATEST_ATTESTATION,
 		HandleLatestAttestation,
 	},
 	Route{
-		models.NAME_SERVER_VERIFY,
-		GET,
-		ROUTE_SERVER_VERIFY,
-		HandleServerVerify,
-	},
-	Route{
-		models.NAME_TRANSACTION,
-		GET,
-		ROUTE_TRANSACTION,
-		HandleTransaction,
+		models.REQUEST_COMMITMENT_SEND,
+		POST,
+		ROUTE_COMMITMENT_SEND,
+		HandleCommitmentSend,
 	},
 }
 

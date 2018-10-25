@@ -9,57 +9,35 @@ import (
 
 // Response handlers for requests send to Server
 
-// BlockResponse handles response to whether a Block (heigh or hash) has been attested
-func (s *Server) BlockResponse(req models.RequestGet_s) models.BlockResponse {
+// VerifyBlockResponse handles response to whether a Block (heigh or hash) has been attested
+func (s *Server) VerifyBlockResponse(req models.RequestGet_s) models.VerifyBlockResponse {
 	res := models.Response{""}
 	var height int32
 	if len(req.Id) == 64 {
 		hash, err := chainhash.NewHashFromStr(req.Id)
 		if err != nil {
 			res.Error = "Invalid request for block hash: " + req.Id
-			return models.BlockResponse{res, false}
+			return models.VerifyBlockResponse{res, false}
 		}
 		blockheight, err := s.sideClient.GetBlockHeight(hash)
 		if err != nil {
 			res.Error = "Invalid request block does not exist: " + req.Id
-			return models.BlockResponse{res, false}
+			return models.VerifyBlockResponse{res, false}
 		}
 		height = blockheight
 	} else {
 		h, err := strconv.Atoi(req.Id)
 		if err != nil {
 			res.Error = "Invalid request for block: " + req.Id
-			return models.BlockResponse{res, false}
+			return models.VerifyBlockResponse{res, false}
 		}
 		height = int32(h)
 	}
 
-	return models.BlockResponse{res, s.latestHeight >= height}
+	return models.VerifyBlockResponse{res, s.latestHeight >= height}
 }
 
-// TransactionResponse handles response to whether a specific Transaction id has been attested
-func (s *Server) TransactionResponse(req models.RequestGet_s) models.TransactionResponse {
-	res := models.Response{""}
-	hash, err := chainhash.NewHashFromStr(req.Id)
-	if err != nil {
-		res.Error = "Invalid request for transaction: " + req.Id
-		return models.TransactionResponse{res, false}
-	}
-	txblockhash, err := s.sideClient.GetTxBlockHash(hash)
-	if err != nil {
-		res.Error = "Invalid request transaction does not exist: " + req.Id
-		return models.TransactionResponse{res, false}
-	}
-	txhash, _ := chainhash.NewHashFromStr(txblockhash)
-	blockheight, err := s.sideClient.GetBlockHeight(txhash)
-	if err != nil {
-		res.Error = "Invalid request transaction does not exist: " + req.Id
-		return models.TransactionResponse{res, false}
-	}
-	return models.TransactionResponse{res, s.latestHeight >= blockheight}
-}
-
-// BestBlockResponse handles reponse to Best (latest) Block attested
+// BestVerifyBlockResponse handles reponse to Best (latest) Block attested
 func (s *Server) BestBlockResponse(req models.RequestGet_s) models.BestBlockResponse {
 	return models.BestBlockResponse{models.Response{""}, s.latestAttestation.AttestedHash.String()}
 }

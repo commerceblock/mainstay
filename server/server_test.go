@@ -1,7 +1,6 @@
 package server
 
 import (
-	"log"
 	"mainstay/clients"
 	"mainstay/models"
 	"mainstay/test"
@@ -54,13 +53,13 @@ func TestServer(t *testing.T) {
 	assert.Equal(t, "", resp2.Error)
 	assert.Equal(t, txid.String(), resp2.TxHash)
 
-	req = models.RequestGet_s{"Block", "1"}
-	resp3, _ := server.respond(req).(models.BlockResponse)
+	req = models.RequestGet_s{"VerifyBlock", "1"}
+	resp3, _ := server.respond(req).(models.VerifyBlockResponse)
 	assert.Equal(t, "", resp3.Error)
 	assert.Equal(t, true, resp3.Attested)
 
-	req = models.RequestGet_s{"Block", "11"}
-	resp4, _ := server.respond(req).(models.BlockResponse)
+	req = models.RequestGet_s{"VerifyBlock", "11"}
+	resp4, _ := server.respond(req).(models.VerifyBlockResponse)
 	assert.Equal(t, "", resp4.Error)
 	assert.Equal(t, false, resp4.Attested)
 
@@ -74,35 +73,13 @@ func TestServer(t *testing.T) {
 	bestblockhashnew, _ := server.sideClient.GetBestBlockHash()
 	assert.Equal(t, *bestblockhashnew, server.latestCommitment)
 
-	req = models.RequestGet_s{"Block", bestblockhash.String()}
-	resp6, _ := server.respond(req).(models.BlockResponse)
+	req = models.RequestGet_s{"VerifyBlock", bestblockhash.String()}
+	resp6, _ := server.respond(req).(models.VerifyBlockResponse)
 	assert.Equal(t, "", resp6.Error)
 	assert.Equal(t, true, resp6.Attested)
 
-	req = models.RequestGet_s{"Block", bestblockhashnew.String()}
-	resp7, _ := server.respond(req).(models.BlockResponse)
+	req = models.RequestGet_s{"VerifyBlock", bestblockhashnew.String()}
+	resp7, _ := server.respond(req).(models.VerifyBlockResponse)
 	assert.Equal(t, "", resp7.Error)
 	assert.Equal(t, false, resp7.Attested)
-
-	// Test models.Requests for a tx in the best attested block and a tx in a newly generated block
-	blocktxs, err1 := sideClientFake.GetBlockTxs(bestblockhash)
-	if err1 != nil {
-		log.Fatal(err1)
-	}
-	txAttested := blocktxs[0]
-	blocktxsnew, err2 := sideClientFake.GetBlockTxs(bestblockhashnew)
-	if err2 != nil {
-		log.Fatal(err2)
-	}
-	txNotAttested := blocktxsnew[0]
-
-	req = models.RequestGet_s{"Transaction", txAttested}
-	resp8, _ := server.respond(req).(models.TransactionResponse)
-	assert.Equal(t, "", resp8.Error)
-	assert.Equal(t, true, resp8.Attested)
-
-	req = models.RequestGet_s{"Transaction", txNotAttested}
-	resp9, _ := server.respond(req).(models.TransactionResponse)
-	assert.Equal(t, "", resp9.Error)
-	assert.Equal(t, false, resp9.Attested)
 }
