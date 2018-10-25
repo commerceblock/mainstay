@@ -24,8 +24,12 @@ func TestHandleBestBlockHeight(t *testing.T) {
 func TestHandleCommitmentSend(t *testing.T) {
 	channel := models.NewChannel()
 	go func() {
-		<-channel.RequestPost
-		response := models.CommintmentSendResponce{models.Response{""}, true}
+		tmp := <-channel.RequestPost
+		// TODO: Add real test
+		_ = tmp.ClientId
+		_ = tmp.Hash
+		_ = tmp.Height
+		response := models.CommitmentSendResponce{models.Response{""}, true}
 		channel.Responses <- response
 	}()
 	router := NewRouter(channel)
@@ -33,9 +37,9 @@ func TestHandleCommitmentSend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	request.Header.Add("CLIENT-ID", "Fuck 1")
-	request.Header.Add("HASH", "Fuck 2")
-	request.Header.Add("HEIGHT", "Fuck 3")
+	request.Header.Add("CLIENT-ID", "123456789")
+	request.Header.Add("HASH", "123456789")
+	request.Header.Add("HEIGHT", "123456789")
 	writer := httptest.NewRecorder()
 	router.ServeHTTP(writer, request)
 	resp := bytes.NewReader(writer.Body.Bytes())
@@ -44,6 +48,10 @@ func TestHandleCommitmentSend(t *testing.T) {
 	if dec.Decode(&decResp) != nil {
 		t.Fatal(err)
 	}
+	if decResp["verified"] != true {
+		t.Fatal("Incorrect Commitment Send")
+	}
+
 }
 
 func TestHandleIndex(t *testing.T) {

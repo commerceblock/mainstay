@@ -16,7 +16,7 @@ type BlockResponse struct {
 	Attested bool `json:"attested"`
 }
 
-type CommintmentSendResponce struct {
+type CommitmentSendResponce struct {
 	Response
 	Verified bool `json:"verified"`
 }
