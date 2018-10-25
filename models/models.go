@@ -25,6 +25,10 @@ type LatestAttestationResponse struct {
 	Response
 	TxHash string `json:"txhash"`
 }
+type CommitmentResponse struct {
+	Response
+	Verified bool `json:"verified"`
+}
 
 type TransactionResponse struct {
 	Response

@@ -2,6 +2,7 @@ package attestation
 
 import (
 	"mainstay/clients"
+	"mainstay/models"
 	"mainstay/test"
 	"testing"
 
@@ -22,46 +23,46 @@ func TestAttestClient(t *testing.T) {
 	txs = append(txs, client.txid0)
 
 	// Find unspent and verify is it the genesis transaction
-	success, unspent := client.findLastUnspent()
+	success, unspent, _ := client.findLastUnspent()
 	if !success {
 		t.Fail()
 	}
 	assert.Equal(t, txs[0], unspent.TxID)
 
 	lastHash := chainhash.Hash{}
-	clientListener := NewListener(sideClientFake)
 	// Do 10 attestations
 	for i := 0; i < 10; i++ {
 		// Generate attestation transaction with the unspent vout
-		oceanhash := clientListener.GetNextHash()
-		key := client.GetNextAttestationKey(oceanhash)
-		addr, _ := client.GetNextAttestationAddr(key, oceanhash)
+		oceanhash, _ := sideClientFake.GetBestBlockHash()
+		key, _ := client.GetNextAttestationKey(*oceanhash)
+		addr, _ := client.GetNextAttestationAddr(key, *oceanhash)
+		client.ImportAttestationAddr(addr)
 
-		tx := client.createAttestation(addr, unspent, true)
-		txid := client.signAndSendAttestation(tx, [][]byte{}, lastHash)
+		tx, _ := client.createAttestation(addr, unspent, true)
+		txid, _ := client.signAndSendAttestation(tx, [][]byte{}, lastHash)
 		sideClientFake.Generate(1)
 
-		lastHash = oceanhash
+		lastHash = *oceanhash
 
 		// Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
-		var unconfirmed *Attestation = &Attestation{}
-		unconf, unconftx := client.getUnconfirmedTx() // new tx is unconfirmed
-		*unconfirmed = unconftx
+		var unconfirmed *models.Attestation = &models.Attestation{}
+		unconf, unconfTxid, _ := client.getUnconfirmedTx() // new tx is unconfirmed
+		unconfirmed = models.NewAttestation(unconfTxid, lastHash)
 		assert.Equal(t, true, unconf)
-		assert.Equal(t, txid, unconfirmed.txid)
-		assert.Equal(t, oceanhash, unconfirmed.attestedHash)
+		assert.Equal(t, txid, unconfirmed.Txid)
+		assert.Equal(t, *oceanhash, unconfirmed.AttestedHash)
 
 		// Verify no more unconfirmed transactions after new block generation
 		client.MainClient.Generate(1)
-		unconfRe, unconftxRe := client.getUnconfirmedTx()
-		*unconfirmed = unconftxRe
+		unconfRe, unconfTxidRe, _ := client.getUnconfirmedTx()
 		assert.Equal(t, false, unconfRe)
-		assert.Equal(t, chainhash.Hash{}, unconfirmed.txid) // new tx no longer unconfirmed
-		assert.Equal(t, chainhash.Hash{}, unconfirmed.attestedHash)
+		assert.Equal(t, chainhash.Hash{}, unconfTxidRe) // new tx no longer unconfirmed
 		txs = append(txs, txid.String())
 
 		// Now check that the new unspent is the vout from the transaction just submitted
-		success, unspent = client.findLastUnspent()
+		var err error
+		success, unspent, err = client.findLastUnspent()
+		assert.Equal(t, nil, err)
 		if !success {
 			t.Fail()
 		}

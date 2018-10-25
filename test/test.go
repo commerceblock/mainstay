@@ -31,7 +31,8 @@ var testConf = []byte(`
         "chain": "main"
     },
     "misc": {
-        "multisignodes": "127.0.0.1:5001"
+        "multisignodes": "127.0.0.1:5001",
+        "clientkeys": "KEY0"
     }
 }
 `)

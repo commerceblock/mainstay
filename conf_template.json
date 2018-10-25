@@ -12,6 +12,7 @@
         "chain": "main"
     },
     "misc": {
-        "multisignodes": "node0:1000,node1:1001"
+        "multisignodes": "node0:1000,node1:1001",
+        "clientkeys": "KEY0,KEY1,KEY2"
     }
 }

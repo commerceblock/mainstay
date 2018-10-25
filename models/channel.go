@@ -13,3 +13,9 @@ func NewChannel() *Channel {
 	channel.Responses = make(chan interface{})
 	return channel
 }
+
+
+type RequestWithResponseChannel struct {
+    Request  RequestGet_s
+    Response chan interface{}
+}

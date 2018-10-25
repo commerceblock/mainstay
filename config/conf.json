@@ -13,5 +13,6 @@
     },
     "misc": {
         "multisignodes": "MAINSTAY_MULTISIG_NODES",
+        "clientkeys": "MAINSTAY_CLIENT_KEYS"
     }
 }

@@ -7,8 +7,8 @@ import (
 	"log"
 	"mainstay/attestation"
 	"mainstay/config"
-	"mainstay/models"
 	"mainstay/requestapi"
+	"mainstay/server"
 	"mainstay/test"
 	"os"
 	"os/signal"
@@ -21,7 +21,7 @@ const DEFAULT_API_HOST = "localhost:8080"
 var (
 	tx0        string
 	pk0        string
-    script     string
+	script     string
 	isRegtest  bool
 	apiHost    string
 	mainConfig *config.Config
@@ -67,9 +67,9 @@ func main() {
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	channel := models.NewChannel()
-	requestService := requestapi.NewRequestService(ctx, wg, channel, apiHost)
-	attestService := attestation.NewAttestService(ctx, wg, channel, mainConfig)
+	server := server.NewServer(ctx, wg, mainConfig)
+	attestService := attestation.NewAttestService(ctx, wg, server, mainConfig)
+	requestService := requestapi.NewRequestService(ctx, wg, server, apiHost)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
@@ -86,6 +86,13 @@ func main() {
 		}
 	}()
 
+	wg.Add(1)
+	go server.Run()
+	wg.Add(1)
+	go attestService.Run()
+	wg.Add(1)
+	go requestService.Run()
+
 	if isRegtest { // In regtest demo mode generate main client blocks automatically
 		wg.Add(1)
 		go func() {
@@ -101,10 +108,5 @@ func main() {
 			}
 		}()
 	}
-
-	wg.Add(1)
-	go requestService.Run()
-	wg.Add(1)
-	go attestService.Run()
 	wg.Wait()
 }
