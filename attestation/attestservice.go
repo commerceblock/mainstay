@@ -9,6 +9,7 @@ package attestation
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log"
 	confpkg "mainstay/config"
 	"mainstay/crypto"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
 
 	zmq "github.com/pebbe/zmq4"
 )
@@ -108,17 +110,21 @@ func (s *AttestService) Run() {
 // - If successful propagate the transaction and set state to unconfirmed
 func (s *AttestService) doAttestation() {
 	switch latestAttestation.State {
-	case models.ASTATE_INIT:
+	case models.ASTATE_INIT, models.ASTATE_FAILURE:
 		log.Println("*AttestService* INIT ATTESTATION CLIENT AND SERVER")
 		// find the state of the attestation
 		// when a DB is put in place, these information will be collected from there
-		unconfirmed, unconfirmedTxid := s.attester.getUnconfirmedTx()
-		if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
+		unconfirmed, unconfirmedTxid, unconfirmedErr := s.attester.getUnconfirmedTx()
+		if s.failureState(unconfirmedErr) {
+			return
+		} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
 			latestAttestation = models.NewAttestation(unconfirmedTxid, s.getTxAttestedHash(unconfirmedTxid), models.ASTATE_UNCONFIRMED)
 			s.server.UpdateChan() <- *latestAttestation // send server update just to make sure it's up to date
 		} else {
-			success, txunspent := s.attester.findLastUnspent()
-			if success {
+			success, txunspent, unspentErr := s.attester.findLastUnspent()
+			if s.failureState(unspentErr) {
+				return
+			} else if success {
 				txunspentHash, _ := chainhash.NewHashFromStr(txunspent.TxID)
 				latestCommitment = s.getTxAttestedHash(*txunspentHash)
 				latestAttestation = models.NewAttestation(*txunspentHash, latestCommitment, models.ASTATE_CONFIRMED)
@@ -134,8 +140,8 @@ func (s *AttestService) doAttestation() {
 	case models.ASTATE_UNCONFIRMED:
 		log.Printf("*AttestService* AWAITING CONFIRMATION \ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.AttestedHash.String())
 		newTx, err := s.config.MainClient().GetTransaction(&latestAttestation.Txid)
-		if err != nil {
-			log.Fatal(err)
+		if s.failureState(err) {
+			return
 		}
 		if newTx.BlockHash != "" {
 			latestAttestation.LatestTime = time.Now()
@@ -151,8 +157,10 @@ func (s *AttestService) doAttestation() {
 	case models.ASTATE_CONFIRMED, models.ASTATE_NEW_ATTESTATION:
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
-		unconfirmed, unconfirmedTxid := s.attester.getUnconfirmedTx()
-		if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
+		unconfirmed, unconfirmedTxid, unconfirmedErr := s.attester.getUnconfirmedTx()
+		if s.failureState(unconfirmedErr) {
+			return
+		} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
 			latestAttestation = models.NewAttestation(unconfirmedTxid, s.getTxAttestedHash(unconfirmedTxid), models.ASTATE_UNCONFIRMED)
 			s.server.UpdateChan() <- *latestAttestation
 			log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.AttestedHash.String())
@@ -174,15 +182,32 @@ func (s *AttestService) doAttestation() {
 			latestAttestation = models.NewAttestation(chainhash.Hash{}, hash, models.ASTATE_COLLECTING_PUBKEYS) // update attestation state
 		}
 	case models.ASTATE_COLLECTING_PUBKEYS:
-		log.Printf("*AttestService* COLLECTING PUBKEYS\n")
+		log.Println("*AttestService* COLLECTING PUBKEYS")
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
-		key := s.attester.GetNextAttestationKey(latestAttestation.AttestedHash)
-		paytoaddr, _ := s.attester.GetNextAttestationAddr(key, latestAttestation.AttestedHash)
+		key, keyErr := s.attester.GetNextAttestationKey(latestAttestation.AttestedHash)
+		if s.failureState(keyErr) {
+			return
+		}
 
-		success, txunspent := s.attester.findLastUnspent()
-		if success {
-			latestAttestation.Tx = *s.attester.createAttestation(paytoaddr, txunspent, false)
+		paytoaddr, _ := s.attester.GetNextAttestationAddr(key, latestAttestation.AttestedHash)
+		importErr := s.attester.ImportAttestationAddr(paytoaddr)
+		if s.failureState(importErr) {
+			return
+		}
+
+		success, txunspent, unspentErr := s.attester.findLastUnspent()
+		if s.failureState(unspentErr) {
+			return
+		} else if success {
+			var createErr error
+			var newTx *wire.MsgTx
+			newTx, createErr = s.attester.createAttestation(paytoaddr, txunspent, false)
+			latestAttestation.Tx = *newTx
+			if s.failureState(createErr) {
+				return
+			}
+
 			log.Printf("********** pre-sign txid: %s\n", latestAttestation.Tx.TxHash().String())
 
 			// publish pre signed transaction
@@ -192,10 +217,11 @@ func (s *AttestService) doAttestation() {
 
 			latestAttestation.State = models.ASTATE_COLLECTING_SIGS // update attestation state
 		} else {
-			log.Fatal("Attestation unsuccessful - No valid unspent found")
+			s.failureState(errors.New("Attestation unsuccessful - No valid unspent found"))
+			return
 		}
 	case models.ASTATE_COLLECTING_SIGS:
-		log.Printf("*AttestService* COLLECTING SIGS\n")
+		log.Println("*AttestService* COLLECTING SIGS")
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 		// Read sigs using subscribers
 
@@ -215,12 +241,27 @@ func (s *AttestService) doAttestation() {
 		latestChan := make(chan interface{})
 		s.server.GetLatestChan() <- models.RequestWithResponseChannel{models.Request{}, latestChan}
 		latest := (<-latestChan).(models.Attestation)
-		txid := s.attester.signAndSendAttestation(&latestAttestation.Tx, sigs, latest.AttestedHash)
+
+		txid, attestationErr := s.attester.signAndSendAttestation(&latestAttestation.Tx, sigs, latest.AttestedHash)
+		if s.failureState(attestationErr) {
+			return
+		}
 
 		log.Printf("********** Attestation committed for txid: (%s)\n", txid)
 		latestAttestation.Txid = txid
 		latestAttestation.State = models.ASTATE_UNCONFIRMED
 	}
+}
+
+// Set to error state and provide debugging information
+func (s *AttestService) failureState(err error) bool {
+	if err != nil {
+		log.Println("*AttestService* ATTESTATION FAILURE")
+		log.Println(err)
+		latestAttestation.State = models.ASTATE_FAILURE
+		return true
+	}
+	return false
 }
 
 // THIS WILL BE REPLACED BY QUERYING SERVER FOR COMMITMENT OF CORRESPONDING TX

@@ -121,8 +121,17 @@ func processHash(msg []byte) chainhash.Hash {
 
 // Check received tx and verify tx address and client generated address match
 func verifyTx(tx wire.MsgTx) bool {
-	nextKey := client.GetNextAttestationKey(nextHash)
+	nextKey, keyErr := client.GetNextAttestationKey(nextHash)
+	if keyErr != nil {
+		log.Fatal(keyErr)
+	}
+
 	nextAddr, _ := client.GetNextAttestationAddr(nextKey, nextHash)
+	importErr := client.ImportAttestationAddr(nextAddr)
+	if importErr != nil {
+		log.Fatal(importErr)
+	}
+
 	// exactr addr from unsigned tx and verify addresses match
 	_, txScriptAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.TxOut[0].PkScript, client.MainChainCfg)
 	if err != nil {
@@ -150,7 +159,10 @@ func processTx(msg []byte) {
 		return
 	}
 
-	signedMsgTx, _ := client.SignTransaction(attestedHash, msgTx)
+	signedMsgTx, _, signErr := client.SignTransaction(attestedHash, msgTx)
+	if signErr != nil {
+		log.Fatal(signErr)
+	}
 
 	scriptSig := signedMsgTx.TxIn[0].SignatureScript
 	if len(scriptSig) > 0 {
