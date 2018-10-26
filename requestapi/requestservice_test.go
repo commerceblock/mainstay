@@ -3,7 +3,6 @@ package requestapi
 import (
 	"bytes"
 	"encoding/json"
-	"mainstay/models"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,11 +10,11 @@ import (
 
 // Request server handling Test
 func TestRequestService(t *testing.T) {
-	channel := models.NewChannel()
+	channel := NewChannel()
 	go func() { // Wait for a best block request and reply with genesis
-		<-channel.RequestGet
+		<-channel.Requests
 		hash := "357abd41543a09f9290ff4b4ae008e317f252b80c96492bd9f346cced0943a7f"
-		res := models.BestBlockResponse{models.Response{""}, hash}
+		res := BestBlockResponse{BlockHash: hash}
 		channel.Responses <- res
 	}()
 	router := NewRouter(channel)

@@ -2,7 +2,6 @@ package requestapi
 
 import (
 	"log"
-	"mainstay/models"
 	"net/http"
 	"time"
 
@@ -27,42 +26,42 @@ type Route struct {
 	name        string
 	method      string
 	pattern     string
-	handlerFunc func(http.ResponseWriter, *http.Request, *models.Channel)
+	handlerFunc func(http.ResponseWriter, *http.Request, *Channel)
 }
 
 var routes = []Route{
 	Route{
-		models.REQUEST_INDEX,
+		SERVER_INDEX,
 		GET,
 		ROUTE_INDEX,
 		HandleIndex,
 	},
 	Route{
-		models.REQUEST_BEST_BLOCK,
+		SERVER_BEST_BLOCK,
 		GET,
 		ROUTE_BEST_BLOCK,
 		HandleBestBlock,
 	},
 	Route{
-		models.REQUEST_BEST_BLOCK_HEIGHT,
+		SERVER_BEST_BLOCK_HEIGHT,
 		GET,
 		ROUTE_BEST_BLOCK_HEIGHT,
 		HandleBestBlockHeight,
 	},
 	Route{
-		models.REQUEST_VERIFY_BLOCK,
+		SERVER_VERIFY_BLOCK,
 		GET,
 		ROUTE_VERIFY_BLOCK,
 		HandleVerifyBlock,
 	},
 	Route{
-		models.REQUEST_LATEST_ATTESTATION,
+		SERVER_LATEST_ATTESTATION,
 		GET,
 		ROUTE_LATEST_ATTESTATION,
 		HandleLatestAttestation,
 	},
 	Route{
-		models.REQUEST_COMMITMENT_SEND,
+		SERVER_COMMITMENT_SEND,
 		POST,
 		ROUTE_COMMITMENT_SEND,
 		HandleCommitmentSend,
@@ -70,7 +69,7 @@ var routes = []Route{
 }
 
 // NewRouter returns pointer to mux router instance
-func NewRouter(channel *models.Channel) *mux.Router {
+func NewRouter(channel *Channel) *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 	for _, route := range routes {
 		handlerFunc := makeHandler(route.handlerFunc, channel) // pass channel to request handler
@@ -84,7 +83,7 @@ func NewRouter(channel *models.Channel) *mux.Router {
 }
 
 // make custom handler to pass communication channel between server and api
-func makeHandler(fn func(http.ResponseWriter, *http.Request, *models.Channel), channel *models.Channel) http.HandlerFunc {
+func makeHandler(fn func(http.ResponseWriter, *http.Request, *Channel), channel *Channel) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		fn(w, r, channel)

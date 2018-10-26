@@ -4,8 +4,6 @@ package requestapi
 import (
 	"context"
 	"log"
-	"mainstay/models"
-	"mainstay/server"
 	"net/http"
 	"sync"
 	"time"
@@ -20,15 +18,15 @@ type RequestService struct {
 	wg      *sync.WaitGroup
 	host    string
 	router  *mux.Router
-	server  *server.Server
-	channel *models.Channel
+	channel *Channel
+    serverChannel chan RequestWithResponseChannel
 }
 
 // NewRequestService returns a pointer to a RequestService instance
-func NewRequestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, host string) *RequestService {
-	channel := models.NewChannel()
+func NewRequestService(ctx context.Context, wg *sync.WaitGroup, serverChannel chan RequestWithResponseChannel, host string) *RequestService {
+	channel := NewChannel()
 	router := NewRouter(channel)
-	return &RequestService{ctx, wg, host, router, server, channel}
+	return &RequestService{ctx, wg, host, router, channel, serverChannel}
 }
 
 // Main Run method
@@ -57,8 +55,8 @@ func (c *RequestService) Run() {
 			select {
 			case <-c.ctx.Done():
 				return
-			case req := <-c.channel.RequestGet:
-				c.server.RequestChan() <- models.RequestWithResponseChannel{req, c.channel.Responses}
+			case req := <-c.channel.Requests:
+				c.serverChannel <- RequestWithResponseChannel{req, c.channel.Responses}
 			}
 		}
 	}()
