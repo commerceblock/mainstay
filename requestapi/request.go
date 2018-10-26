@@ -1,5 +1,14 @@
 package requestapi
 
+import "mainstay/models"
+
+// Request implementations
+// These are used by AttestationService and RequestService to send
+// requests to the main Server of the system
+// The const names below are used to differentiate between different request types
+// BaseRequest can be used for requests that pass no arguments
+// Specialised requests can be implemented by implementing RequestType()
+
 const (
 	SERVER_INDEX              = "Index"
 	SERVER_BEST_BLOCK         = "BestBlock"
@@ -7,51 +16,81 @@ const (
 	SERVER_VERIFY_BLOCK       = "VerifyBlock"
 	SERVER_LATEST_ATTESTATION = "LatestAttestation"
 	SERVER_COMMITMENT_SEND    = "CommitmentSend"
+
+	ATTESTATION_UPDATE     = "AttestationUpdate"
+	ATTESTATION_LATEST     = "AttestationLatest"
+	ATTESTATION_COMMITMENT = "AttestationCommitment"
 )
 
+// Request interface
 type Request interface {
-    RequestType() (string)
+	RequestType() string
 }
 
-// base request type
+// BaseRequest struct - only requestType specified
 type BaseRequest struct {
-   requestType   string `json:"type"`
+	requestType string
 }
 
+// implement interface
 func (b BaseRequest) RequestType() string {
-    return b.requestType
+	return b.requestType
 }
 
+// set request type
 func (b *BaseRequest) SetRequestType(requestType string) {
-    b.requestType = requestType
+	b.requestType = requestType
 }
 
-// request type for SERVER_VERIFY_BLOCK
+
+// ServerVerifyBlockRequest for SERVER_VERIFY_BLOCK
 type ServerVerifyBlockRequest struct {
-   requestType   string `json:"requestType"`
-   Id         string `json:"id"`
+	requestType string
+	Id          string
 }
 
+// implement interface
 func (v ServerVerifyBlockRequest) RequestType() string {
-    return v.requestType
+	return v.requestType
 }
 
+// set request type
 func (v *ServerVerifyBlockRequest) SetRequestType(requestType string) {
-    v.requestType = requestType
+	v.requestType = requestType
 }
 
-// request type for SERVER_COMMITMENT_SEND
+
+// ServerCommitmentSendRequest for SERVER_COMMITMENT_SEND
 type ServerCommitmentSendRequest struct {
-    requestType string `json:"requestType"`
-    ClientId string `json:"clientId"`
-    Hash     string `json:"hash"`
-    Height   string `json:"height"`
+	requestType string
+	ClientId    string
+	Hash        string
+	Height      string
 }
 
+// implement interface
 func (c ServerCommitmentSendRequest) RequestType() string {
-    return c.requestType
+	return c.requestType
 }
 
+// set request type
 func (c *ServerCommitmentSendRequest) SetRequestType(requestType string) {
-    c.requestType = requestType
+	c.requestType = requestType
+}
+
+
+// AttestationUpdateRequest for ATTESTATION_UPDATE
+type AttestationUpdateRequest struct {
+	requestType string
+	Attestation models.Attestation
+}
+
+// implement interface
+func (u AttestationUpdateRequest) RequestType() string {
+	return u.requestType
+}
+
+// set request type
+func (u *AttestationUpdateRequest) SetRequestType(requestType string) {
+	u.requestType = requestType
 }

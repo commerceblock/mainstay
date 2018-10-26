@@ -14,6 +14,7 @@ import (
 	"mainstay/clients"
 	"mainstay/config"
 	"mainstay/models"
+	"mainstay/requestapi"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
@@ -22,12 +23,11 @@ import (
 // Stores information on the latest attestation
 // Responds to external API requests handled by RequestApi
 type Server struct {
-	ctx           context.Context
-	wg            *sync.WaitGroup
-	updateChan    chan models.Attestation
-	requestChan   chan models.RequestWithResponseChannel
-	getLatestChan chan models.RequestWithResponseChannel
-	getNextChan   chan models.RequestWithResponseChannel
+	ctx context.Context
+	wg  *sync.WaitGroup
+
+	attestationServiceChannel chan requestapi.RequestWithInterfaceChannel
+	requestServiceChannel     chan requestapi.RequestWithResponseChannel
 
 	latestAttestation models.Attestation
 	latestCommitment  chainhash.Hash
@@ -40,42 +40,34 @@ type Server struct {
 
 // NewServer returns a pointer to an Server instance
 func NewServer(ctx context.Context, wg *sync.WaitGroup, config *config.Config) *Server {
-	uChan := make(chan models.Attestation)
-	rChan := make(chan models.RequestWithResponseChannel)
-	latestChan := make(chan models.RequestWithResponseChannel)
-	nextChan := make(chan models.RequestWithResponseChannel)
-	return &Server{ctx, wg, uChan, rChan, latestChan, nextChan, *models.NewAttestationDefault(), chainhash.Hash{}, config.ClientKeys(), 0, config.OceanClient()}
+	attChan := make(chan requestapi.RequestWithInterfaceChannel)
+	reqChan := make(chan requestapi.RequestWithResponseChannel)
+	return &Server{ctx, wg, attChan, reqChan, *models.NewAttestationDefault(), chainhash.Hash{}, config.ClientKeys(), 0, config.OceanClient()}
 }
 
-// Return request channel to allow request service to push client requests
-func (s *Server) RequestChan() chan models.RequestWithResponseChannel {
-	return s.requestChan
+// Return channel for communcation with attestation service
+func (s *Server) AttestationServiceChannel() chan requestapi.RequestWithInterfaceChannel {
+	return s.attestationServiceChannel
 }
 
-// Return update channel to allow service to push latest attestation updates
-func (s *Server) UpdateChan() chan models.Attestation {
-	return s.updateChan
-}
-
-// Return request channel to allow service to make requests for latest attestation
-func (s *Server) GetLatestChan() chan models.RequestWithResponseChannel {
-	return s.getLatestChan
-}
-
-// Return latest channel to allow service to make request for latest commitment hash
-func (s *Server) GetNextChan() chan models.RequestWithResponseChannel {
-	return s.getNextChan
+// Return channel for communication with request api
+func (s *Server) RequestServiceChannel() chan requestapi.RequestWithResponseChannel {
+	return s.requestServiceChannel
 }
 
 // Update information on the latest attestation
-func (s *Server) updateLatest(tx models.Attestation) {
+func (s *Server) updateLatest(tx models.Attestation) bool {
 	s.latestAttestation = tx
-	latestheight, err := s.sideClient.GetBlockHeight(&s.latestAttestation.AttestedHash)
-	if err != nil {
-		log.Printf("**Server** No client hash on confirmed tx")
-	} else {
-		s.latestHeight = latestheight
-	}
+
+    // TODO: REMOVE - height will be embedded in the Commitment model
+    latestheight, err := s.sideClient.GetBlockHeight(&s.latestAttestation.AttestedHash)
+    if err != nil {
+        log.Printf("**Server** No client hash on confirmed tx")
+    } else {
+        s.latestHeight = latestheight
+    }
+
+    return true
 }
 
 // Update latest commitment hash
@@ -87,38 +79,41 @@ func (s *Server) updateCommitment() {
 	s.latestCommitment = *hash
 }
 
-// Verify incoming client request
-func (s *Server) verifyCommitment(req models.Request) models.CommitmentSendResponse {
-
-	res := models.Response{""}
-
-	for _, key := range s.commitmentKeys {
-		if req.Id == key {
-
-			// TODO
-			// updateCommitment ()
-
-			return models.CommitmentSendResponse{res, true}
-		}
+// Respond returns appropriate response based on request type
+func (s *Server) respond(req requestapi.Request) requestapi.Response {
+	switch req.RequestType() {
+	case requestapi.SERVER_VERIFY_BLOCK:
+		return s.ResponseVerifyBlock(req)
+	case requestapi.SERVER_BEST_BLOCK:
+		return s.ResponseBestBlock(req)
+	case requestapi.SERVER_BEST_BLOCK_HEIGHT:
+		return s.ResponseBestBlockHeight(req)
+	case requestapi.SERVER_LATEST_ATTESTATION:
+		return s.ResponseLatestAttestation(req)
+	case requestapi.SERVER_COMMITMENT_SEND:
+		return s.ResponseCommitmentSend(req)
+	default:
+		baseResp := requestapi.BaseResponse{}
+		baseResp.SetResponseError("**Server** Non supported request type " + req.RequestType())
+		return baseResp
 	}
-
-	res.Error = "Invalid client identity: " + req.Id
-	return models.CommitmentSendResponse{res, false}
 }
 
-// Respond returns appropriate response based on request type
-func (s *Server) respond(req models.RequestGet_s) interface{} {
-	switch req.Name {
-	case models.REQUEST_VERIFY_BLOCK:
-		return s.VerifyBlockResponse(req)
-	case models.REQUEST_BEST_BLOCK:
-		return s.BestBlockResponse(req)
-	case models.REQUEST_BEST_BLOCK_HEIGHT:
-		return s.BestBlockHeightResponse(req)
-	case models.REQUEST_LATEST_ATTESTATION:
-		return s.LatestAttestation(req)
+// Attestation Respond returns appropriate response based on request type
+func (s *Server) respondAttestation(req requestapi.Request) interface{} {
+	switch req.RequestType() {
+	case requestapi.ATTESTATION_UPDATE:
+        updateReq := req.(requestapi.AttestationUpdateRequest)
+		return s.updateLatest(updateReq.Attestation)
+	case requestapi.ATTESTATION_LATEST:
+		return s.latestAttestation
+	case requestapi.ATTESTATION_COMMITMENT:
+		s.updateCommitment()  // TODO: Remove - proper commitment tool implemented
+		return s.latestCommitment
 	default:
-		return models.Response{"**Server** Non supported request type"}
+		baseResp := requestapi.BaseResponse{}
+		baseResp.SetResponseError("**Server** Non supported request type " + req.RequestType())
+		return baseResp
 	}
 }
 
@@ -130,19 +125,10 @@ func (s *Server) Run() {
 		select {
 		case <-s.ctx.Done():
 			return
-		case req := <-s.requestChan: // api requests
+		case req := <-s.requestServiceChannel: // request service requests
 			req.Response <- s.respond(req.Request)
-
-			// case req := <s.requestChan_POST: // commitment requests
-			//     req.Response <- s.verifyCommitment(req.Request)
-
-		case update := <-s.updateChan: // attestation service updates
-			s.updateLatest(update)
-		case latest := <-s.getLatestChan: // latest attestation request
-			latest.Response <- s.latestAttestation
-		case next := <-s.getNextChan: // next attestation hash request
-			s.updateCommitment()
-			next.Response <- s.latestCommitment
+		case req := <-s.attestationServiceChannel: // attestation service requests
+			req.Response <- s.respondAttestation(req.Request)
 		}
 	}
 }

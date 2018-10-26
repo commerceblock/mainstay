@@ -29,7 +29,7 @@ func TestHandleCommitmentSend(t *testing.T) {
 	go func() {
 		tmp := <-channel.Requests
 		// TODO: Add real test
-        commitmentReq := tmp.(ServerCommitmentSendRequest)
+		commitmentReq := tmp.(ServerCommitmentSendRequest)
 		_ = commitmentReq.ClientId
 		_ = commitmentReq.Hash
 		_ = commitmentReq.Height
@@ -55,7 +55,6 @@ func TestHandleCommitmentSend(t *testing.T) {
 	if decResp["verified"] != true {
 		t.Fatal("Incorrect Commitment Send")
 	}
-
 }
 
 func TestHandleLatestAttestation(t *testing.T) {

@@ -14,12 +14,12 @@ import (
 // RequestService struct
 // Handles setting a request router and handling api requests
 type RequestService struct {
-	ctx     context.Context
-	wg      *sync.WaitGroup
-	host    string
-	router  *mux.Router
-	channel *Channel
-    serverChannel chan RequestWithResponseChannel
+	ctx           context.Context
+	wg            *sync.WaitGroup
+	host          string
+	router        *mux.Router
+	channel       *Channel
+	serverChannel chan RequestWithResponseChannel
 }
 
 // NewRequestService returns a pointer to a RequestService instance
@@ -55,6 +55,9 @@ func (c *RequestService) Run() {
 			select {
 			case <-c.ctx.Done():
 				return
+            // receive requests from http server and pass on to main attestation Server
+            // provide a response channel along with the request, in order to pick up
+            // the response and serve it to the clients that sent the request
 			case req := <-c.channel.Requests:
 				c.serverChannel <- RequestWithResponseChannel{req, c.channel.Responses}
 			}

@@ -3,6 +3,7 @@ package server
 import (
 	"mainstay/clients"
 	"mainstay/models"
+	"mainstay/requestapi"
 	"mainstay/test"
 	"testing"
 
@@ -37,49 +38,52 @@ func TestServer(t *testing.T) {
 
 	bestblockhash, _ := server.sideClient.GetBestBlockHash()
 
-	// Test various models.Requests
-	req := models.RequestGet_s{"BestBlock", ""}
-	resp1, _ := server.respond(req).(models.BestBlockResponse)
-	assert.Equal(t, "", resp1.Error)
+	// Test various requestapi.Requests
+	req := requestapi.BaseRequest{}
+	req.SetRequestType("BestBlock")
+	resp1, _ := server.respond(req).(requestapi.BestBlockResponse)
+	assert.Equal(t, "", resp1.ResponseError())
 	assert.Equal(t, bestblockhash.String(), resp1.BlockHash)
 
-	req = models.RequestGet_s{"BestBlockHeight", ""}
-	resp1b, _ := server.respond(req).(models.BestBlockHeightResponse)
-	assert.Equal(t, "", resp1b.Error)
+	req.SetRequestType("BestBlockHeight")
+	resp1b, _ := server.respond(req).(requestapi.BestBlockHeightResponse)
+	assert.Equal(t, "", resp1b.ResponseError())
 	assert.Equal(t, int32(10), resp1b.BlockHeight)
 
-	req = models.RequestGet_s{"LatestAttestation", ""}
-	resp2, _ := server.respond(req).(models.LatestAttestationResponse)
-	assert.Equal(t, "", resp2.Error)
+	req.SetRequestType("LatestAttestation")
+	resp2, _ := server.respond(req).(requestapi.LatestAttestationResponse)
+	assert.Equal(t, "", resp2.ResponseError())
 	assert.Equal(t, txid.String(), resp2.TxHash)
 
-	req = models.RequestGet_s{"VerifyBlock", "1"}
-	resp3, _ := server.respond(req).(models.VerifyBlockResponse)
-	assert.Equal(t, "", resp3.Error)
+	reqVerify := requestapi.ServerVerifyBlockRequest{}
+	reqVerify.SetRequestType("VerifyBlock")
+	reqVerify.Id = "1"
+	resp3, _ := server.respond(reqVerify).(requestapi.VerifyBlockResponse)
+	assert.Equal(t, "", resp3.ResponseError())
 	assert.Equal(t, true, resp3.Attested)
 
-	req = models.RequestGet_s{"VerifyBlock", "11"}
-	resp4, _ := server.respond(req).(models.VerifyBlockResponse)
-	assert.Equal(t, "", resp4.Error)
+	reqVerify.Id = "11"
+	resp4, _ := server.respond(reqVerify).(requestapi.VerifyBlockResponse)
+	assert.Equal(t, "", resp4.ResponseError())
 	assert.Equal(t, false, resp4.Attested)
 
-	req = models.RequestGet_s{"WhenMoon", ""}
-	resp5, _ := server.respond(req).(models.Response)
-	assert.Equal(t, "**Server** Non supported request type", resp5.Error)
+	req.SetRequestType("WhenMoon")
+	resp5, _ := server.respond(req).(requestapi.Response)
+	assert.Equal(t, "**Server** Non supported request type WhenMoon", resp5.ResponseError())
 
-	// Test models.Requests for the attested best block and a new generated block
+	// Test requestapi.Requests for the attested best block and a new generated block
 	sideClientFake.Generate(1)
 	server.updateCommitment()
 	bestblockhashnew, _ := server.sideClient.GetBestBlockHash()
 	assert.Equal(t, *bestblockhashnew, server.latestCommitment)
 
-	req = models.RequestGet_s{"VerifyBlock", bestblockhash.String()}
-	resp6, _ := server.respond(req).(models.VerifyBlockResponse)
-	assert.Equal(t, "", resp6.Error)
+	reqVerify.Id = bestblockhash.String()
+	resp6, _ := server.respond(reqVerify).(requestapi.VerifyBlockResponse)
+	assert.Equal(t, "", resp6.ResponseError())
 	assert.Equal(t, true, resp6.Attested)
 
-	req = models.RequestGet_s{"VerifyBlock", bestblockhashnew.String()}
-	resp7, _ := server.respond(req).(models.VerifyBlockResponse)
-	assert.Equal(t, "", resp7.Error)
+	reqVerify.Id = bestblockhashnew.String()
+	resp7, _ := server.respond(reqVerify).(requestapi.VerifyBlockResponse)
+	assert.Equal(t, "", resp7.ResponseError())
 	assert.Equal(t, false, resp7.Attested)
 }
