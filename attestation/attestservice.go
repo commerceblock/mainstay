@@ -121,9 +121,6 @@ func (s *AttestService) doAttestation() {
 		} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
 			latestAttestation = models.NewAttestation(unconfirmedTxid, s.getTxAttestedHash(unconfirmedTxid))
 			s.state = ASTATE_UNCONFIRMED
-
-            s.updateServer(*latestAttestation) // update server with latest attestation
-
 		} else {
 			success, txunspent, unspentErr := s.attester.findLastUnspent()
 			if s.failureState(unspentErr) {
@@ -176,8 +173,6 @@ func (s *AttestService) doAttestation() {
 		} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
 			latestAttestation = models.NewAttestation(unconfirmedTxid, s.getTxAttestedHash(unconfirmedTxid))
 			s.state = ASTATE_UNCONFIRMED
-
-			s.updateServer(*latestAttestation) // update server with latest attestation
 
 			log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.AttestedHash.String())
 		} else {
@@ -287,21 +282,21 @@ func (s *AttestService) doAttestation() {
 
 // Method to update server with latest attestation
 func (s *AttestService) updateServer(attestation models.Attestation) {
-    //s.server.UpdateChan() <- *latestAttestation // send server update just to make sure it's up to date
-    log.Println("*AttestService* Updating server with latest attestation")
+	//s.server.UpdateChan() <- *latestAttestation // send server update just to make sure it's up to date
+	log.Println("*AttestService* Updating server with latest attestation")
 
-    updateChan := make(chan interface{})
-    reqUpdate := requestapi.AttestationUpdateRequest{Attestation: attestation}
-    reqUpdate.SetRequestType(requestapi.ATTESTATION_UPDATE)
+	updateChan := make(chan interface{})
+	reqUpdate := requestapi.AttestationUpdateRequest{Attestation: attestation}
+	reqUpdate.SetRequestType(requestapi.ATTESTATION_UPDATE)
 
-    s.serverChannel <- requestapi.RequestWithInterfaceChannel{reqUpdate, updateChan}
-    updated := (<-updateChan).(bool)
+	s.serverChannel <- requestapi.RequestWithInterfaceChannel{reqUpdate, updateChan}
+	updated := (<-updateChan).(bool)
 
-    if !updated {
-        log.Fatal(errors.New("Server update failed"))
-    } else {
-        log.Println("*AttestService* Server update successful")
-    }
+	if !updated {
+		log.Fatal(errors.New("Server update failed"))
+	} else {
+		log.Println("*AttestService* Server update successful")
+	}
 }
 
 // Set to error state and provide debugging information

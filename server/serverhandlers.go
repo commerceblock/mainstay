@@ -74,14 +74,14 @@ func (s *Server) ResponseCommitmentSend(req requestapi.Request) requestapi.Commi
 
 			hash, errHash := chainhash.NewHashFromStr(commitmentReq.Hash)
 			if errHash != nil {
-				resp.SetResponseError(errHash.Error()+"\nInvalid commitment hash: " + commitmentReq.Hash)
+				resp.SetResponseError(errHash.Error() + "\nInvalid commitment hash: " + commitmentReq.Hash)
 				resp.Verified = false
 				return resp
 			}
 
 			height, errHeight := strconv.Atoi(commitmentReq.Height)
 			if errHeight != nil {
-				resp.SetResponseError(errHeight.Error()+"\nInvalid commitment height: " + commitmentReq.Height)
+				resp.SetResponseError(errHeight.Error() + "\nInvalid commitment height: " + commitmentReq.Height)
 				resp.Verified = false
 				return resp
 			}

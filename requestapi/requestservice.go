@@ -55,9 +55,9 @@ func (c *RequestService) Run() {
 			select {
 			case <-c.ctx.Done():
 				return
-            // receive requests from http server and pass on to main attestation Server
-            // provide a response channel along with the request, in order to pick up
-            // the response and serve it to the clients that sent the request
+				// receive requests from http server and pass on to main attestation Server
+				// provide a response channel along with the request, in order to pick up
+				// the response and serve it to the clients that sent the request
 			case req := <-c.channel.Requests:
 				c.serverChannel <- RequestWithResponseChannel{req, c.channel.Responses}
 			}

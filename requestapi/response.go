@@ -11,7 +11,6 @@ type Response interface {
 	ResponseError() string
 }
 
-
 // BaseResponse - only error specified
 type BaseResponse struct {
 	error string `json:"error"`

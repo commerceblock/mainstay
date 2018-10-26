@@ -59,15 +59,15 @@ func (s *Server) RequestServiceChannel() chan requestapi.RequestWithResponseChan
 func (s *Server) updateLatest(tx models.Attestation) bool {
 	s.latestAttestation = tx
 
-    // TODO: REMOVE - height will be embedded in the Commitment model
-    latestheight, err := s.sideClient.GetBlockHeight(&s.latestAttestation.AttestedHash)
-    if err != nil {
-        log.Printf("**Server** No client hash on confirmed tx")
-    } else {
-        s.latestHeight = latestheight
-    }
+	// TODO: REMOVE - height will be embedded in the Commitment model
+	latestheight, err := s.sideClient.GetBlockHeight(&s.latestAttestation.AttestedHash)
+	if err != nil {
+		log.Printf("**Server** No client hash on confirmed tx")
+	} else {
+		s.latestHeight = latestheight
+	}
 
-    return true
+	return true
 }
 
 // Update latest commitment hash
@@ -103,12 +103,12 @@ func (s *Server) respond(req requestapi.Request) requestapi.Response {
 func (s *Server) respondAttestation(req requestapi.Request) interface{} {
 	switch req.RequestType() {
 	case requestapi.ATTESTATION_UPDATE:
-        updateReq := req.(requestapi.AttestationUpdateRequest)
+		updateReq := req.(requestapi.AttestationUpdateRequest)
 		return s.updateLatest(updateReq.Attestation)
 	case requestapi.ATTESTATION_LATEST:
 		return s.latestAttestation
 	case requestapi.ATTESTATION_COMMITMENT:
-		s.updateCommitment()  // TODO: Remove - proper commitment tool implemented
+		s.updateCommitment() // TODO: Remove - proper commitment tool implemented
 		return s.latestCommitment
 	default:
 		baseResp := requestapi.BaseResponse{}

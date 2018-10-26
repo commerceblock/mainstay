@@ -42,7 +42,6 @@ func (b *BaseRequest) SetRequestType(requestType string) {
 	b.requestType = requestType
 }
 
-
 // ServerVerifyBlockRequest for SERVER_VERIFY_BLOCK
 type ServerVerifyBlockRequest struct {
 	requestType string
@@ -58,7 +57,6 @@ func (v ServerVerifyBlockRequest) RequestType() string {
 func (v *ServerVerifyBlockRequest) SetRequestType(requestType string) {
 	v.requestType = requestType
 }
-
 
 // ServerCommitmentSendRequest for SERVER_COMMITMENT_SEND
 type ServerCommitmentSendRequest struct {
@@ -77,7 +75,6 @@ func (c ServerCommitmentSendRequest) RequestType() string {
 func (c *ServerCommitmentSendRequest) SetRequestType(requestType string) {
 	c.requestType = requestType
 }
-
 
 // AttestationUpdateRequest for ATTESTATION_UPDATE
 type AttestationUpdateRequest struct {
