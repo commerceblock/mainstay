@@ -68,8 +68,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	server := server.NewServer(ctx, wg, mainConfig)
-	attestService := attestation.NewAttestService(ctx, wg, server, mainConfig)
-	requestService := requestapi.NewRequestService(ctx, wg, server, apiHost)
+
+	attestService := attestation.NewAttestService(ctx, wg, server.AttestationServiceChannel(), mainConfig)
+	requestService := requestapi.NewRequestService(ctx, wg, server.RequestServiceChannel(), apiHost)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)

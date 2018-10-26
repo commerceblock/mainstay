@@ -3,7 +3,6 @@ package requestapi
 import (
 	"bytes"
 	"encoding/json"
-	"mainstay/models"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,14 +25,15 @@ func TestHandleBestBlockHeight(t *testing.T) {
 }
 
 func TestHandleCommitmentSend(t *testing.T) {
-	channel := models.NewChannel()
+	channel := NewChannel()
 	go func() {
-		tmp := <-channel.RequestPost
+		tmp := <-channel.Requests
 		// TODO: Add real test
-		_ = tmp.ClientId
-		_ = tmp.Hash
-		_ = tmp.Height
-		response := models.CommitmentSendResponse{models.Response{""}, true}
+		commitmentReq := tmp.(ServerCommitmentSendRequest)
+		_ = commitmentReq.ClientId
+		_ = commitmentReq.Hash
+		_ = commitmentReq.Height
+		response := CommitmentSendResponse{Verified: true}
 		channel.Responses <- response
 	}()
 	router := NewRouter(channel)
@@ -55,7 +55,6 @@ func TestHandleCommitmentSend(t *testing.T) {
 	if decResp["verified"] != true {
 		t.Fatal("Incorrect Commitment Send")
 	}
-
 }
 
 func TestHandleLatestAttestation(t *testing.T) {
