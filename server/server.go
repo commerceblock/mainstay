@@ -26,7 +26,7 @@ type Server struct {
 	ctx context.Context
 	wg  *sync.WaitGroup
 
-	attestationServiceChannel chan requestapi.RequestWithInterfaceChannel
+	attestationServiceChannel chan requestapi.RequestWithResponseChannel
 	requestServiceChannel     chan requestapi.RequestWithResponseChannel
 
 	latestAttestation models.Attestation
@@ -40,13 +40,13 @@ type Server struct {
 
 // NewServer returns a pointer to an Server instance
 func NewServer(ctx context.Context, wg *sync.WaitGroup, config *config.Config) *Server {
-	attChan := make(chan requestapi.RequestWithInterfaceChannel)
+	attChan := make(chan requestapi.RequestWithResponseChannel)
 	reqChan := make(chan requestapi.RequestWithResponseChannel)
 	return &Server{ctx, wg, attChan, reqChan, *models.NewAttestationDefault(), chainhash.Hash{}, config.ClientKeys(), 0, config.OceanClient()}
 }
 
 // Return channel for communcation with attestation service
-func (s *Server) AttestationServiceChannel() chan requestapi.RequestWithInterfaceChannel {
+func (s *Server) AttestationServiceChannel() chan requestapi.RequestWithResponseChannel {
 	return s.attestationServiceChannel
 }
 
@@ -100,16 +100,15 @@ func (s *Server) respond(req requestapi.Request) requestapi.Response {
 }
 
 // Attestation Respond returns appropriate response based on request type
-func (s *Server) respondAttestation(req requestapi.Request) interface{} {
+func (s *Server) respondAttestation(req requestapi.Request) requestapi.Response {
 	switch req.RequestType() {
 	case requestapi.ATTESTATION_UPDATE:
-		updateReq := req.(requestapi.AttestationUpdateRequest)
-		return s.updateLatest(updateReq.Attestation)
+		return s.ResponseAttestationUpdate(req)
 	case requestapi.ATTESTATION_LATEST:
-		return s.latestAttestation
+		return s.ResponseAttestationLatest(req)
 	case requestapi.ATTESTATION_COMMITMENT:
 		s.updateCommitment() // TODO: Remove - proper commitment tool implemented
-		return s.latestCommitment
+		return s.ResponseAttestationCommitment(req)
 	default:
 		baseResp := requestapi.BaseResponse{}
 		baseResp.SetResponseError("**Server** Non supported request type " + req.RequestType())
