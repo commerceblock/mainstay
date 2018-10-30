@@ -99,11 +99,13 @@ func NewCommitmentMerkleTree(commitments []chainhash.Hash) CommitmentMerkleTree 
 	myCommitments := make([]chainhash.Hash, leavesSize)
 	copy(myCommitments, commitments)
 
-	treeSize := 2 * nextPow(leavesSize-1)
+	treeSize := 2*nextPow(leavesSize) - 1
 	myTreeStore := make([]*chainhash.Hash, treeSize)
 	myTreeStore = buildMerkleTree(myCommitments)
 
-	return CommitmentMerkleTree{leavesSize, myCommitments, myTreeStore, myTreeStore[treeSize-1]}
+	myRoot := myTreeStore[treeSize-1]
+
+	return CommitmentMerkleTree{leavesSize, myCommitments, myTreeStore, myRoot}
 }
 
 // Build commitment merkle tree store from commitment hashes
