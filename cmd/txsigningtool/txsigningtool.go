@@ -68,12 +68,12 @@ func init() {
 		}
 
 		confFile := confpkg.GetConfFile(os.Getenv("GOPATH") + DEMO_CONF_PATH)
-		config = confpkg.NewConfig(false, confFile)
+		config = confpkg.NewConfig(confFile)
 		pk0 = test.PRIV_CLIENT
 		script = test.SCRIPT
 	} else {
 		confFile := confpkg.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
-		config = confpkg.NewConfig(false, confFile)
+		config = confpkg.NewConfig(confFile)
 	}
 
 	config.SetInitTX(tx0)

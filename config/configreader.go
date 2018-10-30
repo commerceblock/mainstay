@@ -21,7 +21,7 @@ func GetConfFile(filepath string) []byte {
 	return conf
 }
 
-// Get RPC connection for a client from a conf file
+// Get RPC connection for a client name from a conf file
 func GetRPC(name string, conf []byte) *rpcclient.Client {
 	cfg := getCfg(name, conf)
 	host := os.Getenv(cfg.getValue("rpcurl"))

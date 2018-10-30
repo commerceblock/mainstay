@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"encoding/hex"
+	"mainstay/clients"
 	"mainstay/config"
 	"mainstay/test"
 	"testing"
@@ -14,11 +15,13 @@ import (
 var (
 	testConfig   *config.Config
 	mainChainCfg *chaincfg.Params
+	oceanClient  clients.SidechainClient
 )
 
 func init() {
 	test := test.NewTest(false, false)
 	testConfig = test.Config
+	oceanClient = test.OceanClient
 	mainChainCfg = testConfig.MainChainCfg()
 }
 

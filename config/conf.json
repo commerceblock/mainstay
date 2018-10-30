@@ -12,7 +12,6 @@
         "chain": "main"
     },
     "misc": {
-        "multisignodes": "MAINSTAY_MULTISIG_NODES",
-        "clientkeys": "MAINSTAY_CLIENT_KEYS"
+        "multisignodes": "MAINSTAY_MULTISIG_NODES"
     }
 }

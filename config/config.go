@@ -19,7 +19,6 @@ const MAIN_LISTENER_PORT = 6000
 const TOPIC_NEW_HASH = "H"
 const TOPIC_NEW_TX = "T"
 const TOPIC_CONFIRMED_HASH = "C"
-const TOPIC_KEYS = "K"
 const TOPIC_SIGS = "S"
 
 // Config struct
@@ -28,8 +27,6 @@ const TOPIC_SIGS = "S"
 type Config struct {
 	mainClient     *rpcclient.Client
 	mainChainCfg   *chaincfg.Params
-	oceanClient    clients.SidechainClient
-	clientKeys     []string
 	multisigNodes  []string
 	initTX         string
 	initPK         string
@@ -41,19 +38,9 @@ func (c *Config) MainClient() *rpcclient.Client {
 	return c.mainClient
 }
 
-// Get Ocean Client
-func (c *Config) OceanClient() clients.SidechainClient {
-	return c.oceanClient
-}
-
 // Get Main Client Cfg
 func (c *Config) MainChainCfg() *chaincfg.Params {
 	return c.mainChainCfg
-}
-
-// Get Tx Signers host names
-func (c *Config) ClientKeys() []string {
-	return c.clientKeys
 }
 
 // Get Tx Signers host names
@@ -92,7 +79,7 @@ func (c *Config) SetMultisigScript(script string) {
 }
 
 // Return Config instance
-func NewConfig(isUnitTest bool, customConf ...[]byte) *Config {
+func NewConfig(customConf ...[]byte) *Config {
 	var conf []byte
 	if len(customConf) > 0 { //custom config provided
 		conf = customConf[0]
@@ -102,17 +89,22 @@ func NewConfig(isUnitTest bool, customConf ...[]byte) *Config {
 
 	mainClient := GetRPC(MAIN_CHAIN_NAME, conf)
 	mainClientCfg := GetChainCfgParams(MAIN_CHAIN_NAME, conf)
-	oceanClient := GetSidechainClient(isUnitTest, conf)
 
-	clientKeys := strings.Split(GetEnvFromConf("misc", "clientkeys", conf), ",")
 	multisignodes := strings.Split(GetEnvFromConf("misc", "multisignodes", conf), ",")
-	return &Config{mainClient, mainClientCfg, oceanClient, clientKeys, multisignodes, "", "", ""}
+	return &Config{mainClient, mainClientCfg, multisignodes, "", "", ""}
 }
 
 // Return SidechainClient depending on whether unit test config or actual config
-func GetSidechainClient(isUnitTest bool, conf []byte) clients.SidechainClient {
+func NewClientFromConfig(isUnitTest bool, customConf ...[]byte) clients.SidechainClient {
 	if isUnitTest {
 		return clients.NewSidechainClientFake()
+	}
+
+	var conf []byte
+	if len(customConf) > 0 { //custom config provided
+		conf = customConf[0]
+	} else {
+		conf = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
 	}
 	return clients.NewSidechainClientOcean(GetRPC(SIDE_CHAIN_NAME, conf))
 }

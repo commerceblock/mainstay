@@ -16,7 +16,7 @@ import (
 func TestAttestClient(t *testing.T) {
 	// TEST INIT
 	test := test.NewTest(false, false)
-	sideClientFake := test.Config.OceanClient().(*clients.SidechainClientFake)
+	sideClientFake := test.OceanClient.(*clients.SidechainClientFake)
 	client := NewAttestClient(test.Config)
 	txs := []string{client.txid0}
 

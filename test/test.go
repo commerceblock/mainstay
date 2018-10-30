@@ -2,10 +2,14 @@
 package test
 
 import (
+	"context"
 	"log"
-	"mainstay/config"
+	"mainstay/clients"
+	confpkg "mainstay/config"
 	"os"
 	"os/exec"
+	"sync"
+	"time"
 
 	"github.com/btcsuite/btcd/btcjson"
 )
@@ -31,31 +35,29 @@ var testConf = []byte(`
         "chain": "main"
     },
     "misc": {
-        "multisignodes": "127.0.0.1:5001",
-        "clientkeys": "KEY0"
+        "multisignodes": "127.0.0.1:5001"
     }
 }
 `)
 
 // test parameters for a 1-2 multisig redeemScript and P2SH address
-const SCRIPT = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332102f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e7552ae"
 
 // address - "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB"
-
-const PRIV_MAIN = "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz"
+const SCRIPT = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332102f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e7552ae"
 
 // address - "2N9z6a8BQB1xWmesCJcBWZm1R3f1PZcwrGz"
 // pubkey - "03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33"
-
-const PRIV_CLIENT = "cSS9R4XPpajhqy28hcfHEzEzAbyWDqBaGZR4xtV7Jg8TixSWee1x"
+const PRIV_MAIN = "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz"
 
 // address - "2MyC1i1FGy6MZWyMgmZXku4gdWZxWCRa6RL"
 // pubkey -  "02f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e75"
+const PRIV_CLIENT = "cSS9R4XPpajhqy28hcfHEzEzAbyWDqBaGZR4xtV7Jg8TixSWee1x"
 
 // Test structure
 // Set up testing environment for use by regtest demo or unit tests
 type Test struct {
-	Config *config.Config
+	Config      *confpkg.Config
+	OceanClient clients.SidechainClient
 }
 
 // NewTest returns a pointer to a Test instance
@@ -78,7 +80,8 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	}
 
 	// if not a regtest, then unittest
-	config := config.NewConfig(!isRegtest, testConf)
+	config := confpkg.NewConfig(testConf)
+	oceanClient := confpkg.NewClientFromConfig(!isRegtest, testConf)
 
 	// Get first unspent as initial TX for attestation chain
 	unspent, errUnspent := config.MainClient().ListUnspent()
@@ -96,5 +99,19 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	config.SetInitPK(PRIV_MAIN)
 	config.SetMultisigScript(SCRIPT)
 
-	return &Test{config}
+	return &Test{config, oceanClient}
+}
+
+// Work on main client for regtest - block generation automatically
+func DoRegtestWork(config *confpkg.Config, wg *sync.WaitGroup, ctx context.Context) {
+	defer wg.Done()
+	for {
+		newBlockTimer := time.NewTimer(60 * time.Second)
+		select {
+		case <-ctx.Done():
+			return
+		case <-newBlockTimer.C:
+			config.MainClient().Generate(1)
+		}
+	}
 }

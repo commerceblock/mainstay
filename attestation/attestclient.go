@@ -16,7 +16,7 @@ import (
 )
 
 // AttestClient structure
-// Maintains RPC connections to main and side chain clients
+// Maintains RPC connections to main chain client
 // Handles generating staychain next address and next transaction
 // and verifying that the correct chain of transactions is maintained
 type AttestClient struct {

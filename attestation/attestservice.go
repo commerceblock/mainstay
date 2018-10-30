@@ -1,8 +1,8 @@
 /*
 Package attestation implements the MainStay protocol.
 
-Implemented using an Attestation Service structure that runs a main processes:
-    - AttestClient that handles generating attestations and maintaining communication a bitcoin wallet
+Implemented using an Attestation Service structure that runs a main processes that
+handles generating attestations and maintaining communication to a bitcoin wallet
 */
 package attestation
 
@@ -12,15 +12,13 @@ import (
 	"errors"
 	"log"
 	confpkg "mainstay/config"
-	"mainstay/crypto"
 	"mainstay/messengers"
 	"mainstay/models"
-	"mainstay/requestapi"
+	"mainstay/server"
 	"sync"
 	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 
 	zmq "github.com/pebbe/zmq4"
@@ -44,17 +42,17 @@ const (
 const ATTEST_WAIT_TIME = 60
 
 // AttestationService structure
-// Encapsulates Attest Server, Attest Client
-// and a channel for reading requests and writing responses
+// Encapsulates Attest Client and connectivity
+// to a Server for updates and requests
 type AttestService struct {
-	ctx           context.Context
-	wg            *sync.WaitGroup
-	config        *confpkg.Config
-	attester      *AttestClient
-	serverChannel chan requestapi.RequestWithResponseChannel
-	publisher     *messengers.PublisherZmq
-	subscribers   []*messengers.SubscriberZmq
-	state         AttestationState
+	ctx         context.Context
+	wg          *sync.WaitGroup
+	config      *confpkg.Config
+	attester    *AttestClient
+	server      *server.Server
+	publisher   *messengers.PublisherZmq
+	subscribers []*messengers.SubscriberZmq
+	state       AttestationState
 }
 
 var latestAttestation *models.Attestation // hold latest state
@@ -65,7 +63,7 @@ var poller *zmq.Poller // poller to add all subscriber/publisher sockets
 
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, serverChannel chan requestapi.RequestWithResponseChannel, config *confpkg.Config) *AttestService {
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, config *confpkg.Config) *AttestService {
 	if len(config.InitTX()) != 64 {
 		log.Fatal("Incorrect txid size")
 	}
@@ -84,7 +82,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, serverChannel cha
 	}
 	attestDelay = 30 * time.Second // add some delay for subscribers to have time to set up
 
-	return &AttestService{ctx, wg, config, attester, serverChannel, publisher, subscribers, ASTATE_INIT}
+	return &AttestService{ctx, wg, config, attester, server, publisher, subscribers, ASTATE_INIT}
 }
 
 // Run Attest Service
@@ -103,7 +101,7 @@ func (s *AttestService) Run() {
 	}
 }
 
-// Main attestation method. States:
+//Main attestation service method - cycles through AttestationStates
 func (s *AttestService) doAttestation() {
 	switch s.state {
 
@@ -119,7 +117,11 @@ func (s *AttestService) doAttestation() {
 		if s.failureState(unconfirmedErr) {
 			return
 		} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
-			latestAttestation = models.NewAttestation(unconfirmedTxid, s.getTxAttestedHash(unconfirmedTxid))
+			commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid)
+			if s.failureState(commitmentErr) {
+				return
+			}
+			latestAttestation = models.NewAttestation(unconfirmedTxid, commitment)
 			s.state = ASTATE_UNCONFIRMED
 		} else {
 			success, txunspent, unspentErr := s.attester.findLastUnspent()
@@ -127,8 +129,11 @@ func (s *AttestService) doAttestation() {
 				return
 			} else if success {
 				txunspentHash, _ := chainhash.NewHashFromStr(txunspent.TxID)
-				latestCommitment = s.getTxAttestedHash(*txunspentHash)
-				latestAttestation = models.NewAttestation(*txunspentHash, latestCommitment)
+				commitment, commitmentErr := s.server.GetAttestationCommitment(*txunspentHash)
+				if s.failureState(commitmentErr) {
+					return
+				}
+				latestAttestation = models.NewAttestation(*txunspentHash, commitment)
 				s.state = ASTATE_CONFIRMED
 
 				s.updateServer(*latestAttestation) // update server with latest attestation
@@ -171,28 +176,31 @@ func (s *AttestService) doAttestation() {
 		if s.failureState(unconfirmedErr) {
 			return
 		} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
-			latestAttestation = models.NewAttestation(unconfirmedTxid, s.getTxAttestedHash(unconfirmedTxid))
+			commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid)
+			if s.failureState(commitmentErr) {
+				return
+			}
+			latestAttestation = models.NewAttestation(unconfirmedTxid, commitment)
 			s.state = ASTATE_UNCONFIRMED
 
 			log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.AttestedHash.String())
 		} else {
 			log.Println("*AttestService* NEW ATTESTATION")
 
-			// request latest hash from server and await response
-			responseChan := make(chan requestapi.Response)
-			reqCommitment := requestapi.BaseRequest{}
-			reqCommitment.SetRequestType(requestapi.ATTESTATION_COMMITMENT)
-			s.serverChannel <- requestapi.RequestWithResponseChannel{reqCommitment, responseChan}
-			hash := (<-responseChan).(requestapi.AttestastionCommitmentResponse).Commitment
+			// get latest commitment hash from server
+			latestHash, latestErr := s.server.GetLatestCommitment()
+			if s.failureState(latestErr) {
+				return
+			}
 
-			log.Printf("********** hash: %s\n", hash.String())
-			if hash == latestAttestation.AttestedHash { // skip attestation if same client hash
+			log.Printf("********** hash: %s\n", latestHash.String())
+			if latestHash == latestAttestation.AttestedHash { // skip attestation if same client hash
 				log.Printf("********** Skipping attestation - Client hash already attested")
 				return
 			}
 			// publish new attestation hash
-			s.publisher.SendMessage(hash.CloneBytes(), confpkg.TOPIC_NEW_HASH)
-			latestAttestation = models.NewAttestation(chainhash.Hash{}, hash)
+			s.publisher.SendMessage(latestHash.CloneBytes(), confpkg.TOPIC_NEW_HASH)
+			latestAttestation = models.NewAttestation(chainhash.Hash{}, latestHash)
 			s.state = ASTATE_COLLECTING_PUBKEYS // update attestation state
 		}
 
@@ -262,12 +270,11 @@ func (s *AttestService) doAttestation() {
 			}
 		}
 
-		// request latest attestation from server and await response
-		responseChan := make(chan requestapi.Response)
-		reqAttestation := requestapi.BaseRequest{}
-		reqAttestation.SetRequestType(requestapi.ATTESTATION_LATEST)
-		s.serverChannel <- requestapi.RequestWithResponseChannel{reqAttestation, responseChan}
-		latest := (<-responseChan).(requestapi.AttestationLatestResponse).Attestation
+		// get last attestation commitment from server
+		latest, latestErr := s.server.GetLatestAttestation()
+		if s.failureState(latestErr) {
+			return
+		}
 
 		txid, attestationErr := s.attester.signAndSendAttestation(&latestAttestation.Tx, sigs, latest.AttestedHash)
 		if s.failureState(attestationErr) {
@@ -285,13 +292,9 @@ func (s *AttestService) updateServer(attestation models.Attestation) {
 	//s.server.UpdateChan() <- *latestAttestation // send server update just to make sure it's up to date
 	log.Println("*AttestService* Updating server with latest attestation")
 
-	responseChan := make(chan requestapi.Response)
-	reqUpdate := requestapi.AttestationUpdateRequest{Attestation: attestation}
-	reqUpdate.SetRequestType(requestapi.ATTESTATION_UPDATE)
-	s.serverChannel <- requestapi.RequestWithResponseChannel{reqUpdate, responseChan}
-	updated := (<-responseChan).(requestapi.AttestationUpdateResponse).Updated
+	errUpdate := s.server.UpdateLatestAttestation(attestation)
 
-	if !updated {
+	if errUpdate != nil {
 		log.Fatal(errors.New("Server update failed"))
 	} else {
 		log.Println("*AttestService* Server update successful")
@@ -307,54 +310,4 @@ func (s *AttestService) failureState(err error) bool {
 		return true
 	}
 	return false
-}
-
-// THIS WILL BE REPLACED BY QUERYING SERVER FOR COMMITMENT OF CORRESPONDING TX
-
-// Find the attested sidechain hash from a transaction, by testing for all sidechain hashes
-func (s *AttestService) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
-	oceanClient := s.config.OceanClient()
-
-	// Get latest block and block height from sidechain
-	latesthash, err := oceanClient.GetBestBlockHash()
-	if err != nil {
-		log.Fatal(err)
-	}
-	latestheight, err := oceanClient.GetBlockHeight(latesthash)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Get address from transaction
-	tx, err := s.attester.MainClient.GetRawTransaction(&txid)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, addrs, _, errExtract := txscript.ExtractPkScriptAddrs(tx.MsgTx().TxOut[0].PkScript, s.attester.MainChainCfg)
-	if errExtract != nil {
-		log.Fatal(errExtract)
-	}
-	addr := addrs[0]
-
-	tweakedPriv := crypto.TweakPrivKey(s.attester.WalletPriv, latesthash.CloneBytes(), s.attester.MainChainCfg)
-	addrTweaked, _ := s.attester.GetNextAttestationAddr(tweakedPriv, *latesthash)
-	// Check first if the attestation came from the latest block
-	if addr.String() == addrTweaked.String() {
-		return *latesthash
-	}
-
-	// Iterate backwards through all sidechain hashes to find the block hash that was attested
-	for h := latestheight - 1; h >= 0; h-- {
-		hash, err := oceanClient.GetBlockHash(int64(h))
-		if err != nil {
-			log.Fatal(err)
-		}
-		tweakedPriv := crypto.TweakPrivKey(s.attester.WalletPriv, hash.CloneBytes(), s.attester.MainChainCfg)
-		addrTweaked, _ := s.attester.GetNextAttestationAddr(tweakedPriv, *hash)
-		if addr.String() == addrTweaked.String() {
-			return *hash
-		}
-	}
-
-	return chainhash.Hash{}
 }
