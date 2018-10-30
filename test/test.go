@@ -2,11 +2,14 @@
 package test
 
 import (
+	"context"
 	"log"
 	"mainstay/clients"
 	confpkg "mainstay/config"
 	"os"
 	"os/exec"
+	"sync"
+	"time"
 
 	"github.com/btcsuite/btcd/btcjson"
 )
@@ -97,4 +100,18 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	config.SetMultisigScript(SCRIPT)
 
 	return &Test{config, oceanClient}
+}
+
+// Work on main client for regtest - block generation automatically
+func DoRegtestWork(config *confpkg.Config, wg *sync.WaitGroup, ctx context.Context) {
+	defer wg.Done()
+	for {
+		newBlockTimer := time.NewTimer(60 * time.Second)
+		select {
+		case <-ctx.Done():
+			return
+		case <-newBlockTimer.C:
+			config.MainClient().Generate(1)
+		}
+	}
 }

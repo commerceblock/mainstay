@@ -1,8 +1,8 @@
 /*
 Package attestation implements the MainStay server
 
-Implemented using an Server structure that runs a main process:
-    - Server that handles responding to API requests, client requests and service requests
+Implemented using an Server structure that runs a main process Server that handles
+responding to requests from Attestation service and storing latest Attestations / Commitments
 */
 package server
 
@@ -17,8 +17,8 @@ import (
 )
 
 // Server structure
-// Stores information on the latest attestation
-// Responds to external API requests handled by RequestApi
+// Stores information on the latest attestation and commitment
+// Methods to get latest state by attestation service
 type Server struct {
 	latestAttestation models.Attestation
 	latestCommitment  chainhash.Hash
@@ -60,15 +60,15 @@ func (s *Server) GetLatestCommitment() (chainhash.Hash, error) {
 	return s.latestCommitment, nil
 }
 
-// Return latest commitment stored in the server
+// Return commitment for a particular attestation transaction id
 func (s *Server) GetAttestationCommitment(txid chainhash.Hash) (chainhash.Hash, error) {
 
-    // db interface
+	// db interface
 
-    return chainhash.Hash{}, nil
+	return chainhash.Hash{}, nil
 }
 
-// Update latest commitment hash
+// TODO REMOVE: Update latest commitment hash
 func (s *Server) updateCommitment() {
 	hash, err := s.sideClient.GetBestBlockHash()
 	if err != nil {

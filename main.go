@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"time"
 )
 
 var (
@@ -84,20 +83,9 @@ func main() {
 	wg.Add(1)
 	go attestService.Run()
 
-	if isRegtest { // In regtest demo mode generate main client blocks automatically
+	if isRegtest { // In regtest demo mode do block generation work
 		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for {
-				newBlockTimer := time.NewTimer(60 * time.Second)
-				select {
-				case <-ctx.Done():
-					return
-				case <-newBlockTimer.C:
-					mainConfig.MainClient().Generate(1)
-				}
-			}
-		}()
+		go test.DoRegtestWork(mainConfig, wg, ctx)
 	}
 	wg.Wait()
 }

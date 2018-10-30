@@ -1,8 +1,8 @@
 /*
 Package attestation implements the MainStay protocol.
 
-Implemented using an Attestation Service structure that runs a main processes:
-    - AttestClient that handles generating attestations and maintaining communication a bitcoin wallet
+Implemented using an Attestation Service structure that runs a main processes that
+handles generating attestations and maintaining communication to a bitcoin wallet
 */
 package attestation
 
@@ -42,8 +42,8 @@ const (
 const ATTEST_WAIT_TIME = 60
 
 // AttestationService structure
-// Encapsulates Attest Server, Attest Client
-// and a channel for reading requests and writing responses
+// Encapsulates Attest Client and connectivity
+// to a Server for updates and requests
 type AttestService struct {
 	ctx         context.Context
 	wg          *sync.WaitGroup
@@ -101,7 +101,7 @@ func (s *AttestService) Run() {
 	}
 }
 
-// Main attestation method. States:
+//Main attestation service method - cycles through AttestationStates
 func (s *AttestService) doAttestation() {
 	switch s.state {
 
@@ -117,10 +117,10 @@ func (s *AttestService) doAttestation() {
 		if s.failureState(unconfirmedErr) {
 			return
 		} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
-            commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid)
-            if s.failureState(commitmentErr) {
-                return
-            }
+			commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid)
+			if s.failureState(commitmentErr) {
+				return
+			}
 			latestAttestation = models.NewAttestation(unconfirmedTxid, commitment)
 			s.state = ASTATE_UNCONFIRMED
 		} else {
@@ -130,9 +130,9 @@ func (s *AttestService) doAttestation() {
 			} else if success {
 				txunspentHash, _ := chainhash.NewHashFromStr(txunspent.TxID)
 				commitment, commitmentErr := s.server.GetAttestationCommitment(*txunspentHash)
-                if s.failureState(commitmentErr) {
-                    return
-                }
+				if s.failureState(commitmentErr) {
+					return
+				}
 				latestAttestation = models.NewAttestation(*txunspentHash, commitment)
 				s.state = ASTATE_CONFIRMED
 
@@ -176,10 +176,10 @@ func (s *AttestService) doAttestation() {
 		if s.failureState(unconfirmedErr) {
 			return
 		} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
-            commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid)
-            if s.failureState(commitmentErr) {
-                return
-            }
+			commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid)
+			if s.failureState(commitmentErr) {
+				return
+			}
 			latestAttestation = models.NewAttestation(unconfirmedTxid, commitment)
 			s.state = ASTATE_UNCONFIRMED
 
