@@ -7,7 +7,6 @@ import (
 	"log"
 	"mainstay/attestation"
 	"mainstay/config"
-	"mainstay/requestapi"
 	"mainstay/server"
 	"mainstay/test"
 	"os"
@@ -68,9 +67,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	server := server.NewServer(ctx, wg, mainConfig)
-
 	attestService := attestation.NewAttestService(ctx, wg, server.AttestationServiceChannel(), mainConfig)
-	requestService := requestapi.NewRequestService(ctx, wg, server.RequestServiceChannel(), apiHost)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
@@ -91,8 +88,6 @@ func main() {
 	go server.Run()
 	wg.Add(1)
 	go attestService.Run()
-	wg.Add(1)
-	go requestService.Run()
 
 	if isRegtest { // In regtest demo mode generate main client blocks automatically
 		wg.Add(1)
