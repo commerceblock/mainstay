@@ -20,48 +20,45 @@ import (
 // Stores information on the latest attestation
 // Responds to external API requests handled by RequestApi
 type Server struct {
-
 	latestAttestation models.Attestation
 	latestCommitment  chainhash.Hash
-	commitmentKeys    []string
 
 	// to remove soon
 	sideClient clients.SidechainClient
 }
 
 // NewServer returns a pointer to an Server instance
-func NewServer(config *config.Config) *Server {
-	return &Server{*models.NewAttestationDefault(), chainhash.Hash{}, config.ClientKeys(), config.OceanClient()}
+func NewServer(config *config.Config, sideClient clients.SidechainClient) *Server {
+	return &Server{*models.NewAttestationDefault(), chainhash.Hash{}, sideClient}
 }
 
 // Update latest attestation in the server
 func (s *Server) UpdateLatestAttestation(tx models.Attestation) error {
 
-    // db interface
+	// db interface
 
-    s.latestAttestation = tx
+	s.latestAttestation = tx
 	return nil
 }
 
 // Return latest attestation stored in the server
 func (s *Server) GetLatestAttestation() (models.Attestation, error) {
 
-    // db interface
+	// db interface
 
-    return s.latestAttestation, nil
+	return s.latestAttestation, nil
 }
 
 // Return latest commitment stored in the server
 func (s *Server) GetLatestCommitment() (chainhash.Hash, error) {
 
-    // dummy just for now
-    s.updateCommitment()
+	// dummy just for now
+	s.updateCommitment()
 
-    //db interface
+	//db interface
 
-    return s.latestCommitment, nil
+	return s.latestCommitment, nil
 }
-
 
 // Update latest commitment hash
 func (s *Server) updateCommitment() {

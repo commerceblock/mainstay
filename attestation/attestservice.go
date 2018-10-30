@@ -12,7 +12,6 @@ import (
 	"errors"
 	"log"
 	confpkg "mainstay/config"
-	"mainstay/crypto"
 	"mainstay/messengers"
 	"mainstay/models"
 	"mainstay/server"
@@ -20,7 +19,6 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 
 	zmq "github.com/pebbe/zmq4"
@@ -47,14 +45,14 @@ const ATTEST_WAIT_TIME = 60
 // Encapsulates Attest Server, Attest Client
 // and a channel for reading requests and writing responses
 type AttestService struct {
-	ctx           context.Context
-	wg            *sync.WaitGroup
-	config        *confpkg.Config
-	attester      *AttestClient
-	server        *server.Server
-	publisher     *messengers.PublisherZmq
-	subscribers   []*messengers.SubscriberZmq
-	state         AttestationState
+	ctx         context.Context
+	wg          *sync.WaitGroup
+	config      *confpkg.Config
+	attester    *AttestClient
+	server      *server.Server
+	publisher   *messengers.PublisherZmq
+	subscribers []*messengers.SubscriberZmq
+	state       AttestationState
 }
 
 var latestAttestation *models.Attestation // hold latest state
@@ -179,10 +177,10 @@ func (s *AttestService) doAttestation() {
 			log.Println("*AttestService* NEW ATTESTATION")
 
 			// get latest commitment hash from server
-            latestHash, latestErr := s.server.GetLatestCommitment()
-            if s.failureState(latestErr) {
-                return
-            }
+			latestHash, latestErr := s.server.GetLatestCommitment()
+			if s.failureState(latestErr) {
+				return
+			}
 
 			log.Printf("********** hash: %s\n", latestHash.String())
 			if latestHash == latestAttestation.AttestedHash { // skip attestation if same client hash
@@ -262,10 +260,10 @@ func (s *AttestService) doAttestation() {
 		}
 
 		// get last attestation commitment from server
-        latest, latestErr := s.server.GetLatestAttestation()
-        if s.failureState(latestErr) {
-            return
-        }
+		latest, latestErr := s.server.GetLatestAttestation()
+		if s.failureState(latestErr) {
+			return
+		}
 
 		txid, attestationErr := s.attester.signAndSendAttestation(&latestAttestation.Tx, sigs, latest.AttestedHash)
 		if s.failureState(attestationErr) {
@@ -283,7 +281,7 @@ func (s *AttestService) updateServer(attestation models.Attestation) {
 	//s.server.UpdateChan() <- *latestAttestation // send server update just to make sure it's up to date
 	log.Println("*AttestService* Updating server with latest attestation")
 
-    errUpdate := s.server.UpdateLatestAttestation(attestation)
+	errUpdate := s.server.UpdateLatestAttestation(attestation)
 
 	if errUpdate != nil {
 		log.Fatal(errors.New("Server update failed"))
@@ -307,48 +305,5 @@ func (s *AttestService) failureState(err error) bool {
 
 // Find the attested sidechain hash from a transaction, by testing for all sidechain hashes
 func (s *AttestService) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
-	oceanClient := s.config.OceanClient()
-
-	// Get latest block and block height from sidechain
-	latesthash, err := oceanClient.GetBestBlockHash()
-	if err != nil {
-		log.Fatal(err)
-	}
-	latestheight, err := oceanClient.GetBlockHeight(latesthash)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Get address from transaction
-	tx, err := s.attester.MainClient.GetRawTransaction(&txid)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, addrs, _, errExtract := txscript.ExtractPkScriptAddrs(tx.MsgTx().TxOut[0].PkScript, s.attester.MainChainCfg)
-	if errExtract != nil {
-		log.Fatal(errExtract)
-	}
-	addr := addrs[0]
-
-	tweakedPriv := crypto.TweakPrivKey(s.attester.WalletPriv, latesthash.CloneBytes(), s.attester.MainChainCfg)
-	addrTweaked, _ := s.attester.GetNextAttestationAddr(tweakedPriv, *latesthash)
-	// Check first if the attestation came from the latest block
-	if addr.String() == addrTweaked.String() {
-		return *latesthash
-	}
-
-	// Iterate backwards through all sidechain hashes to find the block hash that was attested
-	for h := latestheight - 1; h >= 0; h-- {
-		hash, err := oceanClient.GetBlockHash(int64(h))
-		if err != nil {
-			log.Fatal(err)
-		}
-		tweakedPriv := crypto.TweakPrivKey(s.attester.WalletPriv, hash.CloneBytes(), s.attester.MainChainCfg)
-		addrTweaked, _ := s.attester.GetNextAttestationAddr(tweakedPriv, *hash)
-		if addr.String() == addrTweaked.String() {
-			return *hash
-		}
-	}
-
 	return chainhash.Hash{}
 }

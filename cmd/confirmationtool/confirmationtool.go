@@ -4,6 +4,7 @@ package main
 import (
 	"flag"
 	"log"
+	"mainstay/clients"
 	"mainstay/config"
 	"mainstay/crypto"
 	"mainstay/staychain"
@@ -28,6 +29,7 @@ var (
 	pkWIF       *btcutil.WIF
 	showDetails bool
 	mainConfig  *config.Config
+	oceanClient clients.SidechainClient
 )
 
 // init
@@ -44,20 +46,21 @@ func init() {
 	}
 
 	confFile := config.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
-	mainConfig = config.NewConfig(false, confFile)
+	mainConfig = config.NewConfig(confFile)
+	oceanClient = config.NewClientFromConfig(false, confFile)
 }
 
 // main method
 func main() {
 	defer mainConfig.MainClient().Shutdown()
-	defer mainConfig.OceanClient().Close()
+	defer oceanClient.Close()
 
 	txraw := getRawTxFromHash(tx)
 	tx0raw := getRawTxFromHash(FIRST_TX)
 
 	fetcher := staychain.NewChainFetcher(mainConfig.MainClient(), txraw)
 	chain := staychain.NewChain(fetcher)
-	verifier := staychain.NewChainVerifier(mainConfig.MainChainCfg(), mainConfig.OceanClient(), tx0raw)
+	verifier := staychain.NewChainVerifier(mainConfig.MainChainCfg(), oceanClient, tx0raw)
 
 	time.AfterFunc(5*time.Minute, func() {
 		log.Println("Exit: ", chain.Close())

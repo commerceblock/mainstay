@@ -6,6 +6,7 @@ import (
 	"flag"
 	"log"
 	"mainstay/attestation"
+	"mainstay/clients"
 	"mainstay/config"
 	"mainstay/server"
 	"mainstay/test"
@@ -22,6 +23,7 @@ var (
 	isRegtest  bool
 	apiHost    string
 	mainConfig *config.Config
+	ocean      clients.SidechainClient
 )
 
 func parseFlags() {
@@ -43,23 +45,25 @@ func init() {
 	if isRegtest {
 		test := test.NewTest(true, true)
 		mainConfig = test.Config
+		ocean = test.OceanClient
 		log.Printf("Running regtest mode with -tx=%s\n", mainConfig.InitTX())
 	} else {
-		mainConfig = config.NewConfig(false)
+		mainConfig = config.NewConfig()
 		mainConfig.SetInitTX(tx0)
 		mainConfig.SetInitPK(pk0)
 		mainConfig.SetMultisigScript(script)
+		ocean = config.NewClientFromConfig(false)
 	}
 }
 
 func main() {
 	defer mainConfig.MainClient().Shutdown()
-	defer mainConfig.OceanClient().Close()
+	defer ocean.Close()
 
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	server := server.NewServer(mainConfig)
+	server := server.NewServer(mainConfig, ocean)
 	attestService := attestation.NewAttestService(ctx, wg, server, mainConfig)
 
 	c := make(chan os.Signal)

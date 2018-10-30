@@ -14,8 +14,8 @@ import (
 func TestServer(t *testing.T) {
 	// TEST INIT
 	test := test.NewTest(false, false)
-	sideClientFake := test.Config.OceanClient().(*clients.SidechainClientFake)
-	server := NewServer(test.Config)
+	sideClientFake := test.OceanClient.(*clients.SidechainClientFake)
+	server := NewServer(test.Config, sideClientFake)
 
 	// Generate blocks in side chain and update server latest
 	sideClientFake.Generate(10)
@@ -23,7 +23,7 @@ func TestServer(t *testing.T) {
 	server.latestCommitment = *bestblockhash
 
 	// Test latest commitment request
-    respCommitment, errCommitment := server.GetLatestCommitment()
+	respCommitment, errCommitment := server.GetLatestCommitment()
 	assert.Equal(t, nil, errCommitment)
 	assert.Equal(t, *bestblockhash, respCommitment)
 

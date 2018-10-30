@@ -9,7 +9,7 @@ import (
 
 // Test Tweaking utility
 func TestTweaking(t *testing.T) {
-	sideClientFake := testConfig.OceanClient().(*clients.SidechainClientFake)
+	sideClientFake := oceanClient.(*clients.SidechainClientFake)
 
 	tweak, _ := sideClientFake.GetBestBlockHash()
 
