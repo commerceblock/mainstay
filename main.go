@@ -15,8 +15,6 @@ import (
 	"time"
 )
 
-const DEFAULT_API_HOST = "localhost:8080"
-
 var (
 	tx0        string
 	pk0        string
@@ -52,11 +50,6 @@ func init() {
 		mainConfig.SetInitPK(pk0)
 		mainConfig.SetMultisigScript(script)
 	}
-
-	apiHost = os.Getenv("API_HOST")
-	if apiHost == "" {
-		apiHost = DEFAULT_API_HOST
-	}
 }
 
 func main() {
@@ -66,8 +59,8 @@ func main() {
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	server := server.NewServer(ctx, wg, mainConfig)
-	attestService := attestation.NewAttestService(ctx, wg, server.AttestationServiceChannel(), mainConfig)
+	server := server.NewServer(mainConfig)
+	attestService := attestation.NewAttestService(ctx, wg, server, mainConfig)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
@@ -84,8 +77,6 @@ func main() {
 		}
 	}()
 
-	wg.Add(1)
-	go server.Run()
 	wg.Add(1)
 	go attestService.Run()
 

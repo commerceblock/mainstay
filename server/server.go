@@ -7,9 +7,7 @@ Implemented using an Server structure that runs a main process:
 package server
 
 import (
-	"context"
 	"log"
-	"sync"
 
 	"mainstay/clients"
 	"mainstay/config"
@@ -22,10 +20,6 @@ import (
 // Stores information on the latest attestation
 // Responds to external API requests handled by RequestApi
 type Server struct {
-	ctx context.Context
-	wg  *sync.WaitGroup
-
-	attestationServiceChannel chan RequestWithResponseChannel
 
 	latestAttestation models.Attestation
 	latestCommitment  chainhash.Hash
@@ -36,22 +30,38 @@ type Server struct {
 }
 
 // NewServer returns a pointer to an Server instance
-func NewServer(ctx context.Context, wg *sync.WaitGroup, config *config.Config) *Server {
-	attChan := make(chan RequestWithResponseChannel)
-	return &Server{ctx, wg, attChan, *models.NewAttestationDefault(), chainhash.Hash{}, config.ClientKeys(), config.OceanClient()}
+func NewServer(config *config.Config) *Server {
+	return &Server{*models.NewAttestationDefault(), chainhash.Hash{}, config.ClientKeys(), config.OceanClient()}
 }
 
-// Return channel for communcation with attestation service
-func (s *Server) AttestationServiceChannel() chan RequestWithResponseChannel {
-	return s.attestationServiceChannel
+// Update latest attestation in the server
+func (s *Server) UpdateLatestAttestation(tx models.Attestation) error {
+
+    // db interface
+
+    s.latestAttestation = tx
+	return nil
 }
 
-// Update information on the latest attestation
-func (s *Server) updateLatest(tx models.Attestation) bool {
-	s.latestAttestation = tx
+// Return latest attestation stored in the server
+func (s *Server) GetLatestAttestation() (models.Attestation, error) {
 
-	return true
+    // db interface
+
+    return s.latestAttestation, nil
 }
+
+// Return latest commitment stored in the server
+func (s *Server) GetLatestCommitment() (chainhash.Hash, error) {
+
+    // dummy just for now
+    s.updateCommitment()
+
+    //db interface
+
+    return s.latestCommitment, nil
+}
+
 
 // Update latest commitment hash
 func (s *Server) updateCommitment() {
@@ -60,35 +70,4 @@ func (s *Server) updateCommitment() {
 		log.Fatal(err)
 	}
 	s.latestCommitment = *hash
-}
-
-// Attestation Respond returns appropriate response based on request type
-func (s *Server) respondAttestation(req Request) Response {
-	switch req.RequestType() {
-	case ATTESTATION_UPDATE:
-		return s.ResponseAttestationUpdate(req)
-	case ATTESTATION_LATEST:
-		return s.ResponseAttestationLatest(req)
-	case ATTESTATION_COMMITMENT:
-		s.updateCommitment() // TODO: Remove - proper commitment tool implemented
-		return s.ResponseAttestationCommitment(req)
-	default:
-		baseResp := BaseResponse{}
-		baseResp.SetResponseError("**Server** Non supported request type " + req.RequestType())
-		return baseResp
-	}
-}
-
-// Main attest server method listening to remote requests and updates
-func (s *Server) Run() {
-	defer s.wg.Done()
-
-	for {
-		select {
-		case <-s.ctx.Done():
-			return
-		case req := <-s.attestationServiceChannel: // attestation service requests
-			req.Response <- s.respondAttestation(req.Request)
-		}
-	}
 }

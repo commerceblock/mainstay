@@ -51,7 +51,7 @@ type AttestService struct {
 	wg            *sync.WaitGroup
 	config        *confpkg.Config
 	attester      *AttestClient
-	serverChannel chan server.RequestWithResponseChannel
+	server        *server.Server
 	publisher     *messengers.PublisherZmq
 	subscribers   []*messengers.SubscriberZmq
 	state         AttestationState
@@ -65,7 +65,7 @@ var poller *zmq.Poller // poller to add all subscriber/publisher sockets
 
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, serverChannel chan server.RequestWithResponseChannel, config *confpkg.Config) *AttestService {
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, config *confpkg.Config) *AttestService {
 	if len(config.InitTX()) != 64 {
 		log.Fatal("Incorrect txid size")
 	}
@@ -84,7 +84,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, serverChannel cha
 	}
 	attestDelay = 30 * time.Second // add some delay for subscribers to have time to set up
 
-	return &AttestService{ctx, wg, config, attester, serverChannel, publisher, subscribers, ASTATE_INIT}
+	return &AttestService{ctx, wg, config, attester, server, publisher, subscribers, ASTATE_INIT}
 }
 
 // Run Attest Service
@@ -178,21 +178,20 @@ func (s *AttestService) doAttestation() {
 		} else {
 			log.Println("*AttestService* NEW ATTESTATION")
 
-			// request latest hash from server and await response
-			responseChan := make(chan server.Response)
-			reqCommitment := server.BaseRequest{}
-			reqCommitment.SetRequestType(server.ATTESTATION_COMMITMENT)
-			s.serverChannel <- server.RequestWithResponseChannel{reqCommitment, responseChan}
-			hash := (<-responseChan).(server.AttestastionCommitmentResponse).Commitment
+			// get latest commitment hash from server
+            latestHash, latestErr := s.server.GetLatestCommitment()
+            if s.failureState(latestErr) {
+                return
+            }
 
-			log.Printf("********** hash: %s\n", hash.String())
-			if hash == latestAttestation.AttestedHash { // skip attestation if same client hash
+			log.Printf("********** hash: %s\n", latestHash.String())
+			if latestHash == latestAttestation.AttestedHash { // skip attestation if same client hash
 				log.Printf("********** Skipping attestation - Client hash already attested")
 				return
 			}
 			// publish new attestation hash
-			s.publisher.SendMessage(hash.CloneBytes(), confpkg.TOPIC_NEW_HASH)
-			latestAttestation = models.NewAttestation(chainhash.Hash{}, hash)
+			s.publisher.SendMessage(latestHash.CloneBytes(), confpkg.TOPIC_NEW_HASH)
+			latestAttestation = models.NewAttestation(chainhash.Hash{}, latestHash)
 			s.state = ASTATE_COLLECTING_PUBKEYS // update attestation state
 		}
 
@@ -262,12 +261,11 @@ func (s *AttestService) doAttestation() {
 			}
 		}
 
-		// request latest attestation from server and await response
-		responseChan := make(chan server.Response)
-		reqAttestation := server.BaseRequest{}
-		reqAttestation.SetRequestType(server.ATTESTATION_LATEST)
-		s.serverChannel <- server.RequestWithResponseChannel{reqAttestation, responseChan}
-		latest := (<-responseChan).(server.AttestationLatestResponse).Attestation
+		// get last attestation commitment from server
+        latest, latestErr := s.server.GetLatestAttestation()
+        if s.failureState(latestErr) {
+            return
+        }
 
 		txid, attestationErr := s.attester.signAndSendAttestation(&latestAttestation.Tx, sigs, latest.AttestedHash)
 		if s.failureState(attestationErr) {
@@ -285,13 +283,9 @@ func (s *AttestService) updateServer(attestation models.Attestation) {
 	//s.server.UpdateChan() <- *latestAttestation // send server update just to make sure it's up to date
 	log.Println("*AttestService* Updating server with latest attestation")
 
-	responseChan := make(chan server.Response)
-	reqUpdate := server.AttestationUpdateRequest{Attestation: attestation}
-	reqUpdate.SetRequestType(server.ATTESTATION_UPDATE)
-	s.serverChannel <- server.RequestWithResponseChannel{reqUpdate, responseChan}
-	updated := (<-responseChan).(server.AttestationUpdateResponse).Updated
+    errUpdate := s.server.UpdateLatestAttestation(attestation)
 
-	if !updated {
+	if errUpdate != nil {
 		log.Fatal(errors.New("Server update failed"))
 	} else {
 		log.Println("*AttestService* Server update successful")
