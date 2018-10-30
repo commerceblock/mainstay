@@ -32,14 +32,13 @@ type Server struct {
 	commitmentKeys    []string
 
 	// to remove soon
-	latestHeight int32
-	sideClient   clients.SidechainClient
+	sideClient clients.SidechainClient
 }
 
 // NewServer returns a pointer to an Server instance
 func NewServer(ctx context.Context, wg *sync.WaitGroup, config *config.Config) *Server {
 	attChan := make(chan RequestWithResponseChannel)
-	return &Server{ctx, wg, attChan, *models.NewAttestationDefault(), chainhash.Hash{}, config.ClientKeys(), 0, config.OceanClient()}
+	return &Server{ctx, wg, attChan, *models.NewAttestationDefault(), chainhash.Hash{}, config.ClientKeys(), config.OceanClient()}
 }
 
 // Return channel for communcation with attestation service
@@ -50,14 +49,6 @@ func (s *Server) AttestationServiceChannel() chan RequestWithResponseChannel {
 // Update information on the latest attestation
 func (s *Server) updateLatest(tx models.Attestation) bool {
 	s.latestAttestation = tx
-
-	// TODO: REMOVE - height will be embedded in the Commitment model
-	latestheight, err := s.sideClient.GetBlockHeight(&s.latestAttestation.AttestedHash)
-	if err != nil {
-		log.Printf("**Server** No client hash on confirmed tx")
-	} else {
-		s.latestHeight = latestheight
-	}
 
 	return true
 }
