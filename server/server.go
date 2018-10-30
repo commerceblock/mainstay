@@ -60,6 +60,14 @@ func (s *Server) GetLatestCommitment() (chainhash.Hash, error) {
 	return s.latestCommitment, nil
 }
 
+// Return latest commitment stored in the server
+func (s *Server) GetAttestationCommitment(txid chainhash.Hash) (chainhash.Hash, error) {
+
+    // db interface
+
+    return chainhash.Hash{}, nil
+}
+
 // Update latest commitment hash
 func (s *Server) updateCommitment() {
 	hash, err := s.sideClient.GetBestBlockHash()

@@ -117,7 +117,11 @@ func (s *AttestService) doAttestation() {
 		if s.failureState(unconfirmedErr) {
 			return
 		} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
-			latestAttestation = models.NewAttestation(unconfirmedTxid, s.getTxAttestedHash(unconfirmedTxid))
+            commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid)
+            if s.failureState(commitmentErr) {
+                return
+            }
+			latestAttestation = models.NewAttestation(unconfirmedTxid, commitment)
 			s.state = ASTATE_UNCONFIRMED
 		} else {
 			success, txunspent, unspentErr := s.attester.findLastUnspent()
@@ -125,8 +129,11 @@ func (s *AttestService) doAttestation() {
 				return
 			} else if success {
 				txunspentHash, _ := chainhash.NewHashFromStr(txunspent.TxID)
-				latestCommitment = s.getTxAttestedHash(*txunspentHash)
-				latestAttestation = models.NewAttestation(*txunspentHash, latestCommitment)
+				commitment, commitmentErr := s.server.GetAttestationCommitment(*txunspentHash)
+                if s.failureState(commitmentErr) {
+                    return
+                }
+				latestAttestation = models.NewAttestation(*txunspentHash, commitment)
 				s.state = ASTATE_CONFIRMED
 
 				s.updateServer(*latestAttestation) // update server with latest attestation
@@ -169,7 +176,11 @@ func (s *AttestService) doAttestation() {
 		if s.failureState(unconfirmedErr) {
 			return
 		} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
-			latestAttestation = models.NewAttestation(unconfirmedTxid, s.getTxAttestedHash(unconfirmedTxid))
+            commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid)
+            if s.failureState(commitmentErr) {
+                return
+            }
+			latestAttestation = models.NewAttestation(unconfirmedTxid, commitment)
 			s.state = ASTATE_UNCONFIRMED
 
 			log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.AttestedHash.String())
@@ -299,11 +310,4 @@ func (s *AttestService) failureState(err error) bool {
 		return true
 	}
 	return false
-}
-
-// THIS WILL BE REPLACED BY QUERYING SERVER FOR COMMITMENT OF CORRESPONDING TX
-
-// Find the attested sidechain hash from a transaction, by testing for all sidechain hashes
-func (s *AttestService) getTxAttestedHash(txid chainhash.Hash) chainhash.Hash {
-	return chainhash.Hash{}
 }
