@@ -14,7 +14,6 @@ import (
 	"mainstay/clients"
 	"mainstay/config"
 	"mainstay/models"
-	"mainstay/requestapi"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
@@ -26,7 +25,7 @@ type Server struct {
 	ctx context.Context
 	wg  *sync.WaitGroup
 
-	attestationServiceChannel chan requestapi.RequestWithResponseChannel
+	attestationServiceChannel chan RequestWithResponseChannel
 
 	latestAttestation models.Attestation
 	latestCommitment  chainhash.Hash
@@ -39,12 +38,12 @@ type Server struct {
 
 // NewServer returns a pointer to an Server instance
 func NewServer(ctx context.Context, wg *sync.WaitGroup, config *config.Config) *Server {
-	attChan := make(chan requestapi.RequestWithResponseChannel)
+	attChan := make(chan RequestWithResponseChannel)
 	return &Server{ctx, wg, attChan, *models.NewAttestationDefault(), chainhash.Hash{}, config.ClientKeys(), 0, config.OceanClient()}
 }
 
 // Return channel for communcation with attestation service
-func (s *Server) AttestationServiceChannel() chan requestapi.RequestWithResponseChannel {
+func (s *Server) AttestationServiceChannel() chan RequestWithResponseChannel {
 	return s.attestationServiceChannel
 }
 
@@ -73,17 +72,17 @@ func (s *Server) updateCommitment() {
 }
 
 // Attestation Respond returns appropriate response based on request type
-func (s *Server) respondAttestation(req requestapi.Request) requestapi.Response {
+func (s *Server) respondAttestation(req Request) Response {
 	switch req.RequestType() {
-	case requestapi.ATTESTATION_UPDATE:
+	case ATTESTATION_UPDATE:
 		return s.ResponseAttestationUpdate(req)
-	case requestapi.ATTESTATION_LATEST:
+	case ATTESTATION_LATEST:
 		return s.ResponseAttestationLatest(req)
-	case requestapi.ATTESTATION_COMMITMENT:
+	case ATTESTATION_COMMITMENT:
 		s.updateCommitment() // TODO: Remove - proper commitment tool implemented
 		return s.ResponseAttestationCommitment(req)
 	default:
-		baseResp := requestapi.BaseResponse{}
+		baseResp := BaseResponse{}
 		baseResp.SetResponseError("**Server** Non supported request type " + req.RequestType())
 		return baseResp
 	}

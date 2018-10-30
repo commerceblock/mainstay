@@ -4,7 +4,6 @@ import (
 	"context"
 	"mainstay/clients"
 	"mainstay/models"
-	"mainstay/requestapi"
 	"mainstay/test"
 	"sync"
 	"testing"
@@ -26,16 +25,16 @@ func TestServerRespondAttestation(t *testing.T) {
 	server.latestCommitment = *bestblockhash
 
 	// Test ATTESTATION_COMMITMENT request
-	reqCommitment := requestapi.BaseRequest{}
-	reqCommitment.SetRequestType(requestapi.ATTESTATION_COMMITMENT)
-	respCommitment, _ := server.respondAttestation(reqCommitment).(requestapi.AttestastionCommitmentResponse)
+	reqCommitment := BaseRequest{}
+	reqCommitment.SetRequestType(ATTESTATION_COMMITMENT)
+	respCommitment, _ := server.respondAttestation(reqCommitment).(AttestastionCommitmentResponse)
 	assert.Equal(t, "", respCommitment.ResponseError())
 	assert.Equal(t, *bestblockhash, respCommitment.Commitment)
 
 	// Test ATTESTATION_LATEST request
-	reqLatest := requestapi.BaseRequest{}
-	reqLatest.SetRequestType(requestapi.ATTESTATION_LATEST)
-	respLatest, _ := server.respondAttestation(reqLatest).(requestapi.AttestationLatestResponse)
+	reqLatest := BaseRequest{}
+	reqLatest.SetRequestType(ATTESTATION_LATEST)
+	respLatest, _ := server.respondAttestation(reqLatest).(AttestationLatestResponse)
 	assert.Equal(t, "", respLatest.ResponseError())
 	assert.Equal(t, chainhash.Hash{}, respLatest.Attestation.Txid)
 	assert.Equal(t, chainhash.Hash{}, respLatest.Attestation.AttestedHash)
@@ -45,16 +44,16 @@ func TestServerRespondAttestation(t *testing.T) {
 	latest := models.NewAttestation(*txid, *bestblockhash)
 
 	// Test ATTESTATION_UPDATE
-	reqUpdate := requestapi.AttestationUpdateRequest{Attestation: *latest}
-	reqUpdate.SetRequestType(requestapi.ATTESTATION_UPDATE)
-	respUpdate, _ := server.respondAttestation(reqUpdate).(requestapi.AttestationUpdateResponse)
+	reqUpdate := AttestationUpdateRequest{Attestation: *latest}
+	reqUpdate.SetRequestType(ATTESTATION_UPDATE)
+	respUpdate, _ := server.respondAttestation(reqUpdate).(AttestationUpdateResponse)
 	assert.Equal(t, "", respUpdate.ResponseError())
 	assert.Equal(t, true, respUpdate.Updated)
 	assert.Equal(t, *txid, server.latestAttestation.Txid)
 	assert.Equal(t, *bestblockhash, server.latestAttestation.AttestedHash)
 
 	// Test ATTESTATION_LATEST request again after update
-	respLatest2, _ := server.respondAttestation(reqLatest).(requestapi.AttestationLatestResponse)
+	respLatest2, _ := server.respondAttestation(reqLatest).(AttestationLatestResponse)
 	assert.Equal(t, "", respLatest2.ResponseError())
 	assert.Equal(t, *txid, respLatest2.Attestation.Txid)
 	assert.Equal(t, *bestblockhash, respLatest2.Attestation.AttestedHash)
@@ -85,21 +84,21 @@ func TestServer(t *testing.T) {
 	latest := models.NewAttestation(*txid, *bestblockhash)
 
 	// Test requestion ATTESTATION_UPDATE through AttestationServiceChannel
-	responseChan := make(chan requestapi.Response)
-	reqUpdate := requestapi.AttestationUpdateRequest{Attestation: *latest}
-	reqUpdate.SetRequestType(requestapi.ATTESTATION_UPDATE)
-	attChannel <- requestapi.RequestWithResponseChannel{reqUpdate, responseChan}
-	responseUpdate := (<-responseChan).(requestapi.AttestationUpdateResponse)
+	responseChan := make(chan Response)
+	reqUpdate := AttestationUpdateRequest{Attestation: *latest}
+	reqUpdate.SetRequestType(ATTESTATION_UPDATE)
+	attChannel <- RequestWithResponseChannel{reqUpdate, responseChan}
+	responseUpdate := (<-responseChan).(AttestationUpdateResponse)
 	assert.Equal(t, "", responseUpdate.ResponseError())
 	assert.Equal(t, true, responseUpdate.Updated)
 	assert.Equal(t, *txid, server.latestAttestation.Txid)
 	assert.Equal(t, *bestblockhash, server.latestAttestation.AttestedHash)
 
 	// Test requestion ATTESTATION_LATEST through AttestationServiceChannel
-	reqLatest := requestapi.BaseRequest{}
-	reqLatest.SetRequestType(requestapi.ATTESTATION_LATEST)
-	attChannel <- requestapi.RequestWithResponseChannel{reqLatest, responseChan}
-	responseLatest := (<-responseChan).(requestapi.AttestationLatestResponse)
+	reqLatest := BaseRequest{}
+	reqLatest.SetRequestType(ATTESTATION_LATEST)
+	attChannel <- RequestWithResponseChannel{reqLatest, responseChan}
+	responseLatest := (<-responseChan).(AttestationLatestResponse)
 	assert.Equal(t, "", responseLatest.ResponseError())
 	assert.Equal(t, *txid, responseLatest.Attestation.Txid)
 	assert.Equal(t, *bestblockhash, responseLatest.Attestation.AttestedHash)
