@@ -1,8 +1,9 @@
 package crypto
 
 import (
-	"mainstay/clients"
 	"testing"
+
+	"mainstay/clients"
 
 	"github.com/stretchr/testify/assert"
 )

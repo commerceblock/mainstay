@@ -1,10 +1,11 @@
 package attestation
 
 import (
+	"testing"
+
 	"mainstay/clients"
 	"mainstay/models"
 	"mainstay/test"
-	"testing"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/stretchr/testify/assert"

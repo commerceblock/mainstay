@@ -4,12 +4,13 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
+	"time"
+
 	"mainstay/clients"
 	"mainstay/config"
 	"mainstay/crypto"
 	"mainstay/staychain"
-	"os"
-	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"

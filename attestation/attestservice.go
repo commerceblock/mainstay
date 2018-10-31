@@ -11,16 +11,16 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sync"
+	"time"
+
 	confpkg "mainstay/config"
 	"mainstay/messengers"
 	"mainstay/models"
 	"mainstay/server"
-	"sync"
-	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
-
 	zmq "github.com/pebbe/zmq4"
 )
 

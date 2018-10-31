@@ -3,9 +3,10 @@ package main
 
 import (
 	"fmt"
+	"time"
+
 	"mainstay/config"
 	"mainstay/messengers"
-	"time"
 )
 
 const CLIENT_PUB = "123456789ABCDEF"

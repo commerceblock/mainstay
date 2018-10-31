@@ -5,14 +5,15 @@ import (
 	"context"
 	"flag"
 	"log"
+	"os"
+	"os/signal"
+	"sync"
+
 	"mainstay/attestation"
 	"mainstay/clients"
 	"mainstay/config"
 	"mainstay/server"
 	"mainstay/test"
-	"os"
-	"os/signal"
-	"sync"
 )
 
 var (

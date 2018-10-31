@@ -2,9 +2,10 @@
 package config
 
 import (
-	"mainstay/clients"
 	"os"
 	"strings"
+
+	"mainstay/clients"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/rpcclient"
