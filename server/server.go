@@ -21,7 +21,7 @@ import (
 // Methods to get latest state by attestation service
 type Server struct {
 	latestAttestation models.Attestation
-	latestCommitment  chainhash.Hash
+	latestCommitment  *models.Commitment
 
 	// to remove soon
 	sideClient clients.SidechainClient
@@ -29,7 +29,7 @@ type Server struct {
 
 // NewServer returns a pointer to an Server instance
 func NewServer(config *config.Config, sideClient clients.SidechainClient) *Server {
-	return &Server{*models.NewAttestationDefault(), chainhash.Hash{}, sideClient}
+	return &Server{*models.NewAttestationDefault(), (*models.Commitment)(nil), sideClient}
 }
 
 // Update latest attestation in the server
@@ -50,22 +50,22 @@ func (s *Server) GetLatestAttestation() (models.Attestation, error) {
 }
 
 // Return latest commitment stored in the server
-func (s *Server) GetLatestCommitment() (chainhash.Hash, error) {
+func (s *Server) GetLatestCommitment() (models.Commitment, error) {
 
 	// dummy just for now
 	s.updateCommitment()
 
 	//db interface
 
-	return s.latestCommitment, nil
+	return *s.latestCommitment, nil
 }
 
 // Return commitment for a particular attestation transaction id
-func (s *Server) GetAttestationCommitment(txid chainhash.Hash) (chainhash.Hash, error) {
+func (s *Server) GetAttestationCommitment(txid chainhash.Hash) (*models.Commitment, error) {
 
 	// db interface
 
-	return chainhash.Hash{}, nil
+	return (*models.Commitment)(nil), nil
 }
 
 // TODO REMOVE: Update latest commitment hash
@@ -74,5 +74,5 @@ func (s *Server) updateCommitment() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	s.latestCommitment = *hash
+	s.latestCommitment, _ = models.NewCommitment([]chainhash.Hash{*hash})
 }

@@ -11,16 +11,16 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sync"
+	"time"
+
 	confpkg "mainstay/config"
 	"mainstay/messengers"
 	"mainstay/models"
 	"mainstay/server"
-	"sync"
-	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
-
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -56,7 +56,6 @@ type AttestService struct {
 }
 
 var latestAttestation *models.Attestation // hold latest state
-var latestCommitment chainhash.Hash       // hold latest commitment
 var attestDelay time.Duration             // initially 0 delay
 
 var poller *zmq.Poller // poller to add all subscriber/publisher sockets
@@ -137,8 +136,8 @@ func (s *AttestService) doAttestation() {
 				s.state = ASTATE_CONFIRMED
 
 				s.updateServer(*latestAttestation) // update server with latest attestation
-
-				s.publisher.SendMessage(latestCommitment.CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) // update clients
+				confirmedHash := latestAttestation.CommitmentHash()
+				s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) // update clients
 			} else {
 				log.Println("*AttestService* No unconfirmed (mempool) or unspent tx found. Sleeping...")
 				attestDelay = time.Duration(ATTEST_WAIT_TIME*10) * time.Second // add wait time
@@ -149,7 +148,7 @@ func (s *AttestService) doAttestation() {
 	// - Check for unconfirmed transactions in the mempool of the main client
 	// - If confirmed, initiate new attestation
 	case ASTATE_UNCONFIRMED:
-		log.Printf("*AttestService* AWAITING CONFIRMATION \ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.AttestedHash.String())
+		log.Printf("*AttestService* AWAITING CONFIRMATION \ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.CommitmentHash().String())
 		newTx, err := s.config.MainClient().GetTransaction(&latestAttestation.Txid)
 		if s.failureState(err) {
 			return
@@ -162,8 +161,8 @@ func (s *AttestService) doAttestation() {
 
 			s.updateServer(*latestAttestation) // update server with latest attestation
 
-			latestCommitment = latestAttestation.AttestedHash
-			s.publisher.SendMessage(latestCommitment.CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) //update clients
+			confirmedHash := latestAttestation.CommitmentHash()
+			s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) //update clients
 		}
 
 	// ASTATE_CONFIRMED, ASTATE_NEW_ATTESTATION
@@ -183,24 +182,25 @@ func (s *AttestService) doAttestation() {
 			latestAttestation = models.NewAttestation(unconfirmedTxid, commitment)
 			s.state = ASTATE_UNCONFIRMED
 
-			log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.AttestedHash.String())
+			log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", latestAttestation.Txid.String(), latestAttestation.CommitmentHash().String())
 		} else {
 			log.Println("*AttestService* NEW ATTESTATION")
 
 			// get latest commitment hash from server
-			latestHash, latestErr := s.server.GetLatestCommitment()
+			latestCommitment, latestErr := s.server.GetLatestCommitment()
 			if s.failureState(latestErr) {
 				return
 			}
+			latestCommitmentHash := latestCommitment.GetCommitmentHash()
 
-			log.Printf("********** hash: %s\n", latestHash.String())
-			if latestHash == latestAttestation.AttestedHash { // skip attestation if same client hash
+			log.Printf("********** hash: %s\n", latestCommitmentHash.String())
+			if latestCommitmentHash == latestAttestation.CommitmentHash() { // skip attestation if same client hash
 				log.Printf("********** Skipping attestation - Client hash already attested")
 				return
 			}
 			// publish new attestation hash
-			s.publisher.SendMessage(latestHash.CloneBytes(), confpkg.TOPIC_NEW_HASH)
-			latestAttestation = models.NewAttestation(chainhash.Hash{}, latestHash)
+			s.publisher.SendMessage((&latestCommitmentHash).CloneBytes(), confpkg.TOPIC_NEW_HASH)
+			latestAttestation = models.NewAttestation(chainhash.Hash{}, &latestCommitment)
 			s.state = ASTATE_COLLECTING_PUBKEYS // update attestation state
 		}
 
@@ -213,12 +213,12 @@ func (s *AttestService) doAttestation() {
 		log.Println("*AttestService* COLLECTING PUBKEYS")
 		attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
 
-		key, keyErr := s.attester.GetNextAttestationKey(latestAttestation.AttestedHash)
+		key, keyErr := s.attester.GetNextAttestationKey(latestAttestation.CommitmentHash())
 		if s.failureState(keyErr) {
 			return
 		}
 
-		paytoaddr, _ := s.attester.GetNextAttestationAddr(key, latestAttestation.AttestedHash)
+		paytoaddr, _ := s.attester.GetNextAttestationAddr(key, latestAttestation.CommitmentHash())
 		importErr := s.attester.ImportAttestationAddr(paytoaddr)
 		if s.failureState(importErr) {
 			return
@@ -276,7 +276,7 @@ func (s *AttestService) doAttestation() {
 			return
 		}
 
-		txid, attestationErr := s.attester.signAndSendAttestation(&latestAttestation.Tx, sigs, latest.AttestedHash)
+		txid, attestationErr := s.attester.signAndSendAttestation(&latestAttestation.Tx, sigs, latest.CommitmentHash())
 		if s.failureState(attestationErr) {
 			return
 		}

@@ -2,10 +2,11 @@ package crypto
 
 import (
 	"encoding/hex"
+	"testing"
+
 	"mainstay/clients"
 	"mainstay/config"
 	"mainstay/test"
-	"testing"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"

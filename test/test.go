@@ -4,12 +4,13 @@ package test
 import (
 	"context"
 	"log"
-	"mainstay/clients"
-	confpkg "mainstay/config"
 	"os"
 	"os/exec"
 	"sync"
 	"time"
+
+	"mainstay/clients"
+	confpkg "mainstay/config"
 
 	"github.com/btcsuite/btcd/btcjson"
 )

@@ -3,6 +3,7 @@ package attestation
 import (
 	"encoding/hex"
 	"log"
+
 	confpkg "mainstay/config"
 	"mainstay/crypto"
 
