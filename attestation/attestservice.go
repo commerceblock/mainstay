@@ -29,11 +29,12 @@ type AttestationState int
 
 // Attestation states
 const (
-	ASTATE_INIT                      AttestationState = 0
-	ASTATE_NEXT_COMMITMENT           AttestationState = 1
-	ASTATE_NEW_ATTESTATION           AttestationState = 2
-	ASTATE_SIGN_AND_SEND_ATTESTATION AttestationState = 3
-	ASTATE_AWAIT_CONFIRMATION        AttestationState = 4
+	ASTATE_INIT               AttestationState = 0
+	ASTATE_NEXT_COMMITMENT    AttestationState = 1
+	ASTATE_NEW_ATTESTATION    AttestationState = 2
+	ASTATE_SIGN_ATTESTATION   AttestationState = 3
+	ASTATE_SEND_ATTESTATION   AttestationState = 4
+	ASTATE_AWAIT_CONFIRMATION AttestationState = 5
 )
 
 // Waiting time between attestations and/or attestation confirmation attempts
@@ -59,10 +60,10 @@ var poller *zmq.Poller // poller to add all subscriber/publisher sockets
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
 func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, config *confpkg.Config) *AttestService {
-    // Check init tx size
-    if len(config.InitTX()) != 64 {
-        log.Fatal("Incorrect txid size")
-    }
+	// Check init tx size
+	if len(config.InitTX()) != 64 {
+		log.Fatal("Incorrect txid size")
+	}
 
 	// initiate attestation client
 	attester := NewAttestClient(config)
@@ -131,8 +132,12 @@ func (s *AttestService) doStateInit() {
 			}
 			s.attestation = models.NewAttestation(*txunspentHash, &commitment)
 
-			// update server with latest attestation
-			s.updateServer(*s.attestation)
+			// update server with latest confirmed attestation
+			errUpdate := s.server.UpdateLatestAttestation(*s.attestation, true)
+			if s.checkFailure(errUpdate) {
+				return // will rebound to init
+			}
+
 			confirmedHash := s.attestation.CommitmentHash()
 			s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) // update clients
 
@@ -210,19 +215,18 @@ func (s *AttestService) doStateNewAttestation() {
 		s.attestation.Tx.Serialize(&txbytes)
 		s.publisher.SendMessage(txbytes.Bytes(), confpkg.TOPIC_NEW_TX)
 
-		s.state = ASTATE_SIGN_AND_SEND_ATTESTATION // update attestation state
+		s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 	} else {
 		s.checkFailure(errors.New("Attestation unsuccessful - No valid unspent found"))
 		return // will rebound to init
 	}
 }
 
-// ASTATE_SIGN_AND_SEND_ATTESTATION
+// ASTATE_SIGN_ATTESTATION
 // - Collect signatures from client signers
 // - Combine signatures them and sign the attestation transaction
-// - Send attestation transaction through the client to the network
-func (s *AttestService) doStateSignAndSendAttestation() {
-	log.Println("*AttestService* SIGN AND SEND ATTESTATION")
+func (s *AttestService) doStateSignAttestation() {
+	log.Println("*AttestService* SIGN ATTESTATION")
 
 	// Read sigs using subscribers
 	var sigs [][]byte
@@ -242,10 +246,32 @@ func (s *AttestService) doStateSignAndSendAttestation() {
 	if s.checkFailure(latestErr) {
 		return // will rebound to init
 	}
+
+	// sign attestation with combined sigs and last commitment
 	lastCommitment := lastAttestation.CommitmentHash()
+	signedTx, signErr := s.attester.signAttestation(&s.attestation.Tx, sigs, lastCommitment)
+	if s.checkFailure(signErr) {
+		return // will rebound to init
+	}
+	s.attestation.Tx = *signedTx
+
+	s.state = ASTATE_SEND_ATTESTATION // update attestation state
+}
+
+// ASTATE_SEND_ATTESTATION
+// - Store unconfirmed attestation to server prior to sending
+// - Send attestation transaction through the client to the network
+func (s *AttestService) doStateSendAttestation() {
+	log.Println("*AttestService* SEND ATTESTATION")
+
+	// update server with latest unconfirmed attestation, in case the service fails
+	errUpdate := s.server.UpdateLatestAttestation(*s.attestation, false)
+	if s.checkFailure(errUpdate) {
+		return // will rebound to init
+	}
 
 	// sign attestation with combined signatures and send through client to network
-	txid, attestationErr := s.attester.signAndSendAttestation(&s.attestation.Tx, sigs, lastCommitment)
+	txid, attestationErr := s.attester.sendAttestation(&s.attestation.Tx)
 	if s.checkFailure(attestationErr) {
 		return // will rebound to init
 	}
@@ -267,7 +293,11 @@ func (s *AttestService) doStateAwaitConfirmation() {
 	if newTx.BlockHash != "" {
 		log.Printf("********** attestation confirmed with txid: (%s)\n", s.attestation.Txid.String())
 
-		s.updateServer(*s.attestation) // update server with latest attestation
+		// update server with latest confirmed attestation
+		errUpdate := s.server.UpdateLatestAttestation(*s.attestation, true)
+		if s.checkFailure(errUpdate) {
+			return // will rebound to init
+		}
 
 		confirmedHash := s.attestation.CommitmentHash()
 		s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) //update clients
@@ -289,30 +319,21 @@ func (s *AttestService) doAttestation() {
 	case ASTATE_NEW_ATTESTATION:
 		s.doStateNewAttestation()
 
-	case ASTATE_SIGN_AND_SEND_ATTESTATION:
-		s.doStateSignAndSendAttestation()
+	case ASTATE_SIGN_ATTESTATION:
+		s.doStateSignAttestation()
+
+	case ASTATE_SEND_ATTESTATION:
+		s.doStateSendAttestation()
 
 	case ASTATE_AWAIT_CONFIRMATION:
 		s.doStateAwaitConfirmation()
 	}
 }
 
-// Method to update server with latest attestation
-func (s *AttestService) updateServer(attestation models.Attestation) {
-	log.Println("********** updating server with latest attestation")
-
-	errUpdate := s.server.UpdateLatestAttestation(attestation)
-	if errUpdate != nil {
-		s.checkFailure(errors.New("Server update failed"))
-	} else {
-		log.Println("********** server update successful")
-	}
-}
-
 // Set to error state and provide debugging information
 func (s *AttestService) checkFailure(err error) bool {
 	if err != nil {
-		log.Println("*AttestService* ATTESTATION FAILURE")
+		log.Println("*AttestService* ATTESTATION SERVICE FAILURE")
 		log.Println(err)
 		s.state = ASTATE_INIT
 		return true

@@ -40,7 +40,7 @@ func TestServer(t *testing.T) {
 	latest := models.NewAttestation(*txid, latestCommitment)
 
 	// Test update latest attestation
-	errUpdate := server.UpdateLatestAttestation(*latest)
+	errUpdate := server.UpdateLatestAttestation(*latest, true)
 	assert.Equal(t, nil, errUpdate)
 	assert.Equal(t, *txid, server.latestAttestation.Txid)
 	assert.Equal(t, *bestblockhash, server.latestAttestation.CommitmentHash())

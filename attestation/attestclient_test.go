@@ -60,8 +60,10 @@ func TestAttestClient(t *testing.T) {
 		}
 
 		// test signing and sending attestation
-		txid, signsendErr := client.signAndSendAttestation(tx, [][]byte{}, lastHash)
-		assert.Equal(t, nil, signsendErr)
+		signedTx, signErr := client.signAttestation(tx, [][]byte{}, lastHash)
+		assert.Equal(t, nil, signErr)
+		txid, sendErr := client.sendAttestation(signedTx)
+		assert.Equal(t, nil, sendErr)
 
 		sideClientFake.Generate(1)
 		lastHash = *oceanhash

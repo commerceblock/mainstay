@@ -172,13 +172,13 @@ func (w *AttestClient) SignTransaction(hash chainhash.Hash, msgTx wire.MsgTx) (*
 	return signedMsgTx, redeemScript, nil
 }
 
-// Sign and send the latest attestation transaction
-func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx, sigs [][]byte, hash chainhash.Hash) (chainhash.Hash, error) {
+// Sign the latest attestation transaction with the combined signatures
+func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]byte, hash chainhash.Hash) (*wire.MsgTx, error) {
 
 	// sign generated transaction
 	signedMsgTx, redeemScript, errSign := w.SignTransaction(hash, *msgtx)
 	if errSign != nil {
-		return chainhash.Hash{}, errSign
+		return nil, errSign
 	}
 
 	// MultiSig case - combine sigs and create new scriptSig
@@ -193,7 +193,14 @@ func (w *AttestClient) signAndSendAttestation(msgtx *wire.MsgTx, sigs [][]byte, 
 		}
 	}
 
-	txhash, errSend := w.MainClient.SendRawTransaction(signedMsgTx, false)
+	return signedMsgTx, nil
+}
+
+// Send the latest attestation transaction
+func (w *AttestClient) sendAttestation(msgtx *wire.MsgTx) (chainhash.Hash, error) {
+
+	// send signed attestation
+	txhash, errSend := w.MainClient.SendRawTransaction(msgtx, false)
 	if errSend != nil {
 		return chainhash.Hash{}, errSend
 	}
