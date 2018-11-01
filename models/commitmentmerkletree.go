@@ -73,6 +73,11 @@ func hashLeaves(left chainhash.Hash, right chainhash.Hash) *chainhash.Hash {
 }
 
 func nextPow(n int) int {
+	// if 1 - return 2 so we always get a tree
+	if n == 1 {
+		return 2
+	}
+
 	// Return the number if it's already a power of 2.
 	if n&(n-1) == 0 {
 		return n
@@ -208,4 +213,16 @@ func buildMerkleProof(position int, tree []*chainhash.Hash) CommitmentMerkleProo
 	proof.Ops = ops
 	proof.Root = *tree[len(tree)-1]
 	return proof
+}
+
+func proveMerkleProof(proof CommitmentMerkleProof) bool {
+	hash := proof.Commitment
+	for i := range proof.Ops {
+		if proof.Ops[i].Append {
+			hash = *hashLeaves(hash, proof.Ops[i].Commitment)
+		} else {
+			hash = *hashLeaves(proof.Ops[i].Commitment, hash)
+		}
+	}
+	return hash == proof.Root
 }
