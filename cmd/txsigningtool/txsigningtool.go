@@ -22,6 +22,10 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
+// The transaction signing tool is used by members of the multisig script
+// used to generate new attestations transactions. This process communicates
+// with the main attestation service to receive latest commitments and sign transactions
+
 var (
 	tx0          string
 	pk0          string

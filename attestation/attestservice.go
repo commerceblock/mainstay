@@ -1,9 +1,3 @@
-/*
-Package attestation implements the MainStay protocol.
-
-Implemented using an Attestation Service structure that runs a main processes that
-handles generating attestations and maintaining communication to a bitcoin wallet
-*/
 package attestation
 
 import (
@@ -23,6 +17,9 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	zmq "github.com/pebbe/zmq4"
 )
+
+// Attestation Service is the main processes that handles generating
+// attestations and maintaining communication to a bitcoin wallet
 
 // Attestation state type
 type AttestationState int

@@ -1,4 +1,3 @@
-// Package crypto contains utilities for generating and validation attestation addresses.
 package crypto
 
 import (
@@ -10,6 +9,8 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 )
+
+// Various utility functionalities concerning key tweaking under BIP-175
 
 // Get private key wallet readable format from a string encoded private key
 func GetWalletPrivKey(privKey string) *btcutil.WIF {

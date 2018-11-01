@@ -1,4 +1,3 @@
-// Package conf handles reading conf files and establishing client RPC connections.
 package config
 
 import (

@@ -1,4 +1,3 @@
-// Package crypto contains utilities for generating and validation attestation addresses.
 package crypto
 
 import (
@@ -11,6 +10,8 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 )
+
+// Various utility functions concerning multisig and scripts
 
 // Raw method to parse a multisig script and get pubkeys and num of sigs
 func ParseRedeemScript(script string) ([]*btcec.PublicKey, int) {

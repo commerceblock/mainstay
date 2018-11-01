@@ -5,12 +5,6 @@
         "rpcpass": "MAINSTAY_CLIENT_PASS",
         "chain": "testnet"
     },
-    "ocean": {
-        "rpcurl": "",
-        "rpcuser": "",
-        "rpcpass": "",
-        "chain": ""
-    },
     "misc": {
         "multisignodes": ""
     }
