@@ -33,5 +33,5 @@ func (c Commitment) GetMerkleCommitments() []chainhash.Hash {
 
 // Get merkle root hash for Commitment
 func (c Commitment) GetCommitmentHash() chainhash.Hash {
-	return *c.tree.getMerkleRoot()
+	return c.tree.getMerkleRoot()
 }

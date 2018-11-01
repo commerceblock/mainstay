@@ -49,7 +49,7 @@ func TestMerkleTree(t *testing.T) {
 	commitmentMerkleTree := CommitmentMerkleTree{}
 	commitmentMerkleTree.commitments = commitments
 	commitmentMerkleTree.updateTreeStore()
-	assert.Equal(t, commitmentMerkleTree.getMerkleRoot(), merkleTree[6])
+	assert.Equal(t, commitmentMerkleTree.getMerkleRoot(), *merkleTree[6])
 
 	// test partial merkle tree with 3 hashes
 	partialCommitments := []chainhash.Hash{*hash1, *hash2, *hash3}
@@ -68,7 +68,7 @@ func TestMerkleTree(t *testing.T) {
 	partialCommitmentMerkleTree := CommitmentMerkleTree{}
 	partialCommitmentMerkleTree.commitments = partialCommitments
 	partialCommitmentMerkleTree.updateTreeStore()
-	assert.Equal(t, partialCommitmentMerkleTree.getMerkleRoot(), partialMerkleTree[6])
+	assert.Equal(t, partialCommitmentMerkleTree.getMerkleRoot(), *partialMerkleTree[6])
 
 	// test partial merkle tree with 5 hashes
 	partialCommitments5 := []chainhash.Hash{*hash1, *hash2, *hash3, *hash4, *hash5}
@@ -97,5 +97,5 @@ func TestMerkleTree(t *testing.T) {
 	partialCommitmentMerkleTree5 := CommitmentMerkleTree{}
 	partialCommitmentMerkleTree5.commitments = partialCommitments5
 	partialCommitmentMerkleTree5.updateTreeStore()
-	assert.Equal(t, partialCommitmentMerkleTree5.getMerkleRoot(), partialMerkleTree5[14])
+	assert.Equal(t, partialCommitmentMerkleTree5.getMerkleRoot(), *partialMerkleTree5[14])
 }

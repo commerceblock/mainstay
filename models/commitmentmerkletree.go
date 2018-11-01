@@ -85,10 +85,9 @@ func nextPow(n int) int {
 
 // CommitmentMerkleTree structure
 type CommitmentMerkleTree struct {
-	numOfLeaves int
 	commitments []chainhash.Hash
 	treeStore   []*chainhash.Hash
-	root        *chainhash.Hash
+	root        chainhash.Hash
 }
 
 // New CommitmentMerkleTree instance
@@ -103,21 +102,21 @@ func NewCommitmentMerkleTree(commitments []chainhash.Hash) CommitmentMerkleTree 
 	myTreeStore := make([]*chainhash.Hash, treeSize)
 	myTreeStore = buildMerkleTree(myCommitments)
 
-	myRoot := myTreeStore[treeSize-1]
+	myRoot := *myTreeStore[treeSize-1]
 
-	return CommitmentMerkleTree{leavesSize, myCommitments, myTreeStore, myRoot}
+	return CommitmentMerkleTree{myCommitments, myTreeStore, myRoot}
 }
 
 // Build commitment merkle tree store from commitment hashes
 func (m *CommitmentMerkleTree) updateTreeStore() {
 	m.treeStore = buildMerkleTree(m.commitments)
-	m.root = m.treeStore[len(m.treeStore)-1]
+	m.root = *m.treeStore[len(m.treeStore)-1]
 }
 
 // Get merkle tree commitment hash for a specific position in the tree
 func (m CommitmentMerkleTree) getMerkleCommitment(position int) (chainhash.Hash, error) {
-	if position >= m.numOfLeaves {
-		return chainhash.Hash{}, errors.New(fmt.Sprintf("Position %d out of index for merkle tree number of leaves %d", position, m.numOfLeaves))
+	if position >= len(m.commitments) {
+		return chainhash.Hash{}, errors.New(fmt.Sprintf("Position %d out of index for merkle tree number of leaves %d", position, len(m.commitments)))
 	}
 	return m.commitments[position], nil
 }
@@ -129,8 +128,8 @@ func (m CommitmentMerkleTree) getMerkleCommitments() []chainhash.Hash {
 
 // TODO:
 func (m CommitmentMerkleTree) getMerkleProof(position int) (*interface{}, error) {
-	if position >= m.numOfLeaves {
-		return nil, errors.New(fmt.Sprintf("Position %d out of index for merkle tree number of leaves %d", position, m.numOfLeaves))
+	if position >= len(m.commitments) {
+		return nil, errors.New(fmt.Sprintf("Position %d out of index for merkle tree number of leaves %d", position, len(m.commitments)))
 	}
 	return nil, nil
 }
@@ -146,6 +145,6 @@ func (m CommitmentMerkleTree) getMerkleTree() []*chainhash.Hash {
 }
 
 // Get tree merkle root
-func (m CommitmentMerkleTree) getMerkleRoot() *chainhash.Hash {
+func (m CommitmentMerkleTree) getMerkleRoot() chainhash.Hash {
 	return m.root
 }
