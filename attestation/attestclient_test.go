@@ -33,16 +33,19 @@ func TestAttestClient(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		// Generate attestation transaction with the unspent vout
 		oceanhash, _ := sideClientFake.GetBestBlockHash()
+		oceanCommitment, errCommitment := models.NewCommitment([]chainhash.Hash{*oceanhash})
+		assert.Equal(t, nil, errCommitment)
+		oceanCommitmentHash := oceanCommitment.GetCommitmentHash()
 
 		// test getting next attestation key
-		key, errKey := client.GetNextAttestationKey(*oceanhash)
+		key, errKey := client.GetNextAttestationKey(oceanCommitmentHash)
 		assert.Equal(t, nil, errKey)
 
 		// test getting next attestation address
-		addr, script := client.GetNextAttestationAddr(key, *oceanhash)
+		addr, script := client.GetNextAttestationAddr(key, oceanCommitmentHash)
 
 		// test GetKeyAndScriptFromHash returns the same results
-		keyTest, scriptTest := client.GetKeyAndScriptFromHash(*oceanhash)
+		keyTest, scriptTest := client.GetKeyAndScriptFromHash(oceanCommitmentHash)
 		assert.Equal(t, *key, keyTest)
 		assert.Equal(t, script, scriptTest)
 
@@ -66,16 +69,15 @@ func TestAttestClient(t *testing.T) {
 		assert.Equal(t, nil, sendErr)
 
 		sideClientFake.Generate(1)
-		lastHash = *oceanhash
+		lastHash = oceanCommitmentHash
 
 		// Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
 		unconf, unconfTxid, unconfErr := client.getUnconfirmedTx() // new tx is unconfirmed
-		commitment, _ := models.NewCommitment([]chainhash.Hash{lastHash})
-		unconfirmed := models.NewAttestation(unconfTxid, commitment)
+		unconfirmed := models.NewAttestation(unconfTxid, oceanCommitment)
 		assert.Equal(t, nil, unconfErr)
 		assert.Equal(t, true, unconf)
 		assert.Equal(t, txid, unconfirmed.Txid)
-		assert.Equal(t, *oceanhash, unconfirmed.CommitmentHash())
+		assert.Equal(t, oceanCommitmentHash, unconfirmed.CommitmentHash())
 
 		client.MainClient.Generate(1)
 

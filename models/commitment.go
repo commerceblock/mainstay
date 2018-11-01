@@ -21,9 +21,9 @@ func NewCommitment(commitments []chainhash.Hash) (*Commitment, error) {
 	return &Commitment{commitmentTree}, nil
 }
 
-// TODO:
-func (c Commitment) GetMerkleProofs() []interface{} {
-	return nil
+// Get merkle proofs for Commitment
+func (c Commitment) GetMerkleProofs() []CommitmentMerkleProof {
+	return c.tree.getMerkleProofs()
 }
 
 // Get merkle commitments for Commitment

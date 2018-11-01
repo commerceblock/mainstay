@@ -21,12 +21,14 @@ func TestServer(t *testing.T) {
 	// Generate blocks in side chain and update server latest
 	sideClientFake.Generate(10)
 	bestblockhash, _ := sideClientFake.GetBestBlockHash()
-	server.latestCommitment, _ = models.NewCommitment([]chainhash.Hash{*bestblockhash})
+	bestblockhashCommitment, errCommitment := models.NewCommitment([]chainhash.Hash{*bestblockhash})
+	assert.Equal(t, nil, errCommitment)
+	server.latestCommitment = bestblockhashCommitment
 
 	// Test latest commitment request
 	respCommitment, errCommitment := server.GetLatestCommitment()
 	assert.Equal(t, nil, errCommitment)
-	assert.Equal(t, *bestblockhash, respCommitment.GetCommitmentHash())
+	assert.Equal(t, bestblockhashCommitment.GetCommitmentHash(), respCommitment.GetCommitmentHash())
 
 	// Test latest attestation request
 	respAttestation, errAttestation := server.GetLatestAttestation()
@@ -43,11 +45,11 @@ func TestServer(t *testing.T) {
 	errUpdate := server.UpdateLatestAttestation(*latest, true)
 	assert.Equal(t, nil, errUpdate)
 	assert.Equal(t, *txid, server.latestAttestation.Txid)
-	assert.Equal(t, *bestblockhash, server.latestAttestation.CommitmentHash())
+	assert.Equal(t, bestblockhashCommitment.GetCommitmentHash(), server.latestAttestation.CommitmentHash())
 
 	// Test latest attestation again after update
 	respAttestation, errAttestation = server.GetLatestAttestation()
 	assert.Equal(t, nil, errAttestation)
 	assert.Equal(t, *txid, respAttestation.Txid)
-	assert.Equal(t, *bestblockhash, respAttestation.CommitmentHash())
+	assert.Equal(t, bestblockhashCommitment.GetCommitmentHash(), respAttestation.CommitmentHash())
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
+// Util function to print a merkle tree
 func printMerkleTree(tree []*chainhash.Hash) {
 	num := len(tree)/2 + 1
 	i := 0
@@ -23,6 +24,8 @@ func printMerkleTree(tree []*chainhash.Hash) {
 	fmt.Printf("\n")
 }
 
+// Build merkle tree store from a list of commitments
+// e.g. tree template: [hash0, hash1, hash2, nil, hash01, hash22, hashRoot]
 func buildMerkleTree(hashes []chainhash.Hash) []*chainhash.Hash {
 	// Calculate how many entries are required to hold the binary merkle
 	// tree as a linear array and create an array of that size.
@@ -62,6 +65,7 @@ func buildMerkleTree(hashes []chainhash.Hash) []*chainhash.Hash {
 	return merkles
 }
 
+// Hash the concatenation of two commitment leaves from merkle tree
 func hashLeaves(left chainhash.Hash, right chainhash.Hash) *chainhash.Hash {
 	// Concatenate the left and right nodes.
 	var hash [chainhash.HashSize * 2]byte
@@ -72,6 +76,7 @@ func hashLeaves(left chainhash.Hash, right chainhash.Hash) *chainhash.Hash {
 	return &newHash
 }
 
+// Return next power of 2 for given integer number
 func nextPow(n int) int {
 	// if 1 - return 2 so we always get a tree
 	if n == 1 {
@@ -131,17 +136,21 @@ func (m CommitmentMerkleTree) getMerkleCommitments() []chainhash.Hash {
 	return m.commitments
 }
 
-// TODO:
-func (m CommitmentMerkleTree) getMerkleProof(position int) (*interface{}, error) {
+// Return merkle proof for a specific commitment in the merkle tree
+func (m CommitmentMerkleTree) getMerkleProof(position int) (CommitmentMerkleProof, error) {
 	if position >= len(m.commitments) {
-		return nil, errors.New(fmt.Sprintf("Position %d out of index for merkle tree number of leaves %d", position, len(m.commitments)))
+		return CommitmentMerkleProof{}, errors.New(fmt.Sprintf("Position %d out of index for merkle tree number of leaves %d", position, len(m.commitments)))
 	}
-	return nil, nil
+	return buildMerkleProof(position, m.treeStore), nil
 }
 
-// TODO:
-func (m CommitmentMerkleTree) getMerkleProofs() []interface{} {
-	return nil
+// Return merkle proofs for all commitments in the merkle tree
+func (m CommitmentMerkleTree) getMerkleProofs() []CommitmentMerkleProof {
+	var proofs []CommitmentMerkleProof
+	for i := range m.commitments {
+		proofs = append(proofs, buildMerkleProof(i, m.treeStore))
+	}
+	return proofs
 }
 
 // Return the merkle tree store, including all commitments, intermediary tree nodes and root
@@ -152,77 +161,4 @@ func (m CommitmentMerkleTree) getMerkleTree() []*chainhash.Hash {
 // Get tree merkle root
 func (m CommitmentMerkleTree) getMerkleRoot() chainhash.Hash {
 	return m.root
-}
-
-// CommitmentMerkleProofOps structure
-type CommitmentMerkleProofOp struct {
-	Append     bool
-	Commitment chainhash.Hash
-}
-
-// CommitmentMerkleProof structure
-type CommitmentMerkleProof struct {
-	Commitment chainhash.Hash
-	Ops        []CommitmentMerkleProofOp
-	Root       chainhash.Hash
-}
-
-func buildMerkleProof(position int, tree []*chainhash.Hash) CommitmentMerkleProof {
-
-	// check proof commitment is valid
-	numOfCommitments := len(tree)/2 + 1
-	if position >= numOfCommitments || tree[position] == nil {
-		return CommitmentMerkleProof{}
-	}
-
-	// add base commitment in proof
-	var proof CommitmentMerkleProof
-	proof.Commitment = *tree[position]
-
-	// find all intermediarey commitment ops
-	// iterate through each tree height determining
-	// the commitment that needs to be added to the proof
-	// along with the operation type (append or not)
-	var ops []CommitmentMerkleProofOp
-	offset := 0
-	depth := numOfCommitments
-	depthPosition := position
-	proofIndex := position
-	for depth > 1 {
-		var op CommitmentMerkleProofOp
-		if proofIndex%2 == 0 { // left side
-			op.Append = true
-			if tree[proofIndex+1] == nil { // if nil append self
-				op.Commitment = *tree[proofIndex]
-			} else {
-				op.Commitment = *tree[proofIndex+1]
-			}
-		} else { // right side
-			op.Append = false
-			op.Commitment = *tree[proofIndex-1]
-		}
-		ops = append(ops, op)
-
-		// go to next tree height and depth size
-		// halve initial position to get corresponding one in new depth
-		offset += depth
-		depth /= 2
-		depthPosition /= 2
-		proofIndex = offset + (depthPosition % depth)
-	}
-	proof.Ops = ops
-	proof.Root = *tree[len(tree)-1]
-	return proof
-}
-
-func proveMerkleProof(proof CommitmentMerkleProof) bool {
-	hash := proof.Commitment
-	for i := range proof.Ops {
-		if proof.Ops[i].Append {
-			hash = *hashLeaves(hash, proof.Ops[i].Commitment)
-		} else {
-			hash = *hashLeaves(proof.Ops[i].Commitment, hash)
-		}
-	}
-	return hash == proof.Root
 }
