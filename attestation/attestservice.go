@@ -57,9 +57,10 @@ var poller *zmq.Poller // poller to add all subscriber/publisher sockets
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
 func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, config *confpkg.Config) *AttestService {
-	// Check init tx size
-	if len(config.InitTX()) != 64 {
-		log.Fatal("Incorrect txid size")
+	// Check init txid validity
+	_, errInitTx := chainhash.NewHashFromStr(config.InitTX())
+	if errInitTx != nil {
+		log.Fatalf("Incorrect initial transaction id %s\n", config.InitTX())
 	}
 
 	// initiate attestation client

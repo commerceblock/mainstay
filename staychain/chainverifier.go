@@ -107,7 +107,7 @@ func (v *ChainVerifier) verifyTxAddr(addr string) (ChainVerifierInfo, error) {
 		}
 
 		tweakedPub := crypto.TweakPubKey(v.pubkey0, blockhash.CloneBytes())
-		tweakedAddr := crypto.GetAddressFromPubKey(tweakedPub, v.cfgMain)
+		tweakedAddr, _ := crypto.GetAddressFromPubKey(tweakedPub, v.cfgMain)
 		if tweakedAddr.String() == addr {
 			v.latestHeight = height
 			return ChainVerifierInfo{*blockhash, height}, nil

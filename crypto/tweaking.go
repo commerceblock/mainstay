@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"crypto/ecdsa"
-	"log"
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -13,16 +12,16 @@ import (
 // Various utility functionalities concerning key tweaking under BIP-175
 
 // Get private key wallet readable format from a string encoded private key
-func GetWalletPrivKey(privKey string) *btcutil.WIF {
+func GetWalletPrivKey(privKey string) (*btcutil.WIF, error) {
 	key, err := btcutil.DecodeWIF(privKey)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return key
+	return key, nil
 }
 
 // Tweak a private key by adding the tweak to it's integer representation
-func TweakPrivKey(walletPrivKey *btcutil.WIF, tweak []byte, chainCfg *chaincfg.Params) *btcutil.WIF {
+func TweakPrivKey(walletPrivKey *btcutil.WIF, tweak []byte, chainCfg *chaincfg.Params) (*btcutil.WIF, error) {
 	// Convert private key and tweak to big Int
 	keyVal := new(big.Int).SetBytes(walletPrivKey.PrivKey.Serialize())
 	twkVal := new(big.Int).SetBytes(tweak)
@@ -41,13 +40,13 @@ func TweakPrivKey(walletPrivKey *btcutil.WIF, tweak []byte, chainCfg *chaincfg.P
 	// Return priv key in wallet readable format
 	resWalletPrivKey, err := btcutil.NewWIF(resPrivKey, chainCfg, walletPrivKey.CompressPubKey)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return resWalletPrivKey
+	return resWalletPrivKey, nil
 }
 
 // Get pay to pub key hash address from a private key
-func GetAddressFromPrivKey(walletPrivKey *btcutil.WIF, chainCfg *chaincfg.Params) btcutil.Address {
+func GetAddressFromPrivKey(walletPrivKey *btcutil.WIF, chainCfg *chaincfg.Params) (btcutil.Address, error) {
 	return GetAddressFromPubKey(walletPrivKey.PrivKey.PubKey(), chainCfg)
 }
 
@@ -63,19 +62,19 @@ func TweakPubKey(pubKey *btcec.PublicKey, tweak []byte) *btcec.PublicKey {
 }
 
 // Get pay to pub key hash address from a pub key
-func GetAddressFromPubKey(pubkey *btcec.PublicKey, chainCfg *chaincfg.Params) btcutil.Address {
+func GetAddressFromPubKey(pubkey *btcec.PublicKey, chainCfg *chaincfg.Params) (btcutil.Address, error) {
 	pubKeyHash := btcutil.Hash160(pubkey.SerializeCompressed())     // get pub key hash
 	addr, err := btcutil.NewAddressPubKeyHash(pubKeyHash, chainCfg) // encode to address
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return addr
+	return addr, nil
 }
 
 // Check whether an address has been tweaked by a specific hash
 func IsAddrTweakedFromHash(address string, hash []byte, walletPrivKey *btcutil.WIF, chainCfg *chaincfg.Params) bool {
-	tweakedPriv := TweakPrivKey(walletPrivKey, hash, chainCfg)
-	tweakedAddr := GetAddressFromPrivKey(tweakedPriv, chainCfg)
+	tweakedPriv, _ := TweakPrivKey(walletPrivKey, hash, chainCfg)
+	tweakedAddr, _ := GetAddressFromPrivKey(tweakedPriv, chainCfg)
 
 	return address == tweakedAddr.String()
 }

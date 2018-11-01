@@ -43,7 +43,11 @@ func init() {
 		tx = FUNDING_TX
 	}
 	if pk != "" {
-		pkWIF = crypto.GetWalletPrivKey(pk)
+		var errPkWIF error
+		pkWIF, errPkWIF = crypto.GetWalletPrivKey(pk)
+		if errPkWIF != nil {
+			log.Fatal(errPkWIF)
+		}
 	}
 
 	confFile := config.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
@@ -114,6 +118,6 @@ func printAttestation(tx staychain.Tx, info staychain.ChainVerifierInfo) {
 // print derived private key for attestation
 func printDerivedKey(info staychain.ChainVerifierInfo) {
 	tweak_hash := info.Hash()
-	tweaked_priv := crypto.TweakPrivKey(pkWIF, tweak_hash.CloneBytes(), mainConfig.MainChainCfg())
+	tweaked_priv, _ := crypto.TweakPrivKey(pkWIF, tweak_hash.CloneBytes(), mainConfig.MainChainCfg())
 	log.Printf("%s privkey: %s\n", MAIN_NAME, tweaked_priv.String())
 }

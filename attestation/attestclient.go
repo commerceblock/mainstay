@@ -37,9 +37,14 @@ type AttestClient struct {
 func NewAttestClient(config *confpkg.Config) *AttestClient {
 	// Get initial private key from initial funding transaction of main client
 	pk := config.InitPK()
-	pkWif := crypto.GetWalletPrivKey(pk)
+	pkWif, errPkWif := crypto.GetWalletPrivKey(pk)
+	if errPkWif != nil {
+		log.Printf("Invalid private key %s\n", pk)
+		log.Fatal(errPkWif)
+	}
 	importErr := config.MainClient().ImportPrivKeyRescan(pkWif, "init", false)
 	if importErr != nil {
+		log.Printf("Could not import initial private key %s\n", pk)
 		log.Fatal(importErr)
 	}
 
@@ -66,7 +71,10 @@ func NewAttestClient(config *confpkg.Config) *AttestClient {
 // Get next attestation key by tweaking with latest hash
 func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) (*btcutil.WIF, error) {
 	// Tweak priv key with the latest ocean hash
-	tweakedWalletPriv := crypto.TweakPrivKey(w.WalletPriv, hash.CloneBytes(), w.MainChainCfg)
+	tweakedWalletPriv, tweakErr := crypto.TweakPrivKey(w.WalletPriv, hash.CloneBytes(), w.MainChainCfg)
+	if tweakErr != nil {
+		return nil, tweakErr
+	}
 
 	// Import tweaked priv key to wallet
 	importErr := w.MainClient.ImportPrivKeyRescan(tweakedWalletPriv, hash.String(), false)
@@ -80,7 +88,7 @@ func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) (*btcutil.WIF,
 // Get next attestation address from private key
 func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.Hash) (btcutil.Address, string) {
 
-	myAddr := crypto.GetAddressFromPrivKey(key, w.MainChainCfg)
+	myAddr, _ := crypto.GetAddressFromPrivKey(key, w.MainChainCfg)
 
 	// In multisig case tweak all initial pubkeys and import
 	// a multisig address to the main client wallet
@@ -137,7 +145,8 @@ func (w *AttestClient) GetKeyAndScriptFromHash(hash chainhash.Hash) (btcutil.WIF
 	var key btcutil.WIF
 	var redeemScript string
 	if !hash.IsEqual(&chainhash.Hash{}) {
-		key = *crypto.TweakPrivKey(w.WalletPriv, hash.CloneBytes(), w.MainChainCfg)
+		tweakedKey, _ := crypto.TweakPrivKey(w.WalletPriv, hash.CloneBytes(), w.MainChainCfg)
+		key = *tweakedKey
 		_, redeemScript = w.GetNextAttestationAddr(&key, hash)
 	} else {
 		key = *w.WalletPriv
