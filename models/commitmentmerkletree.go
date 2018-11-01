@@ -148,3 +148,64 @@ func (m CommitmentMerkleTree) getMerkleTree() []*chainhash.Hash {
 func (m CommitmentMerkleTree) getMerkleRoot() chainhash.Hash {
 	return m.root
 }
+
+// CommitmentMerkleProofOps structure
+type CommitmentMerkleProofOp struct {
+	Append     bool
+	Commitment chainhash.Hash
+}
+
+// CommitmentMerkleProof structure
+type CommitmentMerkleProof struct {
+	Commitment chainhash.Hash
+	Ops        []CommitmentMerkleProofOp
+	Root       chainhash.Hash
+}
+
+func buildMerkleProof(position int, tree []*chainhash.Hash) CommitmentMerkleProof {
+
+	// check proof commitment is valid
+	numOfCommitments := len(tree)/2 + 1
+	if position >= numOfCommitments || tree[position] == nil {
+		return CommitmentMerkleProof{}
+	}
+
+	// add base commitment in proof
+	var proof CommitmentMerkleProof
+	proof.Commitment = *tree[position]
+
+	// find all intermediarey commitment ops
+	// iterate through each tree height determining
+	// the commitment that needs to be added to the proof
+	// along with the operation type (append or not)
+	var ops []CommitmentMerkleProofOp
+	offset := 0
+	depth := numOfCommitments
+	depthPosition := position
+	proofIndex := position
+	for depth > 1 {
+		var op CommitmentMerkleProofOp
+		if proofIndex%2 == 0 { // left side
+			op.Append = true
+			if tree[proofIndex+1] == nil { // if nil append self
+				op.Commitment = *tree[proofIndex]
+			} else {
+				op.Commitment = *tree[proofIndex+1]
+			}
+		} else { // right side
+			op.Append = false
+			op.Commitment = *tree[proofIndex-1]
+		}
+		ops = append(ops, op)
+
+		// go to next tree height and depth size
+		// halve initial position to get corresponding one in new depth
+		offset += depth
+		depth /= 2
+		depthPosition /= 2
+		proofIndex = offset + (depthPosition % depth)
+	}
+	proof.Ops = ops
+	proof.Root = *tree[len(tree)-1]
+	return proof
+}
