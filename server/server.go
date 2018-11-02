@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"log"
 
 	"mainstay/clients"
@@ -21,8 +22,17 @@ type Server struct {
 	sideClient clients.SidechainClient
 }
 
+var dbInterface DbMongo
+
 // NewServer returns a pointer to an Server instance
-func NewServer(config *config.Config, sideClient clients.SidechainClient) *Server {
+func NewServer(ctx context.Context, config *config.Config, sideClient clients.SidechainClient) *Server {
+
+	var dbErr error
+	dbInterface, dbErr = NewDbMongo(ctx)
+	if dbErr != nil {
+		log.Fatal(dbErr)
+	}
+
 	return &Server{*models.NewAttestationDefault(), (*models.Commitment)(nil), sideClient}
 }
 
@@ -34,7 +44,9 @@ func (s *Server) UpdateLatestAttestation(attestation models.Attestation, confirm
 	// err := db.Store(attestation)
 	s.latestAttestation = attestation
 
-	return nil
+	errUpdate := dbInterface.saveAttestation(attestation, confirmed)
+
+	return errUpdate
 }
 
 // Return latest attestation stored in the server
@@ -64,8 +76,7 @@ func (s *Server) GetAttestationCommitment(txid chainhash.Hash) (models.Commitmen
 	// db interface
 	// commitment, err := db.GetCommitmentForAttestation(txid)
 
-	commitment, _ := models.NewCommitment([]chainhash.Hash{chainhash.Hash{}})
-	return *commitment, nil
+	return models.Commitment{}, nil
 }
 
 // TODO REMOVE: Update latest commitment hash

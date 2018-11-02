@@ -63,7 +63,7 @@ func main() {
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	server := server.NewServer(mainConfig, ocean)
+	server := server.NewServer(ctx, mainConfig, ocean)
 	attestService := attestation.NewAttestService(ctx, wg, server, mainConfig)
 
 	c := make(chan os.Signal)

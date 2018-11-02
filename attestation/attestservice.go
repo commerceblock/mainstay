@@ -35,7 +35,7 @@ const (
 )
 
 // Waiting time between attestations and/or attestation confirmation attempts
-const ATTEST_WAIT_TIME = 20
+const ATTEST_WAIT_TIME = 10
 
 // AttestationService structure
 // Encapsulates Attest Client and connectivity
@@ -171,8 +171,8 @@ func (s *AttestService) doStateNextCommitment() {
 	// publish new commitment hash to clients
 	s.publisher.SendMessage((&latestCommitmentHash).CloneBytes(), confpkg.TOPIC_NEW_HASH)
 
-    // initialise new attestation with commitment
-    s.attestation = models.NewAttestationDefault()
+	// initialise new attestation with commitment
+	s.attestation = models.NewAttestationDefault()
 	s.attestation.SetCommitment(&latestCommitment)
 
 	s.state = ASTATE_NEW_ATTESTATION // update attestation state
@@ -256,7 +256,7 @@ func (s *AttestService) doStateSignAttestation() {
 		return // will rebound to init
 	}
 	s.attestation.Tx = *signedTx
-    s.attestation.Txid = s.attestation.Tx.TxHash()
+	s.attestation.Txid = s.attestation.Tx.TxHash()
 
 	s.state = ASTATE_SEND_ATTESTATION // update attestation state
 }
