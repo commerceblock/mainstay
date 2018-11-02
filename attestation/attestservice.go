@@ -150,6 +150,7 @@ func (s *AttestService) doStateInit() {
 // - Get latest commitment from server
 // - Check if commitment has already been attested
 // - Send commitment to client signers
+// - Initialise new attestation
 func (s *AttestService) doStateNextCommitment() {
 	log.Println("*AttestService* NEW ATTESTATION COMMITMENT")
 
@@ -169,6 +170,9 @@ func (s *AttestService) doStateNextCommitment() {
 
 	// publish new commitment hash to clients
 	s.publisher.SendMessage((&latestCommitmentHash).CloneBytes(), confpkg.TOPIC_NEW_HASH)
+
+    // initialise new attestation with commitment
+    s.attestation = models.NewAttestationDefault()
 	s.attestation.SetCommitment(&latestCommitment)
 
 	s.state = ASTATE_NEW_ATTESTATION // update attestation state
@@ -252,6 +256,7 @@ func (s *AttestService) doStateSignAttestation() {
 		return // will rebound to init
 	}
 	s.attestation.Tx = *signedTx
+    s.attestation.Txid = s.attestation.Tx.TxHash()
 
 	s.state = ASTATE_SEND_ATTESTATION // update attestation state
 }
