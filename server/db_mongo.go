@@ -15,6 +15,13 @@ import (
 	"github.com/mongodb/mongo-go-driver/mongo/findopt"
 )
 
+const (
+    COL_NAME_ATTESTATION = "Attestation"
+    COL_NAME_COMMITMENT = "MerkleCommitment"
+    COL_NAME_PROOF = "MerkleProof"
+    COL_NAME_LATEST_COMMITMENT = "LatestCommitment"
+)
+
 // Method to connect to mongo database through config
 func dbConnect(ctx context.Context) (*mongo.Database, error) {
 	// get this from config
@@ -75,7 +82,7 @@ func (d *DbMongo) saveAttestation(attestation models.Attestation, confirmed bool
 
 	// insert or update
 	t := bson.NewDocument()
-	res := d.db.Collection("Attestation").FindOneAndUpdate(d.ctx, filterAttestation, newAttestation, findopt.Upsert(true))
+	res := d.db.Collection(COL_NAME_ATTESTATION).FindOneAndUpdate(d.ctx, filterAttestation, newAttestation, findopt.Upsert(true))
 	resErr := res.Decode(t)
 	if resErr != nil && resErr != mongo.ErrNoDocuments {
 		fmt.Printf("couldn't be created: %v\n", resErr)
@@ -166,6 +173,104 @@ func (d *DbMongo) saveMerkleProofs(merkleRoot chainhash.Hash, proofs []models.Co
 }
 
 // Return latest from the database
-func (d *DbMongo) getLatestAttestation() models.Attestation {
-	return models.Attestation{}
+func (d *DbMongo) getLatestAttestedCommitmentHash() (chainhash.Hash, error) {
+
+    sortFilter := bson.NewDocument(bson.EC.Int32("inserted_at", -1))
+    attestationDoc := bson.NewDocument()
+    resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx, bson.NewDocument(), findopt.Sort(sortFilter)).Decode(attestationDoc)
+    if resErr != nil {
+        fmt.Printf("couldn't get latest: %v\n", resErr)
+        return chainhash.Hash{}, resErr
+    }
+
+    merkle_root := attestationDoc.Lookup("merkle_root").StringValue()
+    commitmentHash, errHash := chainhash.NewHashFromStr(merkle_root)
+    if errHash != nil {
+        fmt.Printf("bad data in merkle_root column: %s\n", merkle_root)
+        return chainhash.Hash{}, errHash
+    }
+	return *commitmentHash, nil
+}
+
+// Return latest from the database
+func (d *DbMongo) getLatestCommitment() (models.Commitment, error) {
+
+    sortFilter := bson.NewDocument(bson.EC.Int32("client_position", 1))
+    res, resErr := d.db.Collection(COL_NAME_LATEST_COMMITMENT).Find(d.ctx, bson.NewDocument(), findopt.Sort(sortFilter))
+    if resErr != nil {
+        fmt.Printf("couldn't get latest: %v\n", resErr)
+        return models.Commitment{}, resErr
+    }
+
+    var commitmentHashes []chainhash.Hash
+
+    for res.Next(d.ctx) {
+        commitmentDoc := bson.NewDocument()
+        if err := res.Decode(commitmentDoc); err != nil {
+            fmt.Printf("bad data in %s table: %s\n", COL_NAME_LATEST_COMMITMENT, res)
+            return models.Commitment{}, err
+        }
+        commitment := commitmentDoc.Lookup("commitment").StringValue()
+        commitmentHash, errHash := chainhash.NewHashFromStr(commitment)
+        if errHash != nil {
+            fmt.Printf("bad data in commitment column: %s\n", commitment)
+            return models.Commitment{}, errHash
+        }
+        commitmentHashes = append(commitmentHashes, *commitmentHash)
+    }
+    if err := res.Err(); err != nil {
+        return models.Commitment{}, fmt.Errorf("could not decode data: %v", err)
+    }
+
+    commitment, errCommitment := models.NewCommitment(commitmentHashes)
+    if errCommitment != nil {
+        return models.Commitment{}, errCommitment
+    }
+    return *commitment, nil
+}
+
+// Return latest from the database
+func (d *DbMongo) getAttestationCommitment(attestationHash chainhash.Hash) (models.Commitment, error) {
+    filterAttestation := bson.NewDocument(bson.EC.String("txid", attestationHash.String()))
+    attestationDoc := bson.NewDocument()
+    resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx, filterAttestation).Decode(attestationDoc)
+    if resErr != nil {
+        fmt.Printf("couldn't get latest: %v\n", resErr)
+        return models.Commitment{}, resErr
+    }
+
+    sortFilter := bson.NewDocument(bson.EC.Int32("client_position", 1))
+    merkle_root := attestationDoc.Lookup("merkle_root").StringValue()
+    filterMerkleRoot := bson.NewDocument(bson.EC.String("merkle_root", merkle_root))
+    res, resErr := d.db.Collection(COL_NAME_LATEST_COMMITMENT).Find(d.ctx, filterMerkleRoot, findopt.Sort(sortFilter))
+    if resErr != nil {
+        fmt.Printf("couldn't get latest: %v\n", resErr)
+        return models.Commitment{}, resErr
+    }
+
+    var commitmentHashes []chainhash.Hash
+    for res.Next(d.ctx) {
+        commitmentDoc := bson.NewDocument()
+        if err := res.Decode(commitmentDoc); err != nil {
+            fmt.Printf("bad data in %s table: %s\n", COL_NAME_LATEST_COMMITMENT, res)
+            return models.Commitment{}, err
+        }
+        fmt.Printf("%v\n", commitmentDoc)
+        commitment := commitmentDoc.Lookup("commitment").StringValue()
+        commitmentHash, errHash := chainhash.NewHashFromStr(commitment)
+        if errHash != nil {
+            fmt.Printf("bad data in commitment column: %s\n", commitment)
+            return models.Commitment{}, errHash
+        }
+        commitmentHashes = append(commitmentHashes, *commitmentHash)
+    }
+    if err := res.Err(); err != nil {
+        return models.Commitment{}, fmt.Errorf("could not decode data: %v", err)
+    }
+
+    commitment, errCommitment := models.NewCommitment(commitmentHashes)
+    if errCommitment != nil {
+        return models.Commitment{}, errCommitment
+    }
+    return *commitment, nil
 }

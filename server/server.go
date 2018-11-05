@@ -39,10 +39,7 @@ func NewServer(ctx context.Context, config *config.Config, sideClient clients.Si
 // Update latest attestation in the server
 func (s *Server) UpdateLatestAttestation(attestation models.Attestation, confirmed bool) error {
 
-	// db interface
-	// if confirmed - else
-	// err := db.Store(attestation)
-	s.latestAttestation = attestation
+	s.latestAttestation = attestation // to remove
 
 	errSave := dbInterface.saveAttestation(attestation, confirmed)
 	if errSave != nil {
@@ -60,31 +57,24 @@ func (s *Server) UpdateLatestAttestation(attestation models.Attestation, confirm
 }
 
 // Return latest attestation stored in the server
-func (s *Server) GetLatestAttestation() (models.Attestation, error) {
+func (s *Server) GetLatestAttestedCommitmentHash() (chainhash.Hash, error) {
 
-	// db interface
-	// attestation, err := db.GetLatestAttestation()
-
-	return s.latestAttestation, nil
+    //db interface
+    return dbInterface.getLatestAttestedCommitmentHash()
 }
 
 // Return latest commitment stored in the server
 func (s *Server) GetLatestCommitment() (models.Commitment, error) {
 
-	// dummy just for now
-	s.updateCommitment()
-
-	// db interface
-	// commitment, err := db.GetLatestCommitment()
-
-	return *s.latestCommitment, nil
+    // db interface
+    return dbInterface.getLatestCommitment()
 }
 
 // Return commitment for a particular attestation transaction id
-func (s *Server) GetAttestationCommitment(txid chainhash.Hash) (models.Commitment, error) {
+func (s *Server) GetAttestationCommitment(attestationHash chainhash.Hash) (models.Commitment, error) {
 
 	// db interface
-	// commitment, err := db.GetCommitmentForAttestation(txid)
+	_, _ = dbInterface.getAttestationCommitment(attestationHash)
 
 	return models.Commitment{}, nil
 }
