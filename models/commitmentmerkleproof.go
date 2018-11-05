@@ -16,6 +16,7 @@ func buildMerkleProof(position int, tree []*chainhash.Hash) CommitmentMerkleProo
 
 	// add base commitment in proof
 	var proof CommitmentMerkleProof
+	proof.ClientPosition = int32(position)
 	proof.Commitment = *tree[position]
 
 	// find all intermediarey commitment ops
@@ -50,7 +51,7 @@ func buildMerkleProof(position int, tree []*chainhash.Hash) CommitmentMerkleProo
 		proofIndex = offset + (depthPosition % depth)
 	}
 	proof.Ops = ops
-	proof.Root = *tree[len(tree)-1]
+	proof.MerkleRoot = *tree[len(tree)-1]
 	return proof
 }
 
@@ -64,7 +65,7 @@ func proveMerkleProof(proof CommitmentMerkleProof) bool {
 			hash = *hashLeaves(proof.Ops[i].Commitment, hash)
 		}
 	}
-	return hash == proof.Root
+	return hash == proof.MerkleRoot
 }
 
 // CommitmentMerkleProofOps structure
@@ -75,20 +76,21 @@ type CommitmentMerkleProofOp struct {
 
 // CommitmentMerkleProofOpsBSON structure for mongoDB
 type CommitmentMerkleProofOpBSON struct {
-	Append     bool   "bson: append"
-	Commitment string "bson: commitment"
+	Append     bool   `bson:"append"`
+	Commitment string `bson:"commitment"`
 }
 
 // CommitmentMerkleProof structure
 type CommitmentMerkleProof struct {
-	Commitment chainhash.Hash
-	Ops        []CommitmentMerkleProofOp
-	Root       chainhash.Hash
+	MerkleRoot     chainhash.Hash
+	ClientPosition int32
+	Commitment     chainhash.Hash
+	Ops            []CommitmentMerkleProofOp
 }
 
 // Implement bson.Marshaler MarshalBSON() method for use with db_mongo interface
 func (c CommitmentMerkleProof) MarshalBSON() ([]byte, error) {
-	proofBson := CommitmentMerkleProofBSON{Commitment: c.Commitment.String(), Root: c.Root.String()}
+	proofBson := CommitmentMerkleProofBSON{MerkleRoot: c.MerkleRoot.String(), ClientPosition: c.ClientPosition, Commitment: c.Commitment.String()}
 
 	var opsBson []CommitmentMerkleProofOpBSON
 	for _, op := range c.Ops {
@@ -100,7 +102,8 @@ func (c CommitmentMerkleProof) MarshalBSON() ([]byte, error) {
 
 // CommitmentMerkleProofBSON structure for mongoDB
 type CommitmentMerkleProofBSON struct {
-	Commitment string                        "bson: commitment"
-	Ops        []CommitmentMerkleProofOpBSON "bson: ops"
-	Root       string                        "bson: root"
+	MerkleRoot     string                        `bson:"merkle_root"`
+	ClientPosition int32                         `bson:"client_position"`
+	Commitment     string                        `bson:"commitment"`
+	Ops            []CommitmentMerkleProofOpBSON `bson:"ops"`
 }

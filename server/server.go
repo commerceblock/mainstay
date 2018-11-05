@@ -59,15 +59,15 @@ func (s *Server) UpdateLatestAttestation(attestation models.Attestation, confirm
 // Return latest attestation stored in the server
 func (s *Server) GetLatestAttestedCommitmentHash() (chainhash.Hash, error) {
 
-    //db interface
-    return dbInterface.getLatestAttestedCommitmentHash()
+	//db interface
+	return dbInterface.getLatestAttestedCommitmentHash()
 }
 
 // Return latest commitment stored in the server
 func (s *Server) GetLatestCommitment() (models.Commitment, error) {
 
-    // db interface
-    return dbInterface.getLatestCommitment()
+	// db interface
+	return dbInterface.getLatestCommitment()
 }
 
 // Return commitment for a particular attestation transaction id
