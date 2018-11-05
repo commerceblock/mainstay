@@ -44,9 +44,19 @@ func (s *Server) UpdateLatestAttestation(attestation models.Attestation, confirm
 	// err := db.Store(attestation)
 	s.latestAttestation = attestation
 
-	errUpdate := dbInterface.saveAttestation(attestation, confirmed)
-
-	return errUpdate
+	errSave := dbInterface.saveAttestation(attestation, confirmed)
+	if errSave != nil {
+		return errSave
+	}
+	commitment, errCommitment := attestation.Commitment()
+	if errCommitment != nil {
+		return errCommitment
+	}
+	errSave = dbInterface.saveCommitment(*commitment)
+	if errSave != nil {
+		return errSave
+	}
+	return nil
 }
 
 // Return latest attestation stored in the server
@@ -85,5 +95,5 @@ func (s *Server) updateCommitment() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	s.latestCommitment, _ = models.NewCommitment([]chainhash.Hash{*hash})
+	s.latestCommitment, _ = models.NewCommitment([]chainhash.Hash{*hash, *hash, *hash})
 }

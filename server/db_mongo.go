@@ -8,6 +8,7 @@ import (
 
 	"mainstay/models"
 
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/mongodb/mongo-go-driver/bson"
 	_ "github.com/mongodb/mongo-go-driver/bson/objectid"
 	"github.com/mongodb/mongo-go-driver/mongo"
@@ -84,13 +85,83 @@ func (d *DbMongo) saveAttestation(attestation models.Attestation, confirmed bool
 	return nil
 }
 
-// Save merkle commitments of attestation to the database
-func (d *DbMongo) saveMerkleCommitment(commitment models.Commitment) error {
+// Save attestation commitment to the database
+func (d *DbMongo) saveCommitment(commitment models.Commitment) error {
+	merkleRoot := commitment.GetCommitmentHash()
+	merkleCommitments := commitment.GetMerkleCommitments()
+	errSave := d.saveMerkleCommitments(merkleRoot, merkleCommitments)
+	if errSave != nil {
+		return errSave
+	}
+
+	merkleProofs := commitment.GetMerkleProofs()
+	errSave = d.saveMerkleProofs(merkleRoot, merkleProofs)
+	if errSave != nil {
+		return errSave
+	}
+
 	return nil
 }
 
-// Save merkle proofs of attestation to the database
-func (d *DbMongo) saveMerkleProof(commitment models.Commitment) error {
+// Save merkle commitments
+func (d *DbMongo) saveMerkleCommitments(merkleRoot chainhash.Hash, commitments []chainhash.Hash) error {
+	for pos := range commitments {
+		// new attestation based on Attestation model
+		newMerkleCommitment := bson.NewDocument(
+			bson.EC.SubDocumentFromElements("$set", bson.EC.String("merkle_root", merkleRoot.String())),
+			bson.EC.SubDocumentFromElements("$set", bson.EC.Int32("client_position", int32(pos))),
+			bson.EC.SubDocumentFromElements("$set", bson.EC.String("commitment", commitments[pos].String())),
+		)
+
+		filterMerkleCommitment := bson.NewDocument(
+			bson.EC.String("merkle_root", merkleRoot.String()),
+			bson.EC.Int32("client_position", int32(pos)),
+		)
+
+		// insert or update
+		t := bson.NewDocument()
+		res := d.db.Collection("MerkleCommitment").FindOneAndUpdate(d.ctx, filterMerkleCommitment, newMerkleCommitment, findopt.Upsert(true))
+		resErr := res.Decode(t)
+		if resErr != nil && resErr != mongo.ErrNoDocuments {
+			fmt.Printf("couldn't be created: %v\n", resErr)
+			return resErr
+		}
+	}
+	return nil
+}
+
+// Save merkle proofs
+func (d *DbMongo) saveMerkleProofs(merkleRoot chainhash.Hash, proofs []models.CommitmentMerkleProof) error {
+	for pos := range proofs {
+
+		el, marshalErr := bson.Marshal(proofs[pos])
+		if marshalErr != nil {
+			return marshalErr
+		}
+		out, docErr := bson.ReadDocument(el)
+		if docErr != nil {
+			return docErr
+		}
+
+		newMerkleProof := bson.NewDocument(
+			bson.EC.SubDocumentFromElements("$set", bson.EC.String("merkle_root", merkleRoot.String())),
+			bson.EC.SubDocumentFromElements("$set", bson.EC.Int32("client_position", int32(pos))),
+			bson.EC.SubDocumentFromElements("$set", bson.EC.Interface("proof", out)),
+		)
+
+		filterMerkleProof := bson.NewDocument(
+			bson.EC.String("merkle_root", merkleRoot.String()),
+			bson.EC.Int32("client_position", int32(pos)),
+		)
+
+		t := bson.NewDocument()
+		res := d.db.Collection("MerkleProof").FindOneAndUpdate(d.ctx, filterMerkleProof, newMerkleProof, findopt.Upsert(true))
+		resErr := res.Decode(t)
+		if resErr != nil && resErr != mongo.ErrNoDocuments {
+			fmt.Printf("couldn't be created: %v\n", resErr)
+			return resErr
+		}
+	}
 	return nil
 }
 

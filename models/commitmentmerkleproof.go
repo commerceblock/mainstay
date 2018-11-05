@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/mongodb/mongo-go-driver/bson"
 )
 
 // Build merkle proof for a specific position in the merkle tree
@@ -72,9 +73,34 @@ type CommitmentMerkleProofOp struct {
 	Commitment chainhash.Hash
 }
 
+// CommitmentMerkleProofOpsBSON structure for mongoDB
+type CommitmentMerkleProofOpBSON struct {
+	Append     bool   "bson: append"
+	Commitment string "bson: commitment"
+}
+
 // CommitmentMerkleProof structure
 type CommitmentMerkleProof struct {
 	Commitment chainhash.Hash
 	Ops        []CommitmentMerkleProofOp
 	Root       chainhash.Hash
+}
+
+// Implement bson.Marshaler MarshalBSON() method for use with db_mongo interface
+func (c CommitmentMerkleProof) MarshalBSON() ([]byte, error) {
+	proofBson := CommitmentMerkleProofBSON{Commitment: c.Commitment.String(), Root: c.Root.String()}
+
+	var opsBson []CommitmentMerkleProofOpBSON
+	for _, op := range c.Ops {
+		opsBson = append(opsBson, CommitmentMerkleProofOpBSON{op.Append, op.Commitment.String()})
+	}
+	proofBson.Ops = opsBson
+	return bson.Marshal(proofBson)
+}
+
+// CommitmentMerkleProofBSON structure for mongoDB
+type CommitmentMerkleProofBSON struct {
+	Commitment string                        "bson: commitment"
+	Ops        []CommitmentMerkleProofOpBSON "bson: ops"
+	Root       string                        "bson: root"
 }
