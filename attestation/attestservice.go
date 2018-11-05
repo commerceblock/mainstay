@@ -35,7 +35,7 @@ const (
 )
 
 // Waiting time between attestations and/or attestation confirmation attempts
-const ATTEST_WAIT_TIME = 10
+const ATTEST_WAIT_TIME = 5
 
 // AttestationService structure
 // Encapsulates Attest Client and connectivity
@@ -244,14 +244,13 @@ func (s *AttestService) doStateSignAttestation() {
 	log.Printf("********** received %d signatures\n", len(sigs))
 
 	// get last confirmed commitment from server
-	lastAttestation, latestErr := s.server.GetLatestAttestation()
+	lastCommitmentHash, latestErr := s.server.GetLatestAttestedCommitmentHash()
 	if s.checkFailure(latestErr) {
 		return // will rebound to init
 	}
 
 	// sign attestation with combined sigs and last commitment
-	lastCommitment := lastAttestation.CommitmentHash()
-	signedTx, signErr := s.attester.signAttestation(&s.attestation.Tx, sigs, lastCommitment)
+	signedTx, signErr := s.attester.signAttestation(&s.attestation.Tx, sigs, lastCommitmentHash)
 	if s.checkFailure(signErr) {
 		return // will rebound to init
 	}

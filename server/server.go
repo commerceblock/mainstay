@@ -71,10 +71,10 @@ func (s *Server) GetLatestCommitment() (models.Commitment, error) {
 }
 
 // Return commitment for a particular attestation transaction id
-func (s *Server) GetAttestationCommitment(attestationHash chainhash.Hash) (models.Commitment, error) {
+func (s *Server) GetAttestationCommitment(attestationTxid chainhash.Hash) (models.Commitment, error) {
 
 	// db interface
-	_, _ = dbInterface.getAttestationCommitment(attestationHash)
+	_, _ = dbInterface.getAttestationCommitment(attestationTxid)
 
 	return models.Commitment{}, nil
 }
