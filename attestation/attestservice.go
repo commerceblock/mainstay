@@ -35,7 +35,7 @@ const (
 )
 
 // Waiting time between attestations and/or attestation confirmation attempts
-const ATTEST_WAIT_TIME = 5
+const ATTEST_WAIT_TIME = 20
 
 // AttestationService structure
 // Encapsulates Attest Client and connectivity

@@ -57,6 +57,25 @@ func (a Attestation) MarshalBSON() ([]byte, error) {
 	return bson.Marshal(attestationBSON)
 }
 
+// Implement bson.Unmarshaler UnmarshalJSON() method for use with db_mongo interface
+func (a *Attestation) UnmarshalBSON(b []byte) error {
+	var attestationBSON AttestationBSON
+	if err := bson.Unmarshal(b, &attestationBSON); err != nil {
+		return err
+	}
+	txidHash, errHash := chainhash.NewHashFromStr(attestationBSON.Txid)
+	if errHash != nil {
+		return errHash
+	}
+	a.Txid = *txidHash
+	a.Confirmed = attestationBSON.Confirmed
+	// THIS IS INCOMPLETE
+	// in order to get a full Attestation model
+	// we still need to Umarshal the commitment
+	// model and set through SetCommitment()
+	return nil
+}
+
 // Attestation field names
 const (
 	ATTESTATION_TXID_NAME        = "txid"

@@ -55,6 +55,27 @@ func (c CommitmentMerkleCommitment) MarshalBSON() ([]byte, error) {
 
 }
 
+// Implement bson.Unmarshaler UnmarshalJSON() method for use with db_mongo interface
+func (c *CommitmentMerkleCommitment) UnmarshalBSON(b []byte) error {
+	var commitmentBSON CommitmentMerkleCommitmentBSON
+	if err := bson.Unmarshal(b, &commitmentBSON); err != nil {
+		return err
+	}
+	rootHash, errHash := chainhash.NewHashFromStr(commitmentBSON.MerkleRoot)
+	if errHash != nil {
+		return errHash
+	}
+	commitHash, errHash := chainhash.NewHashFromStr(commitmentBSON.Commitment)
+	if errHash != nil {
+		return errHash
+	}
+
+	c.MerkleRoot = *rootHash
+	c.ClientPosition = commitmentBSON.ClientPosition
+	c.Commitment = *commitHash
+	return nil
+}
+
 // Commitment field names
 const (
 	COMMITMENT_MERKLE_ROOT_NAME     = "merkle_root"

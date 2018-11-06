@@ -100,6 +100,16 @@ func (c CommitmentMerkleProof) MarshalBSON() ([]byte, error) {
 	return bson.Marshal(proofBson)
 }
 
+// Implement bson.Unmarshaler UnmarshalJSON() method for use with db_mongo interface
+func (c *CommitmentMerkleProof) UnmarshalBSON(b []byte) error {
+	var proofBSON CommitmentMerkleProofBSON
+	if err := bson.Unmarshal(b, &proofBSON); err != nil {
+		return err
+	}
+	// TODO : not implemented as not required anywhere at the moment
+	return nil
+}
+
 // Proof field names
 const (
 	PROOF_MERKLE_ROOT_NAME     = "merkle_root"

@@ -53,15 +53,36 @@ func dbConnect(ctx context.Context) (*mongo.Database, error) {
 // Function to get bson Document from model interface that implements MarshalBSON
 func getDocumentFromModel(model interface{}) (*bson.Document, error) {
 
+	// model to bytes
 	bytes, marshalErr := bson.Marshal(model)
 	if marshalErr != nil {
 		return nil, marshalErr
 	}
+
+	// bytes to bson document
 	doc, docErr := bson.ReadDocument(bytes)
 	if docErr != nil {
 		return nil, docErr
 	}
 	return doc, nil
+}
+
+// Function to get model interface that implements UnmarshalBSON from bson Document
+func getModelFromDocument(doc *bson.Document, model interface{}) error {
+
+	// bson document to bytes
+	bytes, errDoc := doc.MarshalBSON()
+	if errDoc != nil {
+		return errDoc
+	}
+
+	// bytes to interface model
+	unmarshalErr := bson.Unmarshal(bytes, model)
+	if unmarshalErr != nil {
+		return unmarshalErr
+	}
+
+	return nil
 }
 
 // DbMongo struct
@@ -147,13 +168,16 @@ func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCom
 
 		// search if merkle commitment already exists
 		filterMerkleCommitment := bson.NewDocument(
-			bson.EC.String(models.COMMITMENT_MERKLE_ROOT_NAME, docCommitment.Lookup(models.COMMITMENT_MERKLE_ROOT_NAME).StringValue()),
-			bson.EC.Int32(models.COMMITMENT_CLIENT_POSITION_NAME, docCommitment.Lookup(models.COMMITMENT_CLIENT_POSITION_NAME).Int32()),
+			bson.EC.String(models.COMMITMENT_MERKLE_ROOT_NAME,
+				docCommitment.Lookup(models.COMMITMENT_MERKLE_ROOT_NAME).StringValue()),
+			bson.EC.Int32(models.COMMITMENT_CLIENT_POSITION_NAME,
+				docCommitment.Lookup(models.COMMITMENT_CLIENT_POSITION_NAME).Int32()),
 		)
 
 		// insert or update merkle commitment
 		t := bson.NewDocument()
-		res := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).FindOneAndUpdate(d.ctx, filterMerkleCommitment, newCommitment, findopt.Upsert(true))
+		res := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).FindOneAndUpdate(d.ctx,
+			filterMerkleCommitment, newCommitment, findopt.Upsert(true))
 		resErr := res.Decode(t)
 		if resErr != nil && resErr != mongo.ErrNoDocuments {
 			fmt.Printf("couldn't save merkle commitment: %v\n", resErr)
@@ -178,13 +202,16 @@ func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error 
 
 		// search if merkle proof already exists
 		filterMerkleProof := bson.NewDocument(
-			bson.EC.String(models.PROOF_MERKLE_ROOT_NAME, docProof.Lookup(models.PROOF_MERKLE_ROOT_NAME).StringValue()),
-			bson.EC.Int32(models.PROOF_CLIENT_POSITION_NAME, docProof.Lookup(models.PROOF_CLIENT_POSITION_NAME).Int32()),
+			bson.EC.String(models.PROOF_MERKLE_ROOT_NAME,
+				docProof.Lookup(models.PROOF_MERKLE_ROOT_NAME).StringValue()),
+			bson.EC.Int32(models.PROOF_CLIENT_POSITION_NAME,
+				docProof.Lookup(models.PROOF_CLIENT_POSITION_NAME).Int32()),
 		)
 
 		// insert or update merkle proof
 		t := bson.NewDocument()
-		res := d.db.Collection(COL_NAME_MERKLE_PROOF).FindOneAndUpdate(d.ctx, filterMerkleProof, newProof, findopt.Upsert(true))
+		res := d.db.Collection(COL_NAME_MERKLE_PROOF).FindOneAndUpdate(d.ctx,
+			filterMerkleProof, newProof, findopt.Upsert(true))
 		resErr := res.Decode(t)
 		if resErr != nil && resErr != mongo.ErrNoDocuments {
 			fmt.Printf("couldn't be created: %v\n", resErr)
@@ -197,25 +224,38 @@ func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error 
 // Return latest attested commitment hash from Attestation collection
 func (d *DbMongo) getLatestAttestedCommitmentHash() (chainhash.Hash, error) {
 
-	// filter by inserted_at DESC to get latest attestation
+	// filter by inserted date and confirmed to get latest attestation from Attestation collection
 	sortFilter := bson.NewDocument(bson.EC.Int32(models.ATTESTATION_INSERTED_AT_NAME, -1))
 	confirmedFilter := bson.NewDocument(bson.EC.Boolean(models.ATTESTATION_CONFIRMED_NAME, true))
 
 	attestationDoc := bson.NewDocument()
-	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx, confirmedFilter, findopt.Sort(sortFilter)).Decode(attestationDoc)
+	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx,
+		confirmedFilter, findopt.Sort(sortFilter)).Decode(attestationDoc)
 	if resErr != nil {
 		fmt.Printf("couldn't get latest attestation: %v\n", resErr)
 		return chainhash.Hash{}, resErr
 	}
-
-	// get merkle root and return the hash
-	merkle_root := attestationDoc.Lookup(models.ATTESTATION_MERKLE_ROOT_NAME).StringValue()
-	commitmentHash, errHash := chainhash.NewHashFromStr(merkle_root)
-	if errHash != nil {
-		fmt.Printf("bad data in merkle_root column: %s\n", merkle_root)
-		return chainhash.Hash{}, errHash
+	attestationRoot := attestationDoc.Lookup(models.ATTESTATION_MERKLE_ROOT_NAME).StringValue()
+	if attestationRoot == "0000000000000000000000000000000000000000000000000000000000000000" { // nasty
+		return chainhash.Hash{}, nil
 	}
-	return *commitmentHash, nil
+
+	// use latest merkle_root from Attestation to get latest MerkleCommitment from collection
+	commitmentDoc := bson.NewDocument()
+	rootFilter := bson.NewDocument(bson.EC.String(models.COMMITMENT_MERKLE_ROOT_NAME, attestationRoot))
+	resErr = d.db.Collection(COL_NAME_MERKLE_COMMITMENT).FindOne(d.ctx, rootFilter).Decode(commitmentDoc)
+	if resErr != nil {
+		fmt.Printf("couldn't get merkle commitment: %v\n", resErr)
+		return chainhash.Hash{}, resErr
+	}
+
+	// decode document result to Commitment model and get hash
+	commitmentModel := &models.CommitmentMerkleCommitment{}
+	modelErr := getModelFromDocument(commitmentDoc, commitmentModel)
+	if modelErr != nil {
+		return chainhash.Hash{}, modelErr
+	}
+	return commitmentModel.MerkleRoot, nil
 }
 
 // Return latest Commitment constructed from commitments of MerkleCommitment collection
@@ -262,6 +302,7 @@ func (d *DbMongo) getAttestationCommitment(attestationTxid chainhash.Hash) (mode
 
 	// get merke_root from Attestation collection for attestation txid provided
 	filterAttestation := bson.NewDocument(bson.EC.String(models.ATTESTATION_TXID_NAME, attestationTxid.String()))
+
 	attestationDoc := bson.NewDocument()
 	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx, filterAttestation).Decode(attestationDoc)
 	if resErr != nil {
@@ -287,13 +328,13 @@ func (d *DbMongo) getAttestationCommitment(attestationTxid chainhash.Hash) (mode
 			fmt.Printf("bad data in %s table: %s\n", COL_NAME_MERKLE_COMMITMENT, res)
 			return models.Commitment{}, err
 		}
-		commitment := commitmentDoc.Lookup(models.COMMITMENT_COMMITMENT_NAME).StringValue()
-		commitmentHash, errHash := chainhash.NewHashFromStr(commitment)
-		if errHash != nil {
-			fmt.Printf("bad data in commitment column: %s\n", commitment)
-			return models.Commitment{}, errHash
+		// decode document result to Commitment model and get hash
+		commitmentModel := &models.CommitmentMerkleCommitment{}
+		modelErr := getModelFromDocument(commitmentDoc, commitmentModel)
+		if modelErr != nil {
+			return models.Commitment{}, modelErr
 		}
-		commitmentHashes = append(commitmentHashes, *commitmentHash)
+		commitmentHashes = append(commitmentHashes, commitmentModel.MerkleRoot)
 	}
 	if err := res.Err(); err != nil {
 		return models.Commitment{}, fmt.Errorf("could not decode data: %v", err)
