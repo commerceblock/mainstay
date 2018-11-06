@@ -199,11 +199,10 @@ func (d *DbMongo) getLatestAttestedCommitmentHash() (chainhash.Hash, error) {
 
 	// filter by inserted_at DESC to get latest attestation
 	sortFilter := bson.NewDocument(bson.EC.Int32(models.ATTESTATION_INSERTED_AT_NAME, -1))
-
-	// ADD FILTER CONFIRMED ONLY
+	confirmedFilter := bson.NewDocument(bson.EC.Boolean(models.ATTESTATION_CONFIRMED_NAME, true))
 
 	attestationDoc := bson.NewDocument()
-	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx, bson.NewDocument(), findopt.Sort(sortFilter)).Decode(attestationDoc)
+	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx, confirmedFilter, findopt.Sort(sortFilter)).Decode(attestationDoc)
 	if resErr != nil {
 		fmt.Printf("couldn't get latest attestation: %v\n", resErr)
 		return chainhash.Hash{}, resErr
