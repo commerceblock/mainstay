@@ -20,7 +20,7 @@ func TestMerkleProof_5Commitments(t *testing.T) {
 	hash44 := *hashLeaves(*hash4, *hash4)
 	hash0123 := *hashLeaves(hash01, hash23)
 	hash4444 := *hashLeaves(hash44, hash44)
-	hashRoot := *hashLeaves(hash0123, hash4444)
+	hashMerkleRoot := *hashLeaves(hash0123, hash4444)
 
 	// build merkle tree
 	commitments := []chainhash.Hash{*hash0, *hash1, *hash2, *hash3, *hash4}
@@ -29,7 +29,7 @@ func TestMerkleProof_5Commitments(t *testing.T) {
 	// test proofs for different commitments
 	proof0 := buildMerkleProof(0, merkleTree)
 	assert.Equal(t, *hash0, proof0.Commitment)
-	assert.Equal(t, hashRoot, proof0.Root)
+	assert.Equal(t, hashMerkleRoot, proof0.MerkleRoot)
 	assert.Equal(t, 3, len(proof0.Ops))
 	assert.Equal(t, true, proof0.Ops[0].Append)
 	assert.Equal(t, *hash1, proof0.Ops[0].Commitment)
@@ -40,7 +40,7 @@ func TestMerkleProof_5Commitments(t *testing.T) {
 
 	proof1 := buildMerkleProof(1, merkleTree)
 	assert.Equal(t, *hash1, proof1.Commitment)
-	assert.Equal(t, hashRoot, proof1.Root)
+	assert.Equal(t, hashMerkleRoot, proof1.MerkleRoot)
 	assert.Equal(t, 3, len(proof1.Ops))
 	assert.Equal(t, false, proof1.Ops[0].Append)
 	assert.Equal(t, *hash0, proof1.Ops[0].Commitment)
@@ -51,7 +51,7 @@ func TestMerkleProof_5Commitments(t *testing.T) {
 
 	proof2 := buildMerkleProof(2, merkleTree)
 	assert.Equal(t, *hash2, proof2.Commitment)
-	assert.Equal(t, hashRoot, proof2.Root)
+	assert.Equal(t, hashMerkleRoot, proof2.MerkleRoot)
 	assert.Equal(t, 3, len(proof2.Ops))
 	assert.Equal(t, true, proof2.Ops[0].Append)
 	assert.Equal(t, *hash3, proof2.Ops[0].Commitment)
@@ -62,7 +62,7 @@ func TestMerkleProof_5Commitments(t *testing.T) {
 
 	proof3 := buildMerkleProof(3, merkleTree)
 	assert.Equal(t, *hash3, proof3.Commitment)
-	assert.Equal(t, hashRoot, proof3.Root)
+	assert.Equal(t, hashMerkleRoot, proof3.MerkleRoot)
 	assert.Equal(t, 3, len(proof3.Ops))
 	assert.Equal(t, false, proof3.Ops[0].Append)
 	assert.Equal(t, *hash2, proof3.Ops[0].Commitment)
@@ -73,7 +73,7 @@ func TestMerkleProof_5Commitments(t *testing.T) {
 
 	proof4 := buildMerkleProof(4, merkleTree)
 	assert.Equal(t, *hash4, proof4.Commitment)
-	assert.Equal(t, hashRoot, proof4.Root)
+	assert.Equal(t, hashMerkleRoot, proof4.MerkleRoot)
 	assert.Equal(t, 3, len(proof4.Ops))
 	assert.Equal(t, true, proof4.Ops[0].Append)
 	assert.Equal(t, *hash4, proof4.Ops[0].Commitment)
@@ -107,7 +107,7 @@ func TestMerkleProof_4Commitments(t *testing.T) {
 
 	hash01 := *hashLeaves(*hash0, *hash1)
 	hash23 := *hashLeaves(*hash2, *hash3)
-	hashRoot := *hashLeaves(hash01, hash23)
+	hashMerkleRoot := *hashLeaves(hash01, hash23)
 
 	// build merkle tree
 	commitments := []chainhash.Hash{*hash0, *hash1, *hash2, *hash3}
@@ -116,7 +116,7 @@ func TestMerkleProof_4Commitments(t *testing.T) {
 	// test proofs for different commitments
 	proof0 := buildMerkleProof(0, merkleTree)
 	assert.Equal(t, *hash0, proof0.Commitment)
-	assert.Equal(t, hashRoot, proof0.Root)
+	assert.Equal(t, hashMerkleRoot, proof0.MerkleRoot)
 	assert.Equal(t, 2, len(proof0.Ops))
 	assert.Equal(t, true, proof0.Ops[0].Append)
 	assert.Equal(t, *hash1, proof0.Ops[0].Commitment)
@@ -125,7 +125,7 @@ func TestMerkleProof_4Commitments(t *testing.T) {
 
 	proof1 := buildMerkleProof(1, merkleTree)
 	assert.Equal(t, *hash1, proof1.Commitment)
-	assert.Equal(t, hashRoot, proof1.Root)
+	assert.Equal(t, hashMerkleRoot, proof1.MerkleRoot)
 	assert.Equal(t, 2, len(proof1.Ops))
 	assert.Equal(t, false, proof1.Ops[0].Append)
 	assert.Equal(t, *hash0, proof1.Ops[0].Commitment)
@@ -134,7 +134,7 @@ func TestMerkleProof_4Commitments(t *testing.T) {
 
 	proof2 := buildMerkleProof(2, merkleTree)
 	assert.Equal(t, *hash2, proof2.Commitment)
-	assert.Equal(t, hashRoot, proof2.Root)
+	assert.Equal(t, hashMerkleRoot, proof2.MerkleRoot)
 	assert.Equal(t, 2, len(proof2.Ops))
 	assert.Equal(t, true, proof2.Ops[0].Append)
 	assert.Equal(t, *hash3, proof2.Ops[0].Commitment)
@@ -143,7 +143,7 @@ func TestMerkleProof_4Commitments(t *testing.T) {
 
 	proof3 := buildMerkleProof(3, merkleTree)
 	assert.Equal(t, *hash3, proof3.Commitment)
-	assert.Equal(t, hashRoot, proof3.Root)
+	assert.Equal(t, hashMerkleRoot, proof3.MerkleRoot)
 	assert.Equal(t, 2, len(proof3.Ops))
 	assert.Equal(t, false, proof3.Ops[0].Append)
 	assert.Equal(t, *hash2, proof3.Ops[0].Commitment)
@@ -176,7 +176,7 @@ func TestMerkleProof_3Commitments(t *testing.T) {
 
 	hash01 := *hashLeaves(*hash0, *hash1)
 	hash22 := *hashLeaves(*hash2, *hash2)
-	hashRoot := *hashLeaves(hash01, hash22)
+	hashMerkleRoot := *hashLeaves(hash01, hash22)
 
 	// build merkle tree
 	commitments := []chainhash.Hash{*hash0, *hash1, *hash2}
@@ -185,7 +185,7 @@ func TestMerkleProof_3Commitments(t *testing.T) {
 	// test proofs for different commitments
 	proof0 := buildMerkleProof(0, merkleTree)
 	assert.Equal(t, *hash0, proof0.Commitment)
-	assert.Equal(t, hashRoot, proof0.Root)
+	assert.Equal(t, hashMerkleRoot, proof0.MerkleRoot)
 	assert.Equal(t, 2, len(proof0.Ops))
 	assert.Equal(t, true, proof0.Ops[0].Append)
 	assert.Equal(t, *hash1, proof0.Ops[0].Commitment)
@@ -194,7 +194,7 @@ func TestMerkleProof_3Commitments(t *testing.T) {
 
 	proof1 := buildMerkleProof(1, merkleTree)
 	assert.Equal(t, *hash1, proof1.Commitment)
-	assert.Equal(t, hashRoot, proof1.Root)
+	assert.Equal(t, hashMerkleRoot, proof1.MerkleRoot)
 	assert.Equal(t, 2, len(proof1.Ops))
 	assert.Equal(t, false, proof1.Ops[0].Append)
 	assert.Equal(t, *hash0, proof1.Ops[0].Commitment)
@@ -203,7 +203,7 @@ func TestMerkleProof_3Commitments(t *testing.T) {
 
 	proof2 := buildMerkleProof(2, merkleTree)
 	assert.Equal(t, *hash2, proof2.Commitment)
-	assert.Equal(t, hashRoot, proof2.Root)
+	assert.Equal(t, hashMerkleRoot, proof2.MerkleRoot)
 	assert.Equal(t, 2, len(proof2.Ops))
 	assert.Equal(t, true, proof2.Ops[0].Append)
 	assert.Equal(t, *hash2, proof2.Ops[0].Commitment)
@@ -228,7 +228,7 @@ func TestMerkleProof_3Commitments(t *testing.T) {
 func TestMerkleProof_1Commitments(t *testing.T) {
 	hash0, _ := chainhash.NewHashFromStr("1a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 
-	hashRoot := *hashLeaves(*hash0, *hash0)
+	hashMerkleRoot := *hashLeaves(*hash0, *hash0)
 
 	// build merkle tree
 	commitments := []chainhash.Hash{*hash0}
@@ -237,7 +237,7 @@ func TestMerkleProof_1Commitments(t *testing.T) {
 	// test proofs for different commitments
 	proof0 := buildMerkleProof(0, merkleTree)
 	assert.Equal(t, *hash0, proof0.Commitment)
-	assert.Equal(t, hashRoot, proof0.Root)
+	assert.Equal(t, hashMerkleRoot, proof0.MerkleRoot)
 	assert.Equal(t, 1, len(proof0.Ops))
 	assert.Equal(t, true, proof0.Ops[0].Append)
 	assert.Equal(t, *hash0, proof0.Ops[0].Commitment)
