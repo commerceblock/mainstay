@@ -9,9 +9,8 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/mongodb/mongo-go-driver/bson"
-	_ "github.com/mongodb/mongo-go-driver/bson/objectid"
 	"github.com/mongodb/mongo-go-driver/mongo"
-	"github.com/mongodb/mongo-go-driver/mongo/findopt"
+	"github.com/mongodb/mongo-go-driver/options"
 )
 
 const (
@@ -88,7 +87,9 @@ func (d *DbMongo) saveAttestation(attestation models.Attestation) error {
 
 	// insert or update attestation
 	t := bson.NewDocument()
-	res := d.db.Collection(COL_NAME_ATTESTATION).FindOneAndUpdate(d.ctx, filterAttestation, newAttestation, findopt.Upsert(true))
+	opts := &options.FindOneAndUpdateOptions{}
+	opts.SetUpsert(true)
+	res := d.db.Collection(COL_NAME_ATTESTATION).FindOneAndUpdate(d.ctx, filterAttestation, newAttestation, opts)
 	resErr := res.Decode(t)
 	if resErr != nil && resErr != mongo.ErrNoDocuments {
 		fmt.Printf("couldn't save attestation: %v\n", resErr)
@@ -141,8 +142,9 @@ func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCom
 
 		// insert or update merkle commitment
 		t := bson.NewDocument()
-		res := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).FindOneAndUpdate(d.ctx,
-			filterMerkleCommitment, newCommitment, findopt.Upsert(true))
+		opts := &options.FindOneAndUpdateOptions{}
+		opts.SetUpsert(true)
+		res := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).FindOneAndUpdate(d.ctx, filterMerkleCommitment, newCommitment, opts)
 		resErr := res.Decode(t)
 		if resErr != nil && resErr != mongo.ErrNoDocuments {
 			fmt.Printf("couldn't save merkle commitment: %v\n", resErr)
@@ -175,8 +177,9 @@ func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error 
 
 		// insert or update merkle proof
 		t := bson.NewDocument()
-		res := d.db.Collection(COL_NAME_MERKLE_PROOF).FindOneAndUpdate(d.ctx,
-			filterMerkleProof, newProof, findopt.Upsert(true))
+		opts := &options.FindOneAndUpdateOptions{}
+		opts.SetUpsert(true)
+		res := d.db.Collection(COL_NAME_MERKLE_PROOF).FindOneAndUpdate(d.ctx, filterMerkleProof, newProof, opts)
 		resErr := res.Decode(t)
 		if resErr != nil && resErr != mongo.ErrNoDocuments {
 			fmt.Printf("couldn't be created: %v\n", resErr)
@@ -195,7 +198,7 @@ func (d *DbMongo) getLatestAttestedCommitmentHash() (chainhash.Hash, error) {
 
 	attestationDoc := bson.NewDocument()
 	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx,
-		confirmedFilter, findopt.Sort(sortFilter)).Decode(attestationDoc)
+		confirmedFilter, &options.FindOneOptions{Sort: sortFilter}).Decode(attestationDoc)
 	if resErr != nil {
 		fmt.Printf("couldn't get latest attestation: %v\n", resErr)
 		return chainhash.Hash{}, resErr
@@ -228,7 +231,7 @@ func (d *DbMongo) getLatestCommitment() (models.Commitment, error) {
 
 	// sort by client position to get correct commitment order
 	sortFilter := bson.NewDocument(bson.EC.Int32(LATEST_COMMITMENT_CLIENT_POSITION_NAME, 1))
-	res, resErr := d.db.Collection(COL_NAME_LATEST_COMMITMENT).Find(d.ctx, bson.NewDocument(), findopt.Sort(sortFilter))
+	res, resErr := d.db.Collection(COL_NAME_LATEST_COMMITMENT).Find(d.ctx, bson.NewDocument(), &options.FindOptions{Sort: sortFilter})
 	if resErr != nil {
 		fmt.Printf("couldn't get latest commitment: %v\n", resErr)
 		return models.Commitment{}, resErr
@@ -279,7 +282,8 @@ func (d *DbMongo) getAttestationCommitment(attestationTxid chainhash.Hash) (mode
 	sortFilter := bson.NewDocument(bson.EC.Int32(models.COMMITMENT_CLIENT_POSITION_NAME, 1))
 	merkle_root := attestationDoc.Lookup(models.COMMITMENT_MERKLE_ROOT_NAME).StringValue()
 	filterMerkleRoot := bson.NewDocument(bson.EC.String(models.COMMITMENT_MERKLE_ROOT_NAME, merkle_root))
-	res, resErr := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).Find(d.ctx, filterMerkleRoot, findopt.Sort(sortFilter))
+
+	res, resErr := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).Find(d.ctx, filterMerkleRoot, &options.FindOptions{Sort: sortFilter})
 	if resErr != nil {
 		fmt.Printf("couldn't get latest: %v\n", resErr)
 		return models.Commitment{}, resErr
