@@ -42,7 +42,12 @@ func dbConnect(ctx context.Context, dbConnectivity config.DbConnectivity) (*mong
 		return nil, err
 	}
 
-	err = client.Connect(ctx)
+	err = client.Connect(ctx) // start background client routine
+	if err != nil {
+		return nil, err
+	}
+
+	err = client.Ping(ctx, nil) // use Ping to check if mongod is running
 	if err != nil {
 		return nil, err
 	}
