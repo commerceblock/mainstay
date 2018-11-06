@@ -50,6 +50,20 @@ func dbConnect(ctx context.Context) (*mongo.Database, error) {
 	return client.Database(os.Getenv("DB_NAME_MAINSTAY")), nil
 }
 
+// Function to get bson Document from model interface that implements MarshalBSON
+func getDocumentFromModel(model interface{}) (*bson.Document, error) {
+
+	bytes, marshalErr := bson.Marshal(model)
+	if marshalErr != nil {
+		return nil, marshalErr
+	}
+	doc, docErr := bson.ReadDocument(bytes)
+	if docErr != nil {
+		return nil, docErr
+	}
+	return doc, nil
+}
+
 // DbMongo struct
 type DbMongo struct {
 	ctx context.Context
@@ -71,22 +85,19 @@ func NewDbMongo(ctx context.Context) (DbMongo, error) {
 func (d *DbMongo) saveAttestation(attestation models.Attestation) error {
 
 	// get document representation of Attestation object
-	atstBytes, marshalErr := bson.Marshal(attestation)
-	if marshalErr != nil {
-		return marshalErr
-	}
-	atstDoc, docErr := bson.ReadDocument(atstBytes)
+	docAttestation, docErr := getDocumentFromModel(attestation)
 	if docErr != nil {
 		return docErr
 	}
+
 	newAttestation := bson.NewDocument(
-		bson.EC.SubDocument("$set", atstDoc),
+		bson.EC.SubDocument("$set", docAttestation),
 	)
 
 	// search if attestation already exists
 	filterAttestation := bson.NewDocument(
-		bson.EC.String(models.ATTESTATION_TXID_NAME, atstDoc.Lookup(models.ATTESTATION_TXID_NAME).StringValue()),
-		bson.EC.String(models.ATTESTATION_MERKLE_ROOT_NAME, atstDoc.Lookup(models.ATTESTATION_MERKLE_ROOT_NAME).StringValue()),
+		bson.EC.String(models.ATTESTATION_TXID_NAME, docAttestation.Lookup(models.ATTESTATION_TXID_NAME).StringValue()),
+		bson.EC.String(models.ATTESTATION_MERKLE_ROOT_NAME, docAttestation.Lookup(models.ATTESTATION_MERKLE_ROOT_NAME).StringValue()),
 	)
 
 	// insert or update attestation
@@ -124,27 +135,25 @@ func (d *DbMongo) saveCommitment(commitment models.Commitment) error {
 func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error {
 	for pos := range commitments {
 		// get document representation of each commitment
-		cmtBytes, marshalErr := bson.Marshal(commitments[pos])
-		if marshalErr != nil {
-			return marshalErr
-		}
-		cmtDoc, docErr := bson.ReadDocument(cmtBytes)
+		// get document representation of Attestation object
+		docCommitment, docErr := getDocumentFromModel(commitments[pos])
 		if docErr != nil {
 			return docErr
 		}
-		newMerkleCommitment := bson.NewDocument(
-			bson.EC.SubDocument("$set", cmtDoc),
+
+		newCommitment := bson.NewDocument(
+			bson.EC.SubDocument("$set", docCommitment),
 		)
 
 		// search if merkle commitment already exists
 		filterMerkleCommitment := bson.NewDocument(
-			bson.EC.String(models.COMMITMENT_MERKLE_ROOT_NAME, cmtDoc.Lookup(models.COMMITMENT_MERKLE_ROOT_NAME).StringValue()),
-			bson.EC.Int32(models.COMMITMENT_CLIENT_POSITION_NAME, cmtDoc.Lookup(models.COMMITMENT_CLIENT_POSITION_NAME).Int32()),
+			bson.EC.String(models.COMMITMENT_MERKLE_ROOT_NAME, docCommitment.Lookup(models.COMMITMENT_MERKLE_ROOT_NAME).StringValue()),
+			bson.EC.Int32(models.COMMITMENT_CLIENT_POSITION_NAME, docCommitment.Lookup(models.COMMITMENT_CLIENT_POSITION_NAME).Int32()),
 		)
 
 		// insert or update merkle commitment
 		t := bson.NewDocument()
-		res := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).FindOneAndUpdate(d.ctx, filterMerkleCommitment, newMerkleCommitment, findopt.Upsert(true))
+		res := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).FindOneAndUpdate(d.ctx, filterMerkleCommitment, newCommitment, findopt.Upsert(true))
 		resErr := res.Decode(t)
 		if resErr != nil && resErr != mongo.ErrNoDocuments {
 			fmt.Printf("couldn't save merkle commitment: %v\n", resErr)
@@ -158,27 +167,24 @@ func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCom
 func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error {
 	for pos := range proofs {
 		// get document representation of merkle proof
-		prfBytes, marshalErr := bson.Marshal(proofs[pos])
-		if marshalErr != nil {
-			return marshalErr
-		}
-		prfDoc, docErr := bson.ReadDocument(prfBytes)
+		docProof, docErr := getDocumentFromModel(proofs[pos])
 		if docErr != nil {
 			return docErr
 		}
-		newMerkleProof := bson.NewDocument(
-			bson.EC.SubDocument("$set", prfDoc),
+
+		newProof := bson.NewDocument(
+			bson.EC.SubDocument("$set", docProof),
 		)
 
 		// search if merkle proof already exists
 		filterMerkleProof := bson.NewDocument(
-			bson.EC.String(models.PROOF_MERKLE_ROOT_NAME, prfDoc.Lookup(models.PROOF_MERKLE_ROOT_NAME).StringValue()),
-			bson.EC.Int32(models.PROOF_CLIENT_POSITION_NAME, prfDoc.Lookup(models.PROOF_CLIENT_POSITION_NAME).Int32()),
+			bson.EC.String(models.PROOF_MERKLE_ROOT_NAME, docProof.Lookup(models.PROOF_MERKLE_ROOT_NAME).StringValue()),
+			bson.EC.Int32(models.PROOF_CLIENT_POSITION_NAME, docProof.Lookup(models.PROOF_CLIENT_POSITION_NAME).Int32()),
 		)
 
 		// insert or update merkle proof
 		t := bson.NewDocument()
-		res := d.db.Collection(COL_NAME_MERKLE_PROOF).FindOneAndUpdate(d.ctx, filterMerkleProof, newMerkleProof, findopt.Upsert(true))
+		res := d.db.Collection(COL_NAME_MERKLE_PROOF).FindOneAndUpdate(d.ctx, filterMerkleProof, newProof, findopt.Upsert(true))
 		resErr := res.Decode(t)
 		if resErr != nil && resErr != mongo.ErrNoDocuments {
 			fmt.Printf("couldn't be created: %v\n", resErr)
