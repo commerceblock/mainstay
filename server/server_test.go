@@ -3,9 +3,7 @@ package server
 import (
 	"testing"
 
-	"mainstay/clients"
 	"mainstay/models"
-	"mainstay/test"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/stretchr/testify/assert"
@@ -14,42 +12,34 @@ import (
 // Test Server responses to requests
 func TestServer(t *testing.T) {
 	// TEST INIT
-	test := test.NewTest(false, false)
-	sideClientFake := test.OceanClient.(*clients.SidechainClientFake)
-	server := NewServer(test.Config, sideClientFake)
+	server := NewServer(nil, nil)
+	dbFake, _ := NewDbFake()
+	server.dbInterface = dbFake
 
 	// Generate blocks in side chain and update server latest
-	sideClientFake.Generate(10)
-	bestblockhash, _ := sideClientFake.GetBestBlockHash()
-	bestblockhashCommitment, errCommitment := models.NewCommitment([]chainhash.Hash{*bestblockhash})
+	latestCommitment, errCommitment := dbFake.getLatestCommitment()
 	assert.Equal(t, nil, errCommitment)
-	server.latestCommitment = bestblockhashCommitment
 
 	// Test latest commitment request
 	respCommitment, errCommitment := server.GetLatestCommitment()
 	assert.Equal(t, nil, errCommitment)
-	assert.Equal(t, bestblockhashCommitment.GetCommitmentHash(), respCommitment.GetCommitmentHash())
+	assert.Equal(t, latestCommitment.GetCommitmentHash(), respCommitment.GetCommitmentHash())
 
 	// Test latest attestation request
-	respAttestation, errAttestation := server.GetLatestAttestation()
+	respAttestationHash, errAttestation := server.GetLatestAttestedCommitmentHash()
 	assert.Equal(t, nil, errAttestation)
-	assert.Equal(t, chainhash.Hash{}, respAttestation.Txid)
-	assert.Equal(t, chainhash.Hash{}, respAttestation.CommitmentHash())
+	assert.Equal(t, chainhash.Hash{}, respAttestationHash)
 
 	// Generate new attestation and update server
 	txid, _ := chainhash.NewHashFromStr("11111111111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
-	latestCommitment, _ := models.NewCommitment([]chainhash.Hash{*bestblockhash})
-	latest := models.NewAttestation(*txid, latestCommitment)
+	latest := models.NewAttestation(*txid, &latestCommitment)
+	latest.Confirmed = true
 
 	// Test update latest attestation
-	errUpdate := server.UpdateLatestAttestation(*latest, true)
+	errUpdate := server.UpdateLatestAttestation(*latest)
 	assert.Equal(t, nil, errUpdate)
-	assert.Equal(t, *txid, server.latestAttestation.Txid)
-	assert.Equal(t, bestblockhashCommitment.GetCommitmentHash(), server.latestAttestation.CommitmentHash())
 
-	// Test latest attestation again after update
-	respAttestation, errAttestation = server.GetLatestAttestation()
+	respAttestationHash, errAttestation = server.GetLatestAttestedCommitmentHash()
 	assert.Equal(t, nil, errAttestation)
-	assert.Equal(t, *txid, respAttestation.Txid)
-	assert.Equal(t, bestblockhashCommitment.GetCommitmentHash(), respAttestation.CommitmentHash())
+	assert.Equal(t, latestCommitment.GetCommitmentHash(), respAttestationHash)
 }

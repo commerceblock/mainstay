@@ -50,41 +50,6 @@ func dbConnect(ctx context.Context) (*mongo.Database, error) {
 	return client.Database(os.Getenv("DB_NAME_MAINSTAY")), nil
 }
 
-// Function to get bson Document from model interface that implements MarshalBSON
-func getDocumentFromModel(model interface{}) (*bson.Document, error) {
-
-	// model to bytes
-	bytes, marshalErr := bson.Marshal(model)
-	if marshalErr != nil {
-		return nil, marshalErr
-	}
-
-	// bytes to bson document
-	doc, docErr := bson.ReadDocument(bytes)
-	if docErr != nil {
-		return nil, docErr
-	}
-	return doc, nil
-}
-
-// Function to get model interface that implements UnmarshalBSON from bson Document
-func getModelFromDocument(doc *bson.Document, model interface{}) error {
-
-	// bson document to bytes
-	bytes, errDoc := doc.MarshalBSON()
-	if errDoc != nil {
-		return errDoc
-	}
-
-	// bytes to interface model
-	unmarshalErr := bson.Unmarshal(bytes, model)
-	if unmarshalErr != nil {
-		return unmarshalErr
-	}
-
-	return nil
-}
-
 // DbMongo struct
 type DbMongo struct {
 	ctx context.Context
@@ -92,21 +57,21 @@ type DbMongo struct {
 }
 
 // Return new DbMongo instance
-func NewDbMongo(ctx context.Context) (DbMongo, error) {
+func NewDbMongo(ctx context.Context) (*DbMongo, error) {
 	db, errConnect := dbConnect(ctx)
 
 	if errConnect != nil {
-		return DbMongo{}, errConnect
+		return &DbMongo{}, errConnect
 	}
 
-	return DbMongo{ctx, db}, nil
+	return &DbMongo{ctx, db}, nil
 }
 
 // Save latest attestation to the Attestation collection
 func (d *DbMongo) saveAttestation(attestation models.Attestation) error {
 
 	// get document representation of Attestation object
-	docAttestation, docErr := getDocumentFromModel(attestation)
+	docAttestation, docErr := models.GetDocumentFromModel(attestation)
 	if docErr != nil {
 		return docErr
 	}
@@ -157,7 +122,7 @@ func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCom
 	for pos := range commitments {
 		// get document representation of each commitment
 		// get document representation of Attestation object
-		docCommitment, docErr := getDocumentFromModel(commitments[pos])
+		docCommitment, docErr := models.GetDocumentFromModel(commitments[pos])
 		if docErr != nil {
 			return docErr
 		}
@@ -191,7 +156,7 @@ func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCom
 func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error {
 	for pos := range proofs {
 		// get document representation of merkle proof
-		docProof, docErr := getDocumentFromModel(proofs[pos])
+		docProof, docErr := models.GetDocumentFromModel(proofs[pos])
 		if docErr != nil {
 			return docErr
 		}
@@ -251,7 +216,7 @@ func (d *DbMongo) getLatestAttestedCommitmentHash() (chainhash.Hash, error) {
 
 	// decode document result to Commitment model and get hash
 	commitmentModel := &models.CommitmentMerkleCommitment{}
-	modelErr := getModelFromDocument(commitmentDoc, commitmentModel)
+	modelErr := models.GetModelFromDocument(commitmentDoc, commitmentModel)
 	if modelErr != nil {
 		return chainhash.Hash{}, modelErr
 	}
@@ -330,7 +295,7 @@ func (d *DbMongo) getAttestationCommitment(attestationTxid chainhash.Hash) (mode
 		}
 		// decode document result to Commitment model and get hash
 		commitmentModel := &models.CommitmentMerkleCommitment{}
-		modelErr := getModelFromDocument(commitmentDoc, commitmentModel)
+		modelErr := models.GetModelFromDocument(commitmentDoc, commitmentModel)
 		if modelErr != nil {
 			return models.Commitment{}, modelErr
 		}
