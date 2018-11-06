@@ -131,7 +131,8 @@ func (s *AttestService) doStateInit() {
 			s.attestation = models.NewAttestation(*txunspentHash, &commitment)
 
 			// update server with latest confirmed attestation
-			errUpdate := s.server.UpdateLatestAttestation(*s.attestation, true)
+			s.attestation.Confirmed = true
+			errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
 			if s.checkFailure(errUpdate) {
 				return // will rebound to init
 			}
@@ -267,7 +268,7 @@ func (s *AttestService) doStateSendAttestation() {
 	log.Println("*AttestService* SEND ATTESTATION")
 
 	// update server with latest unconfirmed attestation, in case the service fails
-	errUpdate := s.server.UpdateLatestAttestation(*s.attestation, false)
+	errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
 	if s.checkFailure(errUpdate) {
 		return // will rebound to init
 	}
@@ -296,7 +297,8 @@ func (s *AttestService) doStateAwaitConfirmation() {
 		log.Printf("********** attestation confirmed with txid: (%s)\n", s.attestation.Txid.String())
 
 		// update server with latest confirmed attestation
-		errUpdate := s.server.UpdateLatestAttestation(*s.attestation, true)
+		s.attestation.Confirmed = true
+		errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
 		if s.checkFailure(errUpdate) {
 			return // will rebound to init
 		}

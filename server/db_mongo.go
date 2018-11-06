@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"mainstay/models"
 
@@ -69,20 +68,25 @@ func NewDbMongo(ctx context.Context) (DbMongo, error) {
 }
 
 // Save latest attestation to the Attestation collection
-func (d *DbMongo) saveAttestation(attestation models.Attestation, confirmed bool) error {
+func (d *DbMongo) saveAttestation(attestation models.Attestation) error {
 
-	// new attestation based on Attestation model
+	// get document representation of Attestation object
+	atstBytes, marshalErr := bson.Marshal(attestation)
+	if marshalErr != nil {
+		return marshalErr
+	}
+	atstDoc, docErr := bson.ReadDocument(atstBytes)
+	if docErr != nil {
+		return docErr
+	}
 	newAttestation := bson.NewDocument(
-		bson.EC.SubDocumentFromElements("$set", bson.EC.String("txid", attestation.Txid.String())),
-		bson.EC.SubDocumentFromElements("$set", bson.EC.String("merkle_root", attestation.CommitmentHash().String())),
-		bson.EC.SubDocumentFromElements("$set", bson.EC.DateTime("inserted_at", int64(time.Now().Unix())*1000)),
-		bson.EC.SubDocumentFromElements("$set", bson.EC.Boolean("confirmed", confirmed)),
+		bson.EC.SubDocument("$set", atstDoc),
 	)
 
 	// search if attestation already exists
 	filterAttestation := bson.NewDocument(
-		bson.EC.String("txid", attestation.Txid.String()),
-		bson.EC.String("merkle_root", attestation.CommitmentHash().String()),
+		bson.EC.String("txid", atstDoc.Lookup("txid").StringValue()),
+		bson.EC.String("merkle_root", atstDoc.Lookup("merkle_root").StringValue()),
 	)
 
 	// insert or update attestation
@@ -99,13 +103,14 @@ func (d *DbMongo) saveAttestation(attestation models.Attestation, confirmed bool
 
 // Handle saving Commitment underlying components to the database
 func (d *DbMongo) saveCommitment(commitment models.Commitment) error {
-	//merkleRoot := commitment.GetCommitmentHash()
+	// store merkle commitments
 	merkleCommitments := commitment.GetMerkleCommitments()
 	errSave := d.saveMerkleCommitments(merkleCommitments)
 	if errSave != nil {
 		return errSave
 	}
 
+	// store merkle proofs
 	merkleProofs := commitment.GetMerkleProofs()
 	errSave = d.saveMerkleProofs(merkleProofs)
 	if errSave != nil {
@@ -118,22 +123,23 @@ func (d *DbMongo) saveCommitment(commitment models.Commitment) error {
 // Save merkle commitments to the MerkleCommitment collection
 func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error {
 	for pos := range commitments {
-		el, marshalErr := bson.Marshal(commitments[pos])
+		// get document representation of each commitment
+		cmtBytes, marshalErr := bson.Marshal(commitments[pos])
 		if marshalErr != nil {
 			return marshalErr
 		}
-		out, docErr := bson.ReadDocument(el)
+		cmtDoc, docErr := bson.ReadDocument(cmtBytes)
 		if docErr != nil {
 			return docErr
 		}
 		newMerkleCommitment := bson.NewDocument(
-			bson.EC.SubDocument("$set", out),
+			bson.EC.SubDocument("$set", cmtDoc),
 		)
 
 		// search if merkle commitment already exists
 		filterMerkleCommitment := bson.NewDocument(
-			bson.EC.String("merkle_root", out.Lookup("merkle_root").StringValue()),
-			bson.EC.Int32("client_position", out.Lookup("client_position").Int32()),
+			bson.EC.String("merkle_root", cmtDoc.Lookup("merkle_root").StringValue()),
+			bson.EC.Int32("client_position", cmtDoc.Lookup("client_position").Int32()),
 		)
 
 		// insert or update merkle commitment
@@ -151,23 +157,23 @@ func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCom
 // Save merkle proofs to the MerkleProof collection
 func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error {
 	for pos := range proofs {
-		// new merkle proof based on Commitment model
-		el, marshalErr := bson.Marshal(proofs[pos])
+		// get document representation of merkle proof
+		prfBytes, marshalErr := bson.Marshal(proofs[pos])
 		if marshalErr != nil {
 			return marshalErr
 		}
-		out, docErr := bson.ReadDocument(el)
+		prfDoc, docErr := bson.ReadDocument(prfBytes)
 		if docErr != nil {
 			return docErr
 		}
 		newMerkleProof := bson.NewDocument(
-			bson.EC.SubDocument("$set", out),
+			bson.EC.SubDocument("$set", prfDoc),
 		)
 
 		// search if merkle proof already exists
 		filterMerkleProof := bson.NewDocument(
-			bson.EC.String("merkle_root", out.Lookup("merkle_root").StringValue()),
-			bson.EC.Int32("client_position", out.Lookup("client_position").Int32()),
+			bson.EC.String("merkle_root", prfDoc.Lookup("merkle_root").StringValue()),
+			bson.EC.Int32("client_position", prfDoc.Lookup("client_position").Int32()),
 		)
 
 		// insert or update merkle proof
@@ -188,7 +194,7 @@ func (d *DbMongo) getLatestAttestedCommitmentHash() (chainhash.Hash, error) {
 	// filter by inserted_at DESC to get latest attestation
 	sortFilter := bson.NewDocument(bson.EC.Int32("inserted_at", -1))
 
-    // ADD FILTER CONFIRMED ONLY
+	// ADD FILTER CONFIRMED ONLY
 
 	attestationDoc := bson.NewDocument()
 	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx, bson.NewDocument(), findopt.Sort(sortFilter)).Decode(attestationDoc)

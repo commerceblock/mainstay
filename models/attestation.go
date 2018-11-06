@@ -2,9 +2,11 @@ package models
 
 import (
 	"errors"
+	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/mongodb/mongo-go-driver/bson"
 )
 
 // Attestation structure
@@ -14,17 +16,18 @@ import (
 type Attestation struct {
 	Txid       chainhash.Hash
 	Tx         wire.MsgTx
+	Confirmed  bool
 	commitment *Commitment
 }
 
 // Attestation constructor for defaulting some values
 func NewAttestation(txid chainhash.Hash, commitment *Commitment) *Attestation {
-	return &Attestation{txid, wire.MsgTx{}, commitment}
+	return &Attestation{txid, wire.MsgTx{}, false, commitment}
 }
 
 // Attestation constructor for defaulting all values
 func NewAttestationDefault() *Attestation {
-	return &Attestation{chainhash.Hash{}, wire.MsgTx{}, (*Commitment)(nil)}
+	return &Attestation{chainhash.Hash{}, wire.MsgTx{}, false, (*Commitment)(nil)}
 }
 
 // Set commitment
@@ -46,4 +49,18 @@ func (a Attestation) CommitmentHash() chainhash.Hash {
 		return chainhash.Hash{}
 	}
 	return a.commitment.GetCommitmentHash()
+}
+
+// Implement bson.Marshaler MarshalBSON() method for use with db_mongo interface
+func (a Attestation) MarshalBSON() ([]byte, error) {
+	attestationBSON := AttestationBSON{a.Txid.String(), a.CommitmentHash().String(), a.Confirmed, time.Now()}
+	return bson.Marshal(attestationBSON)
+}
+
+// AttestationBSON structure for mongoDb
+type AttestationBSON struct {
+	Txid       string    `bson:"txid"`
+	MerkleRoot string    `bson:"merkle_root"`
+	Confirmed  bool      `bson:"confirmed"`
+	InsertedAt time.Time `bson:"inserted_at"`
 }

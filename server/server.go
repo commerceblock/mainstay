@@ -37,11 +37,11 @@ func NewServer(ctx context.Context, config *config.Config, sideClient clients.Si
 }
 
 // Update latest attestation in the server
-func (s *Server) UpdateLatestAttestation(attestation models.Attestation, confirmed bool) error {
+func (s *Server) UpdateLatestAttestation(attestation models.Attestation) error {
 
 	s.latestAttestation = attestation // to remove
 
-	errSave := dbInterface.saveAttestation(attestation, confirmed)
+	errSave := dbInterface.saveAttestation(attestation)
 	if errSave != nil {
 		return errSave
 	}
