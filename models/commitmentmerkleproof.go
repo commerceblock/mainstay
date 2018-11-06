@@ -80,6 +80,12 @@ type CommitmentMerkleProofOpBSON struct {
 	Commitment string `bson:"commitment"`
 }
 
+// Proof OP field names
+const (
+	PROOF_OP_APPEND_NAME     = "append"
+	PROOF_OP_COMMITMENT_NAME = "commitment"
+)
+
 // CommitmentMerkleProof structure
 type CommitmentMerkleProof struct {
 	MerkleRoot     chainhash.Hash
