@@ -100,6 +100,14 @@ func (c CommitmentMerkleProof) MarshalBSON() ([]byte, error) {
 	return bson.Marshal(proofBson)
 }
 
+// Proof field names
+const (
+	PROOF_MERKLE_ROOT_NAME     = "merkle_root"
+	PROOF_CLIENT_POSITION_NAME = "client_position"
+	PROOF_COMMITMENT_NAME      = "commitment"
+	PROOF_OPS_NAME             = "ops"
+)
+
 // CommitmentMerkleProofBSON structure for mongoDB
 type CommitmentMerkleProofBSON struct {
 	MerkleRoot     string                        `bson:"merkle_root"`

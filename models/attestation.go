@@ -57,6 +57,14 @@ func (a Attestation) MarshalBSON() ([]byte, error) {
 	return bson.Marshal(attestationBSON)
 }
 
+// Attestation field names
+const (
+	ATTESTATION_TXID_NAME        = "txid"
+	ATTESTATION_MERKLE_ROOT_NAME = "merkle_root"
+	ATTESTATION_CONFIRMED_NAME   = "confirmed"
+	ATTESTATION_INSERTED_AT_NAME = "inserted_at"
+)
+
 // AttestationBSON structure for mongoDb
 type AttestationBSON struct {
 	Txid       string    `bson:"txid"`

@@ -55,6 +55,13 @@ func (c CommitmentMerkleCommitment) MarshalBSON() ([]byte, error) {
 
 }
 
+// Commitment field names
+const (
+	COMMITMENT_MERKLE_ROOT_NAME     = "merkle_root"
+	COMMITMENT_CLIENT_POSITION_NAME = "client_position"
+	COMMITMENT_COMMITMENT_NAME      = "commitment"
+)
+
 //CommitmentMerkleCommitmentBSON structure for mongoDB
 type CommitmentMerkleCommitmentBSON struct {
 	MerkleRoot     string `bson:"merkle_root"`
