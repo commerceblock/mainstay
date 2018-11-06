@@ -3,8 +3,9 @@ package server
 import (
 	"context"
 	"fmt"
-	"os"
+	"log"
 
+	"mainstay/config"
 	"mainstay/models"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -26,14 +27,14 @@ const (
 )
 
 // Method to connect to mongo database through config
-func dbConnect(ctx context.Context) (*mongo.Database, error) {
+func dbConnect(ctx context.Context, dbConnectivity config.DbConnectivity) (*mongo.Database, error) {
 	// get this from config
 	uri := fmt.Sprintf(`mongodb://%s:%s@%s:%s/%s`,
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME_MAINSTAY"),
+		dbConnectivity.User,
+		dbConnectivity.Password,
+		dbConnectivity.Host,
+		dbConnectivity.Port,
+		dbConnectivity.Name,
 	)
 
 	client, err := mongo.NewClient(uri)
@@ -46,24 +47,25 @@ func dbConnect(ctx context.Context) (*mongo.Database, error) {
 		return nil, err
 	}
 
-	return client.Database(os.Getenv("DB_NAME_MAINSTAY")), nil
+	return client.Database(dbConnectivity.Name), nil
 }
 
 // DbMongo struct
 type DbMongo struct {
-	ctx context.Context
-	db  *mongo.Database
+	ctx            context.Context
+	dbConnectivity config.DbConnectivity
+	db             *mongo.Database
 }
 
 // Return new DbMongo instance
-func NewDbMongo(ctx context.Context) (*DbMongo, error) {
-	db, errConnect := dbConnect(ctx)
-
+func NewDbMongo(ctx context.Context, dbConnectivity config.DbConnectivity) *DbMongo {
+	db, errConnect := dbConnect(ctx, dbConnectivity)
 	if errConnect != nil {
-		return &DbMongo{}, errConnect
+		fmt.Printf("db connectivity failure\n")
+		log.Fatal(errConnect)
 	}
 
-	return &DbMongo{ctx, db}, nil
+	return &DbMongo{ctx, dbConnectivity, db}
 }
 
 // Save latest attestation to the Attestation collection

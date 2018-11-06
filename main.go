@@ -20,7 +20,6 @@ var (
 	pk0        string
 	script     string
 	isRegtest  bool
-	apiHost    string
 	mainConfig *config.Config
 )
 
@@ -58,7 +57,8 @@ func main() {
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	server := server.NewServer(ctx, mainConfig)
+	dbInterface := server.NewDbMongo(ctx, mainConfig.DbConnectivity())
+	server := server.NewServer(dbInterface)
 	attestService := attestation.NewAttestService(ctx, wg, server, mainConfig)
 
 	c := make(chan os.Signal)

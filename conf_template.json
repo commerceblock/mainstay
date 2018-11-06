@@ -13,5 +13,12 @@
     },
     "misc": {
         "multisignodes": "node0:1000,node1:1001"
+    },
+    "db": {
+        "user":"user",
+        "password":"pssword",
+        "host":"localhost",
+        "port":"27017",
+        "name":"mainstay"
     }
 }

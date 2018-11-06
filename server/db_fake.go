@@ -14,8 +14,8 @@ type DbFake struct {
 }
 
 // Return new DbFake instance
-func NewDbFake() (*DbFake, error) {
-	return &DbFake{0, []models.Attestation{}, []models.Commitment{}}, nil
+func NewDbFake() *DbFake {
+	return &DbFake{0, []models.Attestation{}, []models.Commitment{}}
 }
 
 // Save latest attestation to attestations

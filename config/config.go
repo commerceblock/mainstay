@@ -31,6 +31,7 @@ type Config struct {
 	initTX         string
 	initPK         string
 	multisigScript string
+	dbConnectivity DbConnectivity
 }
 
 // Get Main Client
@@ -46,6 +47,11 @@ func (c *Config) MainChainCfg() *chaincfg.Params {
 // Get Tx Signers host names
 func (c *Config) MultisigNodes() []string {
 	return c.multisigNodes
+}
+
+// Get Tx Signers host names
+func (c *Config) DbConnectivity() DbConnectivity {
+	return c.dbConnectivity
 }
 
 // Get init TX
@@ -91,7 +97,9 @@ func NewConfig(customConf ...[]byte) *Config {
 	mainClientCfg := GetChainCfgParams(MAIN_CHAIN_NAME, conf)
 
 	multisignodes := strings.Split(GetEnvFromConf("misc", "multisignodes", conf), ",")
-	return &Config{mainClient, mainClientCfg, multisignodes, "", "", ""}
+
+	dbConnectivity := GetDbConnectivity(conf)
+	return &Config{mainClient, mainClientCfg, multisignodes, "", "", "", dbConnectivity}
 }
 
 // Return SidechainClient depending on whether unit test config or actual config
@@ -107,4 +115,25 @@ func NewClientFromConfig(isUnitTest bool, customConf ...[]byte) clients.Sidechai
 		conf = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
 	}
 	return clients.NewSidechainClientOcean(GetRPC(SIDE_CHAIN_NAME, conf))
+}
+
+// DbDetails struct
+// Database connectivity details
+type DbConnectivity struct {
+	User     string
+	Password string
+	Host     string
+	Port     string
+	Name     string
+}
+
+// Return DbConnectivity from conf options
+func GetDbConnectivity(conf []byte) DbConnectivity {
+	return DbConnectivity{
+		User:     GetEnvFromConf("db", "user", conf),
+		Password: GetEnvFromConf("db", "password", conf),
+		Host:     GetEnvFromConf("db", "host", conf),
+		Port:     GetEnvFromConf("db", "port", conf),
+		Name:     GetEnvFromConf("db", "name", conf),
+	}
 }

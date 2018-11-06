@@ -1,10 +1,6 @@
 package server
 
 import (
-	"context"
-	"log"
-
-	"mainstay/config"
 	"mainstay/models"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -18,13 +14,7 @@ type Server struct {
 }
 
 // NewServer returns a pointer to an Server instance
-func NewServer(ctx context.Context, config *config.Config) *Server {
-
-	dbInterface, dbErr := NewDbMongo(ctx)
-	if dbErr != nil {
-		log.Fatal(dbErr)
-	}
-
+func NewServer(dbInterface Db) *Server {
 	return &Server{dbInterface}
 }
 

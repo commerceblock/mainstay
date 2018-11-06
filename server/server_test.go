@@ -12,9 +12,8 @@ import (
 // Test Server responses to requests
 func TestServer(t *testing.T) {
 	// TEST INIT
-	server := NewServer(nil, nil)
-	dbFake, _ := NewDbFake()
-	server.dbInterface = dbFake
+	dbFake := NewDbFake()
+	server := NewServer(dbFake)
 
 	// Generate blocks in side chain and update server latest
 	latestCommitment, errCommitment := dbFake.getLatestCommitment()
