@@ -24,7 +24,6 @@ func TestServerUpdateLatestAttestation_NoLatestCommitments(t *testing.T) {
 	// Test update latest attestation
 	errUpdate := server.UpdateLatestAttestation(*latest)
 	assert.Equal(t, errors.New("Attestation Commitment not defined"), errUpdate)
-
 }
 
 // Test Server UpdateLatestAttestation with 1 latest commitment
@@ -166,6 +165,10 @@ func TestServerGetLatestCommitment(t *testing.T) {
 	dbFake := NewDbFake()
 	server := NewServer(dbFake)
 
+	// check empty latest commitment first
+	respLatestCommitment, err := server.GetLatestCommitment()
+	assert.Equal(t, errors.New("List of commitments is empty"), err)
+
 	// set db latest commitment
 	hash0, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 	hash1, _ := chainhash.NewHashFromStr("baaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
@@ -176,8 +179,8 @@ func TestServerGetLatestCommitment(t *testing.T) {
 		models.LatestCommitment{*hash0, 0}, models.LatestCommitment{*hash2, 2}}
 	dbFake.setLatestCommitments(latestCommitments)
 
-	respLatestCommitment, err := server.GetLatestCommitment()
-	assert.Equal(t, errors.New("Latest commitment missing in position 1\n"), err)
+	respLatestCommitment, err = server.GetLatestCommitment()
+	assert.Equal(t, errors.New("Latest commitment missing in position 1"), err)
 	assert.Equal(t, chainhash.Hash{}, respLatestCommitment.GetCommitmentHash())
 
 	// update server with incorrect latest commitment and test server
@@ -186,7 +189,7 @@ func TestServerGetLatestCommitment(t *testing.T) {
 	dbFake.setLatestCommitments(latestCommitments)
 
 	respLatestCommitment, err = server.GetLatestCommitment()
-	assert.Equal(t, errors.New("Latest commitment missing in position 0\n"), err)
+	assert.Equal(t, errors.New("Latest commitment missing in position 0"), err)
 	assert.Equal(t, chainhash.Hash{}, respLatestCommitment.GetCommitmentHash())
 
 	// update server with incorrect latest commitment and test server
@@ -194,7 +197,7 @@ func TestServerGetLatestCommitment(t *testing.T) {
 	dbFake.setLatestCommitments(latestCommitments)
 
 	respLatestCommitment, err = server.GetLatestCommitment()
-	assert.Equal(t, errors.New("Latest commitment missing in position 0\n"), err)
+	assert.Equal(t, errors.New("Latest commitment missing in position 0"), err)
 	assert.Equal(t, chainhash.Hash{}, respLatestCommitment.GetCommitmentHash())
 
 	// update server with correct latest commitment and test server
@@ -209,4 +212,67 @@ func TestServerGetLatestCommitment(t *testing.T) {
 	respLatestCommitment, err = server.GetLatestCommitment()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), respLatestCommitment.GetCommitmentHash())
+}
+
+// Test Server GetAttestationCommitment
+func TestServerGetAttestationCommitment(t *testing.T) {
+	//TEST INIT
+	dbFake := NewDbFake()
+	server := NewServer(dbFake)
+
+	// set db latest commitment
+	hashX, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	hashY, _ := chainhash.NewHashFromStr("baaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	hashZ, _ := chainhash.NewHashFromStr("caaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+
+	// check empty attestation first
+	commitment, err := server.GetAttestationCommitment(chainhash.Hash{})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, chainhash.Hash{}, commitment.GetCommitmentHash())
+
+	// update attestation to server
+	latestCommitments0 := []models.LatestCommitment{
+		models.LatestCommitment{*hashX, 0},
+		models.LatestCommitment{*hashY, 1},
+		models.LatestCommitment{*hashZ, 2}}
+	dbFake.setLatestCommitments(latestCommitments0)
+	latestCommitment0, _ := models.NewCommitment([]chainhash.Hash{*hashX, *hashY, *hashZ})
+
+	txid0, _ := chainhash.NewHashFromStr("11111111111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	latest0 := models.NewAttestation(*txid0, latestCommitment0)
+	latest0.Confirmed = true
+	errUpdate := server.UpdateLatestAttestation(*latest0)
+	assert.Equal(t, nil, errUpdate)
+
+	// check commitment for new attestation
+	commitment, err = server.GetAttestationCommitment(*txid0)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, latestCommitment0.GetCommitmentHash(), commitment.GetCommitmentHash())
+
+	// add another attestation to server
+	latestCommitments1 := []models.LatestCommitment{
+		models.LatestCommitment{*hashX, 0},
+		models.LatestCommitment{*hashY, 1}}
+	dbFake.setLatestCommitments(latestCommitments1)
+	latestCommitment1, _ := models.NewCommitment([]chainhash.Hash{*hashX, *hashY})
+
+	txid1, _ := chainhash.NewHashFromStr("21111111111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	latest1 := models.NewAttestation(*txid1, latestCommitment1)
+	latest1.Confirmed = true
+	errUpdate = server.UpdateLatestAttestation(*latest1)
+	assert.Equal(t, nil, errUpdate)
+
+	// check commitment for new attestation
+	commitment, err = server.GetAttestationCommitment(*txid1)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, latestCommitment1.GetCommitmentHash(), commitment.GetCommitmentHash())
+
+	// check commitment for old attestation
+	commitment, err = server.GetAttestationCommitment(*txid0)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, latestCommitment0.GetCommitmentHash(), commitment.GetCommitmentHash())
+
+	// check commitment for invalid attestation
+	commitment, err = server.GetAttestationCommitment(chainhash.Hash{})
+	assert.Equal(t, errors.New("Merkle commitments not found"), err)
 }

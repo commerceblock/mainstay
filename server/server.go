@@ -65,7 +65,7 @@ func (s *Server) GetLatestAttestationCommitmentHash() (chainhash.Hash, error) {
 	merkleRoot, rootErr := s.dbInterface.getLatestAttestationMerkleRoot()
 	if rootErr != nil {
 		return chainhash.Hash{}, rootErr
-	} else if merkleRoot == "0000000000000000000000000000000000000000000000000000000000000000" { // nasty
+	} else if merkleRoot == "" { // no attestations yet
 		return chainhash.Hash{}, nil
 	}
 	commitmentHash, errHash := chainhash.NewHashFromStr(merkleRoot)
@@ -90,13 +90,13 @@ func (s *Server) GetLatestCommitment() (models.Commitment, error) {
 		if int32(pos) == c.ClientPosition {
 			commitmentHashes = append(commitmentHashes, c.Commitment)
 		} else {
-			return models.Commitment{}, errors.New(fmt.Sprintf("Latest commitment missing in position %d\n", pos))
+			return models.Commitment{}, errors.New(fmt.Sprintf("Latest commitment missing in position %d", pos))
 		}
 	}
 	// construct Commitment from MerkleCommitment commitments
 	commitment, errCommitment := models.NewCommitment(commitmentHashes)
 	if errCommitment != nil {
-		return models.Commitment{}, nil
+		return models.Commitment{}, errCommitment
 	}
 
 	// db interface
@@ -107,7 +107,13 @@ func (s *Server) GetLatestCommitment() (models.Commitment, error) {
 func (s *Server) GetAttestationCommitment(attestationTxid chainhash.Hash) (models.Commitment, error) {
 
 	// get merkle commitments from db
-	merkleCommitments, _ := s.dbInterface.getAttestationMerkleCommitments(attestationTxid)
+	merkleCommitments, merkleCommitmentsErr := s.dbInterface.getAttestationMerkleCommitments(attestationTxid)
+
+	if merkleCommitmentsErr != nil {
+		return models.Commitment{}, merkleCommitmentsErr
+	} else if len(merkleCommitments) == 0 {
+		return models.Commitment{}, nil
+	}
 
 	// construct Commitment from MerkleCommitment commitments
 	var commitmentHashes []chainhash.Hash
@@ -115,13 +121,10 @@ func (s *Server) GetAttestationCommitment(attestationTxid chainhash.Hash) (model
 		commitmentHashes = append(commitmentHashes, c.Commitment)
 	}
 
-	_, errCommitment := models.NewCommitment(commitmentHashes)
+	commitment, errCommitment := models.NewCommitment(commitmentHashes)
 	if errCommitment != nil {
 		return models.Commitment{}, nil
 	}
 
-	// if attestation empty return chainhash.Hash{}
-	// if not found return error
-
-	return models.Commitment{}, nil
+	return *commitment, nil
 }

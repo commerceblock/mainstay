@@ -199,8 +199,30 @@ func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error 
 	return nil
 }
 
+// Get Attestation collection document count
+func (d *DbMongo) getLatestAttestationCount() (int64, error) {
+	// find latest attestation count
+	opts := options.CountOptions{}
+	opts.SetLimit(1)
+	count, countErr := d.db.Collection(COL_NAME_ATTESTATION).Count(d.ctx, nil, &opts)
+	if countErr != nil {
+		fmt.Printf("%s\n", ERROR_ATTESTATION_GET)
+		return 0, countErr
+	}
+
+	return count, nil
+}
+
 // Get Attestation entry from collection and return merkle_root field
 func (d *DbMongo) getLatestAttestationMerkleRoot() (string, error) {
+	// first check if attestation has any documents
+	count, countErr := d.getLatestAttestationCount()
+	if countErr != nil {
+		return "", countErr
+	} else if count == 0 { // no attestations yet
+		return "", nil
+	}
+
 	// filter by inserted date and confirmed to get latest attestation from Attestation collection
 	sortFilter := bson.NewDocument(bson.EC.Int32(models.ATTESTATION_INSERTED_AT_NAME, -1))
 	confirmedFilter := bson.NewDocument(bson.EC.Boolean(models.ATTESTATION_CONFIRMED_NAME, true))
@@ -217,6 +239,14 @@ func (d *DbMongo) getLatestAttestationMerkleRoot() (string, error) {
 
 // Return Commitment from MerkleCommitment commitments for attestation with given txid hash
 func (d *DbMongo) getAttestationMerkleRoot(txid chainhash.Hash) (string, error) {
+	// first check if attestation has any documents
+	count, countErr := d.getLatestAttestationCount()
+	if countErr != nil {
+		return "", countErr
+	} else if count == 0 { // no attestations yet
+		return "", nil
+	}
+
 	// get merke_root from Attestation collection for attestation txid provided
 	filterAttestation := bson.NewDocument(bson.EC.String(models.ATTESTATION_TXID_NAME, txid.String()))
 
@@ -235,6 +265,8 @@ func (d *DbMongo) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models
 	merkleRoot, rootErr := d.getAttestationMerkleRoot(txid)
 	if rootErr != nil {
 		return []models.CommitmentMerkleCommitment{}, rootErr
+	} else if merkleRoot == "" {
+		return []models.CommitmentMerkleCommitment{}, nil
 	}
 
 	// filter MerkleCommitment collection by merkle_root and sort for client position

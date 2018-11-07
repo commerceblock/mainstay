@@ -1,6 +1,8 @@
 package server
 
 import (
+	"errors"
+
 	"mainstay/models"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -61,6 +63,25 @@ func (d *DbFake) getLatestCommitments() ([]models.LatestCommitment, error) {
 }
 
 // Return commitment for attestation with given txid
-func (d *DbFake) getAttestationMerkleCommitments(attestationTxid chainhash.Hash) ([]models.CommitmentMerkleCommitment, error) {
-	return []models.CommitmentMerkleCommitment{}, nil
+func (d *DbFake) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models.CommitmentMerkleCommitment, error) {
+	if len(d.attestations) == 0 {
+		return []models.CommitmentMerkleCommitment{}, nil
+	}
+
+	var merkleCommitments []models.CommitmentMerkleCommitment
+	for _, attestation := range d.attestations {
+		if txid == attestation.Txid {
+			for _, commitment := range d.merkleCommitments {
+				if commitment.MerkleRoot == attestation.CommitmentHash() {
+					merkleCommitments = append(merkleCommitments, commitment)
+				}
+			}
+		}
+	}
+
+	// not found - error
+	if len(merkleCommitments) == 0 {
+		return merkleCommitments, errors.New("Merkle commitments not found")
+	}
+	return merkleCommitments, nil
 }

@@ -127,16 +127,15 @@ func (s *AttestService) doStateInit() {
 			commitment, commitmentErr := s.server.GetAttestationCommitment(*txunspentHash)
 			if s.checkFailure(commitmentErr) {
 				return // will rebound to init
+			} else if (commitment.GetCommitmentHash() != chainhash.Hash{}) {
+				s.attestation = models.NewAttestation(*txunspentHash, &commitment)
+				// update server with latest confirmed attestation
+				s.attestation.Confirmed = true
+				errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
+				if s.checkFailure(errUpdate) {
+					return // will rebound to init
+				}
 			}
-			s.attestation = models.NewAttestation(*txunspentHash, &commitment)
-
-			// update server with latest confirmed attestation
-			s.attestation.Confirmed = true
-			errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
-			if s.checkFailure(errUpdate) {
-				return // will rebound to init
-			}
-
 			confirmedHash := s.attestation.CommitmentHash()
 			s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) // update clients
 
