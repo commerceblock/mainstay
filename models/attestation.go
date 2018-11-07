@@ -2,9 +2,16 @@ package models
 
 import (
 	"errors"
+	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/mongodb/mongo-go-driver/bson"
+)
+
+// error consts
+const (
+	ERROR_COMMITMENT_NOT_DEFINED = "Commitment not defined"
 )
 
 // Attestation structure
@@ -14,17 +21,18 @@ import (
 type Attestation struct {
 	Txid       chainhash.Hash
 	Tx         wire.MsgTx
+	Confirmed  bool
 	commitment *Commitment
 }
 
 // Attestation constructor for defaulting some values
 func NewAttestation(txid chainhash.Hash, commitment *Commitment) *Attestation {
-	return &Attestation{txid, wire.MsgTx{}, commitment}
+	return &Attestation{txid, wire.MsgTx{}, false, commitment}
 }
 
 // Attestation constructor for defaulting all values
 func NewAttestationDefault() *Attestation {
-	return &Attestation{chainhash.Hash{}, wire.MsgTx{}, (*Commitment)(nil)}
+	return &Attestation{chainhash.Hash{}, wire.MsgTx{}, false, (*Commitment)(nil)}
 }
 
 // Set commitment
@@ -35,7 +43,7 @@ func (a *Attestation) SetCommitment(commitment *Commitment) {
 // Get commitment
 func (a Attestation) Commitment() (*Commitment, error) {
 	if a.commitment == (*Commitment)(nil) {
-		return (*Commitment)(nil), errors.New("Attestation Commitment not defined")
+		return (*Commitment)(nil), errors.New(ERROR_COMMITMENT_NOT_DEFINED)
 	}
 	return a.commitment, nil
 }
@@ -46,4 +54,45 @@ func (a Attestation) CommitmentHash() chainhash.Hash {
 		return chainhash.Hash{}
 	}
 	return a.commitment.GetCommitmentHash()
+}
+
+// Implement bson.Marshaler MarshalBSON() method for use with db_mongo interface
+func (a Attestation) MarshalBSON() ([]byte, error) {
+	attestationBSON := AttestationBSON{a.Txid.String(), a.CommitmentHash().String(), a.Confirmed, time.Now()}
+	return bson.Marshal(attestationBSON)
+}
+
+// Implement bson.Unmarshaler UnmarshalJSON() method for use with db_mongo interface
+func (a *Attestation) UnmarshalBSON(b []byte) error {
+	var attestationBSON AttestationBSON
+	if err := bson.Unmarshal(b, &attestationBSON); err != nil {
+		return err
+	}
+	txidHash, errHash := chainhash.NewHashFromStr(attestationBSON.Txid)
+	if errHash != nil {
+		return errHash
+	}
+	a.Txid = *txidHash
+	a.Confirmed = attestationBSON.Confirmed
+	// THIS IS INCOMPLETE
+	// in order to get a full Attestation model
+	// we still need to Umarshal the commitment
+	// model and set through SetCommitment()
+	return nil
+}
+
+// Attestation field names
+const (
+	ATTESTATION_TXID_NAME        = "txid"
+	ATTESTATION_MERKLE_ROOT_NAME = "merkle_root"
+	ATTESTATION_CONFIRMED_NAME   = "confirmed"
+	ATTESTATION_INSERTED_AT_NAME = "inserted_at"
+)
+
+// AttestationBSON structure for mongoDb
+type AttestationBSON struct {
+	Txid       string    `bson:"txid"`
+	MerkleRoot string    `bson:"merkle_root"`
+	Confirmed  bool      `bson:"confirmed"`
+	InsertedAt time.Time `bson:"inserted_at"`
 }

@@ -14,6 +14,8 @@ import (
 // Various utility functions concerning multisig and scripts
 
 // Raw method to parse a multisig script and get pubkeys and num of sigs
+// Allow fatals here as this is only used in AttestClient initialisation
+// NOTE: Handle errors if this is used somewhere else in the future
 func ParseRedeemScript(script string) ([]*btcec.PublicKey, int) {
 
 	// check op codes
@@ -66,10 +68,7 @@ func CreateMultisig(pubkeys []*btcec.PublicKey, nSigs int, chainCfg *chaincfg.Pa
 	script += "ae"
 
 	scriptBytes, _ := hex.DecodeString(script)
-	multisigAddr, err := btcutil.NewAddressScriptHash(scriptBytes, chainCfg)
-	if err != nil {
-		log.Fatal(err)
-	}
+	multisigAddr, _ := btcutil.NewAddressScriptHash(scriptBytes, chainCfg)
 
 	return multisigAddr, script
 }

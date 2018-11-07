@@ -37,6 +37,11 @@ const (
 // Waiting time between attestations and/or attestation confirmation attempts
 const ATTEST_WAIT_TIME = 20
 
+// error consts
+const (
+	ERROR_UNSPENT_NOT_FOUND = "No valid unspent found"
+)
+
 // AttestationService structure
 // Encapsulates Attest Client and connectivity
 // to a Server for updates and requests
@@ -127,15 +132,15 @@ func (s *AttestService) doStateInit() {
 			commitment, commitmentErr := s.server.GetAttestationCommitment(*txunspentHash)
 			if s.checkFailure(commitmentErr) {
 				return // will rebound to init
+			} else if (commitment.GetCommitmentHash() != chainhash.Hash{}) {
+				s.attestation = models.NewAttestation(*txunspentHash, &commitment)
+				// update server with latest confirmed attestation
+				s.attestation.Confirmed = true
+				errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
+				if s.checkFailure(errUpdate) {
+					return // will rebound to init
+				}
 			}
-			s.attestation = models.NewAttestation(*txunspentHash, &commitment)
-
-			// update server with latest confirmed attestation
-			errUpdate := s.server.UpdateLatestAttestation(*s.attestation, true)
-			if s.checkFailure(errUpdate) {
-				return // will rebound to init
-			}
-
 			confirmedHash := s.attestation.CommitmentHash()
 			s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) // update clients
 
@@ -150,6 +155,7 @@ func (s *AttestService) doStateInit() {
 // - Get latest commitment from server
 // - Check if commitment has already been attested
 // - Send commitment to client signers
+// - Initialise new attestation
 func (s *AttestService) doStateNextCommitment() {
 	log.Println("*AttestService* NEW ATTESTATION COMMITMENT")
 
@@ -169,6 +175,9 @@ func (s *AttestService) doStateNextCommitment() {
 
 	// publish new commitment hash to clients
 	s.publisher.SendMessage((&latestCommitmentHash).CloneBytes(), confpkg.TOPIC_NEW_HASH)
+
+	// initialise new attestation with commitment
+	s.attestation = models.NewAttestationDefault()
 	s.attestation.SetCommitment(&latestCommitment)
 
 	s.state = ASTATE_NEW_ATTESTATION // update attestation state
@@ -215,7 +224,7 @@ func (s *AttestService) doStateNewAttestation() {
 
 		s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 	} else {
-		s.checkFailure(errors.New("Attestation unsuccessful - No valid unspent found"))
+		s.checkFailure(errors.New(ERROR_UNSPENT_NOT_FOUND))
 		return // will rebound to init
 	}
 }
@@ -240,18 +249,18 @@ func (s *AttestService) doStateSignAttestation() {
 	log.Printf("********** received %d signatures\n", len(sigs))
 
 	// get last confirmed commitment from server
-	lastAttestation, latestErr := s.server.GetLatestAttestation()
+	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()
 	if s.checkFailure(latestErr) {
 		return // will rebound to init
 	}
 
 	// sign attestation with combined sigs and last commitment
-	lastCommitment := lastAttestation.CommitmentHash()
-	signedTx, signErr := s.attester.signAttestation(&s.attestation.Tx, sigs, lastCommitment)
+	signedTx, signErr := s.attester.signAttestation(&s.attestation.Tx, sigs, lastCommitmentHash)
 	if s.checkFailure(signErr) {
 		return // will rebound to init
 	}
 	s.attestation.Tx = *signedTx
+	s.attestation.Txid = s.attestation.Tx.TxHash()
 
 	s.state = ASTATE_SEND_ATTESTATION // update attestation state
 }
@@ -263,7 +272,7 @@ func (s *AttestService) doStateSendAttestation() {
 	log.Println("*AttestService* SEND ATTESTATION")
 
 	// update server with latest unconfirmed attestation, in case the service fails
-	errUpdate := s.server.UpdateLatestAttestation(*s.attestation, false)
+	errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
 	if s.checkFailure(errUpdate) {
 		return // will rebound to init
 	}
@@ -292,7 +301,8 @@ func (s *AttestService) doStateAwaitConfirmation() {
 		log.Printf("********** attestation confirmed with txid: (%s)\n", s.attestation.Txid.String())
 
 		// update server with latest confirmed attestation
-		errUpdate := s.server.UpdateLatestAttestation(*s.attestation, true)
+		s.attestation.Confirmed = true
+		errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
 		if s.checkFailure(errUpdate) {
 			return // will rebound to init
 		}

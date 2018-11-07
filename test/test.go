@@ -36,6 +36,13 @@ var testConf = []byte(`
     },
     "misc": {
         "multisignodes": "127.0.0.1:5001"
+    },
+    "db": {
+        "user":"",
+        "password":"",
+        "host":"localhost",
+        "port":"27017",
+        "name":"mainstay1"
     }
 }
 `)
