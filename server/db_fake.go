@@ -8,15 +8,19 @@ import (
 
 // DbFake struct
 type DbFake struct {
-	height            int32
 	attestations      []models.Attestation
 	merkleCommitments []models.CommitmentMerkleCommitment
 	merkleProofs      []models.CommitmentMerkleProof
+	latestCommitments []models.LatestCommitment
 }
 
 // Return new DbFake instance
 func NewDbFake() *DbFake {
-	return &DbFake{0, []models.Attestation{}, []models.CommitmentMerkleCommitment{}, []models.CommitmentMerkleProof{}}
+	return &DbFake{
+		[]models.Attestation{},
+		[]models.CommitmentMerkleCommitment{},
+		[]models.CommitmentMerkleProof{},
+		[]models.LatestCommitment{}}
 }
 
 // Save latest attestation to attestations
@@ -46,36 +50,14 @@ func (d *DbFake) getLatestAttestationMerkleRoot() (string, error) {
 	return latestAttestation.CommitmentHash().String(), nil
 }
 
-// Fake client commitment hashes
-var fakeLatestCommitment = []string{
-	"1a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"2a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"3a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"4a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"5a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"6a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"7a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"8a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"9a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"aa39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"ba39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"ca39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"da39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"ea39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
-	"fa39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7",
+// Set latest commitments for testing
+func (d *DbFake) setLatestCommitments(latestCommitments []models.LatestCommitment) {
+	d.latestCommitments = latestCommitments
 }
 
 // Return latest commitment from fake client commitments
 func (d *DbFake) getLatestCommitments() ([]models.LatestCommitment, error) {
-	var latestCommitments []models.LatestCommitment
-
-	commitmentHash, errHash := chainhash.NewHashFromStr(fakeLatestCommitment[d.height])
-	if errHash != nil {
-		return []models.LatestCommitment{}, errHash
-	}
-	latestCommitments = append(latestCommitments, models.LatestCommitment{*commitmentHash, 0})
-
-	return latestCommitments, nil
+	return d.latestCommitments, nil
 }
 
 // Return commitment for attestation with given txid

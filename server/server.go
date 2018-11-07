@@ -75,29 +75,6 @@ func (s *Server) GetLatestAttestationCommitmentHash() (chainhash.Hash, error) {
 	return *commitmentHash, nil
 }
 
-// Return Commitment for a particular Attestation transaction id
-func (s *Server) GetAttestationCommitment(attestationTxid chainhash.Hash) (models.Commitment, error) {
-
-	// get merkle commitments from db
-	merkleCommitments, _ := s.dbInterface.getAttestationMerkleCommitments(attestationTxid)
-
-	// construct Commitment from MerkleCommitment commitments
-	var commitmentHashes []chainhash.Hash
-	for _, c := range merkleCommitments {
-		commitmentHashes = append(commitmentHashes, c.Commitment)
-	}
-
-	_, errCommitment := models.NewCommitment(commitmentHashes)
-	if errCommitment != nil {
-		return models.Commitment{}, nil
-	}
-
-	// if attestation empty return chainhash.Hash{}
-	// if not found return error
-
-	return models.Commitment{}, nil
-}
-
 // Return latest commitment stored in the server
 func (s *Server) GetLatestCommitment() (models.Commitment, error) {
 
@@ -124,4 +101,27 @@ func (s *Server) GetLatestCommitment() (models.Commitment, error) {
 
 	// db interface
 	return *commitment, nil
+}
+
+// Return Commitment for a particular Attestation transaction id
+func (s *Server) GetAttestationCommitment(attestationTxid chainhash.Hash) (models.Commitment, error) {
+
+	// get merkle commitments from db
+	merkleCommitments, _ := s.dbInterface.getAttestationMerkleCommitments(attestationTxid)
+
+	// construct Commitment from MerkleCommitment commitments
+	var commitmentHashes []chainhash.Hash
+	for _, c := range merkleCommitments {
+		commitmentHashes = append(commitmentHashes, c.Commitment)
+	}
+
+	_, errCommitment := models.NewCommitment(commitmentHashes)
+	if errCommitment != nil {
+		return models.Commitment{}, nil
+	}
+
+	// if attestation empty return chainhash.Hash{}
+	// if not found return error
+
+	return models.Commitment{}, nil
 }
