@@ -21,10 +21,6 @@ const (
 	COL_NAME_MERKLE_PROOF      = "MerkleProof"
 	COL_NAME_LATEST_COMMITMENT = "LatestCommitment"
 
-	// LatestCommitment field names
-	LATEST_COMMITMENT_CLIENT_POSITION_NAME = "client_position"
-	LATEST_COMMITMENT_COMMITMENT_NAME      = "commitment"
-
 	// error messages
 	ERROR_MONGO_CLIENT  = "could not create mongoDB client"
 	ERROR_MONGO_CONNECT = "could not connect to mongoDB client"
@@ -275,41 +271,35 @@ func (d *DbMongo) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models
 }
 
 // Return latest commitments from MerkleCommitment collection
-func (d *DbMongo) getLatestCommitment() (models.Commitment, error) {
+func (d *DbMongo) getLatestCommitments() ([]models.LatestCommitment, error) {
 
 	// sort by client position to get correct commitment order
-	sortFilter := bson.NewDocument(bson.EC.Int32(LATEST_COMMITMENT_CLIENT_POSITION_NAME, 1))
+	sortFilter := bson.NewDocument(bson.EC.Int32(models.LATEST_COMMITMENT_CLIENT_POSITION_NAME, 1))
 	res, resErr := d.db.Collection(COL_NAME_LATEST_COMMITMENT).Find(d.ctx, bson.NewDocument(), &options.FindOptions{Sort: sortFilter})
 	if resErr != nil {
 		fmt.Printf("%s\n", ERROR_LATEST_COMMITMENT_GET)
-		return models.Commitment{}, resErr
+		return []models.LatestCommitment{}, resErr
 	}
 
 	// iterate through commitments
-	var commitmentHashes []chainhash.Hash
+	var latestCommitments []models.LatestCommitment
 	for res.Next(d.ctx) {
 		commitmentDoc := bson.NewDocument()
 		if err := res.Decode(commitmentDoc); err != nil {
 			fmt.Printf("%s\n", BAD_DATA_LATEST_COMMITMENT_COL)
-			return models.Commitment{}, err
+			return []models.LatestCommitment{}, err
 		}
-		commitment := commitmentDoc.Lookup(LATEST_COMMITMENT_COMMITMENT_NAME).StringValue()
-		commitmentHash, errHash := chainhash.NewHashFromStr(commitment)
-		if errHash != nil {
-			fmt.Printf("%s %s\n", BAD_DATA_LATEST_COMMITMENT_COL, commitment)
-			return models.Commitment{}, errHash
+		commitmentModel := &models.LatestCommitment{}
+		modelErr := models.GetModelFromDocument(commitmentDoc, commitmentModel)
+		if modelErr != nil {
+			fmt.Printf("%s\n", BAD_DATA_LATEST_COMMITMENT_COL)
+			return []models.LatestCommitment{}, modelErr
 		}
-		commitmentHashes = append(commitmentHashes, *commitmentHash)
+		latestCommitments = append(latestCommitments, *commitmentModel)
 	}
 	if err := res.Err(); err != nil {
 		fmt.Printf("%s\n", BAD_DATA_LATEST_COMMITMENT_COL)
-		return models.Commitment{}, err
+		return []models.LatestCommitment{}, err
 	}
-
-	// contruct Commitment from MerkleCommitment commitment hashes
-	commitment, errCommitment := models.NewCommitment(commitmentHashes)
-	if errCommitment != nil {
-		return models.Commitment{}, errCommitment
-	}
-	return *commitment, nil
+	return latestCommitments, nil
 }

@@ -66,21 +66,16 @@ var fakeLatestCommitment = []string{
 }
 
 // Return latest commitment from fake client commitments
-func (d *DbFake) getLatestCommitment() (models.Commitment, error) {
-	var commitmentHashes []chainhash.Hash
+func (d *DbFake) getLatestCommitments() ([]models.LatestCommitment, error) {
+	var latestCommitments []models.LatestCommitment
 
 	commitmentHash, errHash := chainhash.NewHashFromStr(fakeLatestCommitment[d.height])
 	if errHash != nil {
-		return models.Commitment{}, errHash
+		return []models.LatestCommitment{}, errHash
 	}
-	commitmentHashes = append(commitmentHashes, *commitmentHash)
+	latestCommitments = append(latestCommitments, models.LatestCommitment{*commitmentHash, 0})
 
-	commitment, errCommitment := models.NewCommitment(commitmentHashes)
-	if errCommitment != nil {
-		return models.Commitment{}, errCommitment
-	}
-
-	return *commitment, nil
+	return latestCommitments, nil
 }
 
 // Return commitment for attestation with given txid

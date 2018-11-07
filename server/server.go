@@ -75,8 +75,23 @@ func (s *Server) GetLatestAttestationCommitmentHash() (chainhash.Hash, error) {
 // Return latest commitment stored in the server
 func (s *Server) GetLatestCommitment() (models.Commitment, error) {
 
+	latestCommitments, errLatest := s.dbInterface.getLatestCommitments()
+	if errLatest != nil {
+		return models.Commitment{}, errLatest
+	}
+
+	var commitmentHashes []chainhash.Hash
+	for _, c := range latestCommitments {
+		commitmentHashes = append(commitmentHashes, c.Commitment)
+	}
+	// construct Commitment from MerkleCommitment commitments
+	commitment, errCommitment := models.NewCommitment(commitmentHashes)
+	if errCommitment != nil {
+		return models.Commitment{}, nil
+	}
+
 	// db interface
-	return s.dbInterface.getLatestCommitment()
+	return *commitment, nil
 }
 
 // Return commitment for a particular attestation transaction id

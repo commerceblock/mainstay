@@ -16,8 +16,9 @@ func TestServer(t *testing.T) {
 	server := NewServer(dbFake)
 
 	// Generate blocks in side chain and update server latest
-	latestCommitment, errCommitment := dbFake.getLatestCommitment()
-	assert.Equal(t, nil, errCommitment)
+	latestCommitments, errLatest := dbFake.getLatestCommitments()
+	assert.Equal(t, nil, errLatest)
+	latestCommitment, _ := models.NewCommitment([]chainhash.Hash{latestCommitments[0].Commitment})
 
 	// Test latest commitment request
 	respCommitment, errCommitment := server.GetLatestCommitment()
@@ -31,7 +32,7 @@ func TestServer(t *testing.T) {
 
 	// Generate new attestation and update server
 	txid, _ := chainhash.NewHashFromStr("11111111111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
-	latest := models.NewAttestation(*txid, &latestCommitment)
+	latest := models.NewAttestation(*txid, latestCommitment)
 	latest.Confirmed = true
 
 	// Test update latest attestation
