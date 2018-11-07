@@ -8,14 +8,15 @@ import (
 
 // DbFake struct
 type DbFake struct {
-	height       int32
-	attestations []models.Attestation
-	commitments  []models.Commitment
+	height            int32
+	attestations      []models.Attestation
+	merkleCommitments []models.CommitmentMerkleCommitment
+	merkleProofs      []models.CommitmentMerkleProof
 }
 
 // Return new DbFake instance
 func NewDbFake() *DbFake {
-	return &DbFake{0, []models.Attestation{}, []models.Commitment{}}
+	return &DbFake{0, []models.Attestation{}, []models.CommitmentMerkleCommitment{}, []models.CommitmentMerkleProof{}}
 }
 
 // Save latest attestation to attestations
@@ -24,19 +25,25 @@ func (d *DbFake) saveAttestation(attestation models.Attestation) error {
 	return nil
 }
 
-// Save latest commitment to commitments
-func (d *DbFake) saveCommitment(commitment models.Commitment) error {
-	d.commitments = append(d.commitments, commitment)
+// Save merkle commitments to the MerkleCommitment collection
+func (d *DbFake) saveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error {
+	d.merkleCommitments = append(d.merkleCommitments, commitments...)
+	return nil
+}
+
+// Save merkle proofs to the MerkleProof collection
+func (d *DbFake) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error {
+	d.merkleProofs = append(d.merkleProofs, proofs...)
 	return nil
 }
 
 // Return latest attestation commitment hash
-func (d *DbFake) getLatestAttestedCommitmentHash() (chainhash.Hash, error) {
+func (d *DbFake) getLatestAttestationMerkleRoot() (string, error) {
 	if len(d.attestations) == 0 {
-		return chainhash.Hash{}, nil
+		return "", nil
 	}
 	latestAttestation := d.attestations[len(d.attestations)-1]
-	return latestAttestation.CommitmentHash(), nil
+	return latestAttestation.CommitmentHash().String(), nil
 }
 
 // Fake client commitment hashes
@@ -77,6 +84,6 @@ func (d *DbFake) getLatestCommitment() (models.Commitment, error) {
 }
 
 // Return commitment for attestation with given txid
-func (d *DbFake) getAttestationCommitment(attestationTxid chainhash.Hash) (models.Commitment, error) {
-	return models.Commitment{}, nil
+func (d *DbFake) getAttestationMerkleCommitments(attestationTxid chainhash.Hash) ([]models.CommitmentMerkleCommitment, error) {
+	return []models.CommitmentMerkleCommitment{}, nil
 }

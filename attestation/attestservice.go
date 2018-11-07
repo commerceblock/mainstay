@@ -245,7 +245,7 @@ func (s *AttestService) doStateSignAttestation() {
 	log.Printf("********** received %d signatures\n", len(sigs))
 
 	// get last confirmed commitment from server
-	lastCommitmentHash, latestErr := s.server.GetLatestAttestedCommitmentHash()
+	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()
 	if s.checkFailure(latestErr) {
 		return // will rebound to init
 	}

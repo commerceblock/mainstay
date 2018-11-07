@@ -130,25 +130,6 @@ func (d *DbMongo) saveAttestation(attestation models.Attestation) error {
 	return nil
 }
 
-// Handle saving Commitment underlying components to the database
-func (d *DbMongo) saveCommitment(commitment models.Commitment) error {
-	// store merkle commitments
-	merkleCommitments := commitment.GetMerkleCommitments()
-	errSave := d.saveMerkleCommitments(merkleCommitments)
-	if errSave != nil {
-		return errSave
-	}
-
-	// store merkle proofs
-	merkleProofs := commitment.GetMerkleProofs()
-	errSave = d.saveMerkleProofs(merkleProofs)
-	if errSave != nil {
-		return errSave
-	}
-
-	return nil
-}
-
 // Save merkle commitments to the MerkleCommitment collection
 func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error {
 	for pos := range commitments {
@@ -222,9 +203,8 @@ func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error 
 	return nil
 }
 
-// Return latest attested commitment hash from Attestation collection
-func (d *DbMongo) getLatestAttestedCommitmentHash() (chainhash.Hash, error) {
-
+// Get Attestation entry from collection and return merkle_root field
+func (d *DbMongo) getLatestAttestationMerkleRoot() (string, error) {
 	// filter by inserted date and confirmed to get latest attestation from Attestation collection
 	sortFilter := bson.NewDocument(bson.EC.Int32(models.ATTESTATION_INSERTED_AT_NAME, -1))
 	confirmedFilter := bson.NewDocument(bson.EC.Boolean(models.ATTESTATION_CONFIRMED_NAME, true))
@@ -234,33 +214,67 @@ func (d *DbMongo) getLatestAttestedCommitmentHash() (chainhash.Hash, error) {
 		confirmedFilter, &options.FindOneOptions{Sort: sortFilter}).Decode(attestationDoc)
 	if resErr != nil {
 		fmt.Printf("%s\n", ERROR_ATTESTATION_GET)
-		return chainhash.Hash{}, resErr
+		return "", resErr
 	}
-	attestationRoot := attestationDoc.Lookup(models.ATTESTATION_MERKLE_ROOT_NAME).StringValue()
-	if attestationRoot == "0000000000000000000000000000000000000000000000000000000000000000" { // nasty
-		return chainhash.Hash{}, nil
-	}
-
-	// use latest merkle_root from Attestation to get latest MerkleCommitment from collection
-	commitmentDoc := bson.NewDocument()
-	rootFilter := bson.NewDocument(bson.EC.String(models.COMMITMENT_MERKLE_ROOT_NAME, attestationRoot))
-	resErr = d.db.Collection(COL_NAME_MERKLE_COMMITMENT).FindOne(d.ctx, rootFilter).Decode(commitmentDoc)
-	if resErr != nil {
-		fmt.Printf("%s\n", ERROR_MERKLE_COMMITMENT_GET)
-		return chainhash.Hash{}, resErr
-	}
-
-	// decode document result to Commitment model and get hash
-	commitmentModel := &models.CommitmentMerkleCommitment{}
-	modelErr := models.GetModelFromDocument(commitmentDoc, commitmentModel)
-	if modelErr != nil {
-		fmt.Printf("%s\n", BAD_DATA_MERKLE_COMMITMENT_COL)
-		return chainhash.Hash{}, modelErr
-	}
-	return commitmentModel.MerkleRoot, nil
+	return attestationDoc.Lookup(models.ATTESTATION_MERKLE_ROOT_NAME).StringValue(), nil
 }
 
-// Return latest Commitment constructed from commitments of MerkleCommitment collection
+// Return Commitment from MerkleCommitment commitments for attestation with given txid hash
+func (d *DbMongo) getAttestationMerkleRoot(txid chainhash.Hash) (string, error) {
+	// get merke_root from Attestation collection for attestation txid provided
+	filterAttestation := bson.NewDocument(bson.EC.String(models.ATTESTATION_TXID_NAME, txid.String()))
+
+	attestationDoc := bson.NewDocument()
+	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx, filterAttestation).Decode(attestationDoc)
+	if resErr != nil {
+		fmt.Printf("%s\n", ERROR_ATTESTATION_GET)
+		return "", resErr
+	}
+	return attestationDoc.Lookup(models.COMMITMENT_MERKLE_ROOT_NAME).StringValue(), nil
+}
+
+// Return Commitment from MerkleCommitment commitments for attestation with given txid hash
+func (d *DbMongo) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models.CommitmentMerkleCommitment, error) {
+	// get merkle root of attestation
+	merkleRoot, rootErr := d.getAttestationMerkleRoot(txid)
+	if rootErr != nil {
+		return []models.CommitmentMerkleCommitment{}, rootErr
+	}
+
+	// filter MerkleCommitment collection by merkle_root and sort for client position
+	sortFilter := bson.NewDocument(bson.EC.Int32(models.COMMITMENT_CLIENT_POSITION_NAME, 1))
+	filterMerkleRoot := bson.NewDocument(bson.EC.String(models.COMMITMENT_MERKLE_ROOT_NAME, merkleRoot))
+	res, resErr := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).Find(d.ctx, filterMerkleRoot, &options.FindOptions{Sort: sortFilter})
+	if resErr != nil {
+		fmt.Printf("%s\n", ERROR_MERKLE_COMMITMENT_GET)
+		return []models.CommitmentMerkleCommitment{}, resErr
+	}
+
+	// fetch commitments
+	var merkleCommitments []models.CommitmentMerkleCommitment
+	for res.Next(d.ctx) {
+		commitmentDoc := bson.NewDocument()
+		if err := res.Decode(commitmentDoc); err != nil {
+			fmt.Printf("%s\n", BAD_DATA_MERKLE_COMMITMENT_COL)
+			return []models.CommitmentMerkleCommitment{}, err
+		}
+		// decode document result to Commitment model and get hash
+		commitmentModel := &models.CommitmentMerkleCommitment{}
+		modelErr := models.GetModelFromDocument(commitmentDoc, commitmentModel)
+		if modelErr != nil {
+			fmt.Printf("%s\n", BAD_DATA_MERKLE_COMMITMENT_COL)
+			return []models.CommitmentMerkleCommitment{}, modelErr
+		}
+		merkleCommitments = append(merkleCommitments, *commitmentModel)
+	}
+	if err := res.Err(); err != nil {
+		fmt.Printf("%s\n", BAD_DATA_MERKLE_COMMITMENT_COL)
+		return []models.CommitmentMerkleCommitment{}, err
+	}
+	return merkleCommitments, nil
+}
+
+// Return latest commitments from MerkleCommitment collection
 func (d *DbMongo) getLatestCommitment() (models.Commitment, error) {
 
 	// sort by client position to get correct commitment order
@@ -293,60 +307,6 @@ func (d *DbMongo) getLatestCommitment() (models.Commitment, error) {
 	}
 
 	// contruct Commitment from MerkleCommitment commitment hashes
-	commitment, errCommitment := models.NewCommitment(commitmentHashes)
-	if errCommitment != nil {
-		return models.Commitment{}, errCommitment
-	}
-	return *commitment, nil
-}
-
-// Return Commitment from MerkleCommitment commitments for attestation with given txid hash
-func (d *DbMongo) getAttestationCommitment(attestationTxid chainhash.Hash) (models.Commitment, error) {
-
-	// get merke_root from Attestation collection for attestation txid provided
-	filterAttestation := bson.NewDocument(bson.EC.String(models.ATTESTATION_TXID_NAME, attestationTxid.String()))
-
-	attestationDoc := bson.NewDocument()
-	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx, filterAttestation).Decode(attestationDoc)
-	if resErr != nil {
-		fmt.Printf("%s\n", ERROR_ATTESTATION_GET)
-		return models.Commitment{}, resErr
-	}
-
-	// filter MerkleCommitment collection by merkle_root and sort for client position
-	sortFilter := bson.NewDocument(bson.EC.Int32(models.COMMITMENT_CLIENT_POSITION_NAME, 1))
-	merkle_root := attestationDoc.Lookup(models.COMMITMENT_MERKLE_ROOT_NAME).StringValue()
-	filterMerkleRoot := bson.NewDocument(bson.EC.String(models.COMMITMENT_MERKLE_ROOT_NAME, merkle_root))
-
-	res, resErr := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).Find(d.ctx, filterMerkleRoot, &options.FindOptions{Sort: sortFilter})
-	if resErr != nil {
-		fmt.Printf("%s\n", ERROR_MERKLE_COMMITMENT_GET)
-		return models.Commitment{}, resErr
-	}
-
-	// fetch commitments
-	var commitmentHashes []chainhash.Hash
-	for res.Next(d.ctx) {
-		commitmentDoc := bson.NewDocument()
-		if err := res.Decode(commitmentDoc); err != nil {
-			fmt.Printf("%s\n", BAD_DATA_MERKLE_COMMITMENT_COL)
-			return models.Commitment{}, err
-		}
-		// decode document result to Commitment model and get hash
-		commitmentModel := &models.CommitmentMerkleCommitment{}
-		modelErr := models.GetModelFromDocument(commitmentDoc, commitmentModel)
-		if modelErr != nil {
-			fmt.Printf("%s\n", BAD_DATA_MERKLE_COMMITMENT_COL)
-			return models.Commitment{}, modelErr
-		}
-		commitmentHashes = append(commitmentHashes, commitmentModel.MerkleRoot)
-	}
-	if err := res.Err(); err != nil {
-		fmt.Printf("%s\n", BAD_DATA_MERKLE_COMMITMENT_COL)
-		return models.Commitment{}, err
-	}
-
-	// construct Commitment from MerkleCommitment commitments
 	commitment, errCommitment := models.NewCommitment(commitmentHashes)
 	if errCommitment != nil {
 		return models.Commitment{}, errCommitment

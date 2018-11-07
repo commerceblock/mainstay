@@ -25,7 +25,7 @@ func TestServer(t *testing.T) {
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), respCommitment.GetCommitmentHash())
 
 	// Test latest attestation request
-	respAttestationHash, errAttestation := server.GetLatestAttestedCommitmentHash()
+	respAttestationHash, errAttestation := server.GetLatestAttestationCommitmentHash()
 	assert.Equal(t, nil, errAttestation)
 	assert.Equal(t, chainhash.Hash{}, respAttestationHash)
 
@@ -38,7 +38,7 @@ func TestServer(t *testing.T) {
 	errUpdate := server.UpdateLatestAttestation(*latest)
 	assert.Equal(t, nil, errUpdate)
 
-	respAttestationHash, errAttestation = server.GetLatestAttestedCommitmentHash()
+	respAttestationHash, errAttestation = server.GetLatestAttestationCommitmentHash()
 	assert.Equal(t, nil, errAttestation)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), respAttestationHash)
 }

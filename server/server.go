@@ -18,6 +18,25 @@ func NewServer(dbInterface Db) *Server {
 	return &Server{dbInterface}
 }
 
+// Handle saving Commitment underlying components to the database
+func (s *Server) updateAttestationCommitment(commitment models.Commitment) error {
+	// store merkle commitments
+	merkleCommitments := commitment.GetMerkleCommitments()
+	errSave := s.dbInterface.saveMerkleCommitments(merkleCommitments)
+	if errSave != nil {
+		return errSave
+	}
+
+	// store merkle proofs
+	merkleProofs := commitment.GetMerkleProofs()
+	errSave = s.dbInterface.saveMerkleProofs(merkleProofs)
+	if errSave != nil {
+		return errSave
+	}
+
+	return nil
+}
+
 // Update latest attestation in the server
 func (s *Server) UpdateLatestAttestation(attestation models.Attestation) error {
 
@@ -29,7 +48,7 @@ func (s *Server) UpdateLatestAttestation(attestation models.Attestation) error {
 	if errCommitment != nil {
 		return errCommitment
 	}
-	errSave = s.dbInterface.saveCommitment(*commitment)
+	errSave = s.updateAttestationCommitment(*commitment)
 	if errSave != nil {
 		return errSave
 	}
@@ -37,10 +56,20 @@ func (s *Server) UpdateLatestAttestation(attestation models.Attestation) error {
 }
 
 // Return latest attestation stored in the server
-func (s *Server) GetLatestAttestedCommitmentHash() (chainhash.Hash, error) {
+func (s *Server) GetLatestAttestationCommitmentHash() (chainhash.Hash, error) {
 
 	//db interface
-	return s.dbInterface.getLatestAttestedCommitmentHash()
+	merkleRoot, rootErr := s.dbInterface.getLatestAttestationMerkleRoot()
+	if rootErr != nil {
+		return chainhash.Hash{}, rootErr
+	} else if merkleRoot == "0000000000000000000000000000000000000000000000000000000000000000" { // nasty
+		return chainhash.Hash{}, nil
+	}
+	commitmentHash, errHash := chainhash.NewHashFromStr(merkleRoot)
+	if errHash != nil {
+		return chainhash.Hash{}, errHash
+	}
+	return *commitmentHash, nil
 }
 
 // Return latest commitment stored in the server
@@ -54,7 +83,20 @@ func (s *Server) GetLatestCommitment() (models.Commitment, error) {
 func (s *Server) GetAttestationCommitment(attestationTxid chainhash.Hash) (models.Commitment, error) {
 
 	// db interface
-	_, _ = s.dbInterface.getAttestationCommitment(attestationTxid)
+	merkleCommitments, _ := s.dbInterface.getAttestationMerkleCommitments(attestationTxid)
+
+	var commitmentHashes []chainhash.Hash
+	for _, c := range merkleCommitments {
+		commitmentHashes = append(commitmentHashes, c.Commitment)
+	}
+	// construct Commitment from MerkleCommitment commitments
+	_, errCommitment := models.NewCommitment(commitmentHashes)
+	if errCommitment != nil {
+		return models.Commitment{}, nil
+	}
+
+	// if attestation empty return chainhash.Hash{}
+	// if not found return error
 
 	return models.Commitment{}, nil
 }

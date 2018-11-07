@@ -9,8 +9,10 @@ import (
 // Db Interface
 type Db interface {
 	saveAttestation(models.Attestation) error
-	saveCommitment(models.Commitment) error
-	getLatestAttestedCommitmentHash() (chainhash.Hash, error)
+	saveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error
+	saveMerkleProofs(proofs []models.CommitmentMerkleProof) error
+
+	getLatestAttestationMerkleRoot() (string, error)
 	getLatestCommitment() (models.Commitment, error)
-	getAttestationCommitment(chainhash.Hash) (models.Commitment, error)
+	getAttestationMerkleCommitments(chainhash.Hash) ([]models.CommitmentMerkleCommitment, error)
 }
