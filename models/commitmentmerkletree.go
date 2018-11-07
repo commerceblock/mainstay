@@ -1,7 +1,7 @@
 package models
 
 import (
-	"errors"
+	_ "errors"
 	"fmt"
 	"math"
 
@@ -123,26 +123,26 @@ func (m *CommitmentMerkleTree) updateTreeStore() {
 	m.root = *m.treeStore[len(m.treeStore)-1]
 }
 
-// Get merkle tree commitment hash for a specific position in the tree
-func (m CommitmentMerkleTree) getMerkleCommitment(position int) (chainhash.Hash, error) {
-	if position >= len(m.commitments) {
-		return chainhash.Hash{}, errors.New(fmt.Sprintf("Position %d out of index for merkle tree number of leaves %d", position, len(m.commitments)))
-	}
-	return m.commitments[position], nil
-}
+// // Get merkle tree commitment hash for a specific position in the tree
+// func (m CommitmentMerkleTree) getMerkleCommitment(position int) (chainhash.Hash, error) {
+// 	if position >= len(m.commitments) {
+// 		return chainhash.Hash{}, errors.New(fmt.Sprintf("Position %d out of index for merkle tree number of leaves %d", position, len(m.commitments)))
+// 	}
+// 	return m.commitments[position], nil
+// }
 
 // Return the whole list of commitments for the merkle tree
 func (m CommitmentMerkleTree) getMerkleCommitments() []chainhash.Hash {
 	return m.commitments
 }
 
-// Return merkle proof for a specific commitment in the merkle tree
-func (m CommitmentMerkleTree) getMerkleProof(position int) (CommitmentMerkleProof, error) {
-	if position >= len(m.commitments) {
-		return CommitmentMerkleProof{}, errors.New(fmt.Sprintf("Position %d out of index for merkle tree number of leaves %d", position, len(m.commitments)))
-	}
-	return buildMerkleProof(position, m.treeStore), nil
-}
+// // Return merkle proof for a specific commitment in the merkle tree
+// func (m CommitmentMerkleTree) getMerkleProof(position int) (CommitmentMerkleProof, error) {
+// 	if position >= len(m.commitments) {
+// 		return CommitmentMerkleProof{}, errors.New(fmt.Sprintf("Position %d out of index for merkle tree number of leaves %d", position, len(m.commitments)))
+// 	}
+// 	return buildMerkleProof(position, m.treeStore), nil
+// }
 
 // Return merkle proofs for all commitments in the merkle tree
 func (m CommitmentMerkleTree) getMerkleProofs() []CommitmentMerkleProof {

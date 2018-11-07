@@ -81,7 +81,7 @@ func (d *DbFake) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models.
 
 	// not found - error
 	if len(merkleCommitments) == 0 {
-		return merkleCommitments, errors.New("Merkle commitments not found")
+		return merkleCommitments, errors.New(ERROR_MERKLE_COMMITMENT_GET)
 	}
 	return merkleCommitments, nil
 }

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -22,7 +23,7 @@ func TestCommitment(t *testing.T) {
 	proofs := []CommitmentMerkleProof{proof0, proof1, proof2}
 
 	_, errCommitmentEmpty := NewCommitment([]chainhash.Hash{})
-	assert.Equal(t, "List of commitments is empty", errCommitmentEmpty.Error())
+	assert.Equal(t, errors.New(ERROR_COMMITMENT_LIST_EMPTY), errCommitmentEmpty)
 
 	commitment, errCommitment := NewCommitment(commitments)
 	assert.Equal(t, nil, errCommitment)

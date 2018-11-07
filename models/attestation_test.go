@@ -14,7 +14,7 @@ func TestAttestation(t *testing.T) {
 	attestationDefault := NewAttestationDefault()
 
 	_, errCommitment := attestationDefault.Commitment()
-	assert.Equal(t, errors.New("Attestation Commitment not defined"), errCommitment)
+	assert.Equal(t, errors.New(ERROR_COMMITMENT_NOT_DEFINED), errCommitment)
 
 	commitmentHash := attestationDefault.CommitmentHash()
 	assert.Equal(t, chainhash.Hash{}, commitmentHash)

@@ -7,6 +7,11 @@ import (
 	"github.com/mongodb/mongo-go-driver/bson"
 )
 
+// error consts
+const (
+	ERROR_COMMITMENT_LIST_EMPTY = "List of commitments is empty"
+)
+
 // Commitment structure
 type Commitment struct {
 	tree CommitmentMerkleTree
@@ -16,7 +21,7 @@ type Commitment struct {
 func NewCommitment(commitments []chainhash.Hash) (*Commitment, error) {
 	// check length
 	if len(commitments) == 0 {
-		return nil, errors.New("List of commitments is empty")
+		return nil, errors.New(ERROR_COMMITMENT_LIST_EMPTY)
 	}
 	commitmentTree := NewCommitmentMerkleTree(commitments)
 	return &Commitment{commitmentTree}, nil

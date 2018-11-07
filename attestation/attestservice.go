@@ -37,6 +37,11 @@ const (
 // Waiting time between attestations and/or attestation confirmation attempts
 const ATTEST_WAIT_TIME = 20
 
+// error consts
+const (
+	ERROR_UNSPENT_NOT_FOUND = "No valid unspent found"
+)
+
 // AttestationService structure
 // Encapsulates Attest Client and connectivity
 // to a Server for updates and requests
@@ -219,7 +224,7 @@ func (s *AttestService) doStateNewAttestation() {
 
 		s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 	} else {
-		s.checkFailure(errors.New("Attestation unsuccessful - No valid unspent found"))
+		s.checkFailure(errors.New(ERROR_UNSPENT_NOT_FOUND))
 		return // will rebound to init
 	}
 }

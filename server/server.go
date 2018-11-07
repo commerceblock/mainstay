@@ -9,6 +9,11 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
+// error consts
+const (
+	ERROR_LATEST_COMMITMENT_MISSING = "Latest commitment missing for position"
+)
+
 // Server structure
 // Stores information on the latest attestation and commitment
 // Methods to get latest state by attestation service
@@ -90,7 +95,7 @@ func (s *Server) GetLatestCommitment() (models.Commitment, error) {
 		if int32(pos) == c.ClientPosition {
 			commitmentHashes = append(commitmentHashes, c.Commitment)
 		} else {
-			return models.Commitment{}, errors.New(fmt.Sprintf("Latest commitment missing in position %d", pos))
+			return models.Commitment{}, errors.New(fmt.Sprintf("%s %d", ERROR_LATEST_COMMITMENT_MISSING, pos))
 		}
 	}
 	// construct Commitment from MerkleCommitment commitments

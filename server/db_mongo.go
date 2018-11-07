@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -56,20 +57,17 @@ func dbConnect(ctx context.Context, dbConnectivity config.DbConnectivity) (*mong
 
 	client, err := mongo.NewClient(uri)
 	if err != nil {
-		fmt.Printf("%s\n", ERROR_MONGO_CLIENT)
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("%s %v", ERROR_MONGO_CLIENT, err))
 	}
 
 	err = client.Connect(ctx) // start background client routine
 	if err != nil {
-		fmt.Printf("%s\n", ERROR_MONGO_CONNECT)
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("%s %v", ERROR_MONGO_CONNECT, err))
 	}
 
 	err = client.Ping(ctx, nil) // use Ping to check if mongod is running
 	if err != nil {
-		fmt.Printf("%s\n", ERROR_MONGO_PING)
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("%s %v", ERROR_MONGO_PING, err))
 	}
 
 	return client.Database(dbConnectivity.Name), nil
@@ -98,8 +96,7 @@ func (d *DbMongo) saveAttestation(attestation models.Attestation) error {
 	// get document representation of Attestation object
 	docAttestation, docErr := models.GetDocumentFromModel(attestation)
 	if docErr != nil {
-		fmt.Printf("%s\n", BAD_DATA_ATTESTATION_MODEL)
-		return docErr
+		return errors.New(fmt.Sprintf("%s %v", BAD_DATA_ATTESTATION_MODEL, docErr))
 	}
 
 	newAttestation := bson.NewDocument(
@@ -119,8 +116,7 @@ func (d *DbMongo) saveAttestation(attestation models.Attestation) error {
 	res := d.db.Collection(COL_NAME_ATTESTATION).FindOneAndUpdate(d.ctx, filterAttestation, newAttestation, opts)
 	resErr := res.Decode(t)
 	if resErr != nil && resErr != mongo.ErrNoDocuments {
-		fmt.Printf("%s\n", ERROR_ATTESTATION_SAVE)
-		return resErr
+		return errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_SAVE, resErr))
 	}
 
 	return nil
@@ -133,8 +129,7 @@ func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCom
 		// get document representation of Attestation object
 		docCommitment, docErr := models.GetDocumentFromModel(commitments[pos])
 		if docErr != nil {
-			fmt.Printf("%s\n", BAD_DATA_MERKLE_COMMITMENT_MODEL)
-			return docErr
+			return errors.New(fmt.Sprintf("%s %v", BAD_DATA_MERKLE_COMMITMENT_MODEL, docErr))
 		}
 
 		newCommitment := bson.NewDocument(
@@ -156,8 +151,7 @@ func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCom
 		res := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).FindOneAndUpdate(d.ctx, filterMerkleCommitment, newCommitment, opts)
 		resErr := res.Decode(t)
 		if resErr != nil && resErr != mongo.ErrNoDocuments {
-			fmt.Printf("%s\n", ERROR_MERKLE_COMMITMENT_SAVE)
-			return resErr
+			return errors.New(fmt.Sprintf("%s %v", ERROR_MERKLE_COMMITMENT_SAVE, resErr))
 		}
 	}
 	return nil
@@ -169,8 +163,7 @@ func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error 
 		// get document representation of merkle proof
 		docProof, docErr := models.GetDocumentFromModel(proofs[pos])
 		if docErr != nil {
-			fmt.Printf("%s\n", BAD_DATA_MERKLE_PROOF_MODEL)
-			return docErr
+			return errors.New(fmt.Sprintf("%s %v", BAD_DATA_MERKLE_PROOF_MODEL, docErr))
 		}
 
 		newProof := bson.NewDocument(
@@ -192,8 +185,7 @@ func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error 
 		res := d.db.Collection(COL_NAME_MERKLE_PROOF).FindOneAndUpdate(d.ctx, filterMerkleProof, newProof, opts)
 		resErr := res.Decode(t)
 		if resErr != nil && resErr != mongo.ErrNoDocuments {
-			fmt.Printf("%s\n", ERROR_MERKLE_PROOF_SAVE)
-			return resErr
+			return errors.New(fmt.Sprintf("%s %v", ERROR_MERKLE_PROOF_SAVE, resErr))
 		}
 	}
 	return nil
@@ -206,8 +198,7 @@ func (d *DbMongo) getLatestAttestationCount() (int64, error) {
 	opts.SetLimit(1)
 	count, countErr := d.db.Collection(COL_NAME_ATTESTATION).Count(d.ctx, nil, &opts)
 	if countErr != nil {
-		fmt.Printf("%s\n", ERROR_ATTESTATION_GET)
-		return 0, countErr
+		return 0, errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_GET, countErr))
 	}
 
 	return count, nil
@@ -231,8 +222,7 @@ func (d *DbMongo) getLatestAttestationMerkleRoot() (string, error) {
 	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx,
 		confirmedFilter, &options.FindOneOptions{Sort: sortFilter}).Decode(attestationDoc)
 	if resErr != nil {
-		fmt.Printf("%s\n", ERROR_ATTESTATION_GET)
-		return "", resErr
+		return "", errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_GET, resErr))
 	}
 	return attestationDoc.Lookup(models.ATTESTATION_MERKLE_ROOT_NAME).StringValue(), nil
 }
@@ -253,8 +243,7 @@ func (d *DbMongo) getAttestationMerkleRoot(txid chainhash.Hash) (string, error) 
 	attestationDoc := bson.NewDocument()
 	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx, filterAttestation).Decode(attestationDoc)
 	if resErr != nil {
-		fmt.Printf("%s\n", ERROR_ATTESTATION_GET)
-		return "", resErr
+		return "", errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_GET, resErr))
 	}
 	return attestationDoc.Lookup(models.COMMITMENT_MERKLE_ROOT_NAME).StringValue(), nil
 }
@@ -274,8 +263,8 @@ func (d *DbMongo) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models
 	filterMerkleRoot := bson.NewDocument(bson.EC.String(models.COMMITMENT_MERKLE_ROOT_NAME, merkleRoot))
 	res, resErr := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).Find(d.ctx, filterMerkleRoot, &options.FindOptions{Sort: sortFilter})
 	if resErr != nil {
-		fmt.Printf("%s\n", ERROR_MERKLE_COMMITMENT_GET)
-		return []models.CommitmentMerkleCommitment{}, resErr
+		return []models.CommitmentMerkleCommitment{},
+			errors.New(fmt.Sprintf("%s %v", ERROR_MERKLE_COMMITMENT_GET, resErr))
 	}
 
 	// fetch commitments
@@ -296,8 +285,8 @@ func (d *DbMongo) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models
 		merkleCommitments = append(merkleCommitments, *commitmentModel)
 	}
 	if err := res.Err(); err != nil {
-		fmt.Printf("%s\n", BAD_DATA_MERKLE_COMMITMENT_COL)
-		return []models.CommitmentMerkleCommitment{}, err
+		return []models.CommitmentMerkleCommitment{},
+			errors.New(fmt.Sprintf("%s %v", BAD_DATA_MERKLE_COMMITMENT_COL, err))
 	}
 	return merkleCommitments, nil
 }
@@ -309,8 +298,8 @@ func (d *DbMongo) getLatestCommitments() ([]models.LatestCommitment, error) {
 	sortFilter := bson.NewDocument(bson.EC.Int32(models.LATEST_COMMITMENT_CLIENT_POSITION_NAME, 1))
 	res, resErr := d.db.Collection(COL_NAME_LATEST_COMMITMENT).Find(d.ctx, bson.NewDocument(), &options.FindOptions{Sort: sortFilter})
 	if resErr != nil {
-		fmt.Printf("%s\n", ERROR_LATEST_COMMITMENT_GET)
-		return []models.LatestCommitment{}, resErr
+		return []models.LatestCommitment{},
+			errors.New(fmt.Sprintf("%s %v", ERROR_LATEST_COMMITMENT_GET, resErr))
 	}
 
 	// iterate through commitments
@@ -324,14 +313,12 @@ func (d *DbMongo) getLatestCommitments() ([]models.LatestCommitment, error) {
 		commitmentModel := &models.LatestCommitment{}
 		modelErr := models.GetModelFromDocument(commitmentDoc, commitmentModel)
 		if modelErr != nil {
-			fmt.Printf("%s\n", BAD_DATA_LATEST_COMMITMENT_COL)
-			return []models.LatestCommitment{}, modelErr
+			return []models.LatestCommitment{}, errors.New(fmt.Sprintf("%s %v", BAD_DATA_LATEST_COMMITMENT_COL, modelErr))
 		}
 		latestCommitments = append(latestCommitments, *commitmentModel)
 	}
 	if err := res.Err(); err != nil {
-		fmt.Printf("%s\n", BAD_DATA_LATEST_COMMITMENT_COL)
-		return []models.LatestCommitment{}, err
+		return []models.LatestCommitment{}, errors.New(fmt.Sprintf("%s %v", BAD_DATA_LATEST_COMMITMENT_COL, err))
 	}
 	return latestCommitments, nil
 }

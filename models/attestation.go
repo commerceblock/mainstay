@@ -9,6 +9,11 @@ import (
 	"github.com/mongodb/mongo-go-driver/bson"
 )
 
+// error consts
+const (
+	ERROR_COMMITMENT_NOT_DEFINED = "Commitment not defined"
+)
+
 // Attestation structure
 // Holds information on the attestation transaction generated
 // and the information on the sidechain hash attested
@@ -38,7 +43,7 @@ func (a *Attestation) SetCommitment(commitment *Commitment) {
 // Get commitment
 func (a Attestation) Commitment() (*Commitment, error) {
 	if a.commitment == (*Commitment)(nil) {
-		return (*Commitment)(nil), errors.New("Attestation Commitment not defined")
+		return (*Commitment)(nil), errors.New(ERROR_COMMITMENT_NOT_DEFINED)
 	}
 	return a.commitment, nil
 }
