@@ -103,8 +103,8 @@ func NewConfig(customConf ...[]byte) *Config {
 }
 
 // Return SidechainClient depending on whether unit test config or actual config
-func NewClientFromConfig(isUnitTest bool, customConf ...[]byte) clients.SidechainClient {
-	if isUnitTest {
+func NewClientFromConfig(isTest bool, customConf ...[]byte) clients.SidechainClient {
+	if isTest {
 		return clients.NewSidechainClientFake()
 	}
 

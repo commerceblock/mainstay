@@ -32,6 +32,11 @@ var testConf = []byte(`
         "multisignodes": "127.0.0.1:5001"
     },
     "db": {
+        "user":"",
+        "password":"",
+        "host":"localhost",
+        "port":"27017",
+        "name":"mainstay1"
     }
 }
 `)
@@ -77,7 +82,7 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 
 	// if not a regtest, then unittest
 	config := confpkg.NewConfig(testConf)
-	oceanClient := confpkg.NewClientFromConfig(!isRegtest, testConf)
+	oceanClient := confpkg.NewClientFromConfig(true, testConf)
 
 	// Get first unspent as initial TX for attestation chain
 	unspent, errUnspent := config.MainClient().ListUnspent()
