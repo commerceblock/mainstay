@@ -70,7 +70,7 @@ func NewAttestClient(config *confpkg.Config) *AttestClient {
 
 // Get next attestation key by tweaking with latest hash
 func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) (*btcutil.WIF, error) {
-	// Tweak priv key with the latest ocean hash
+	// Tweak priv key with the latest commitment hash
 	tweakedWalletPriv, tweakErr := crypto.TweakPrivKey(w.WalletPriv, hash.CloneBytes(), w.MainChainCfg)
 	if tweakErr != nil {
 		return nil, tweakErr

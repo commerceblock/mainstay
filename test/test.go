@@ -28,21 +28,10 @@ var testConf = []byte(`
         "rpcpass": "pass",
         "chain": "regtest"
     },
-    "ocean": {
-        "rpcurl": "localhost:18010",
-        "rpcuser": "bitcoinrpc",
-        "rpcpass": "acc1e7a299bc49449912e235b54dbce5",
-        "chain": "main"
-    },
     "misc": {
         "multisignodes": "127.0.0.1:5001"
     },
     "db": {
-        "user":"",
-        "password":"",
-        "host":"localhost",
-        "port":"27017",
-        "name":"mainstay1"
     }
 }
 `)

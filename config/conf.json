@@ -15,10 +15,10 @@
         "multisignodes": "MAINSTAY_MULTISIG_NODES"
     },
     "db": {
-        "user":"DB_USER",
-        "password":"DB_PASSWORD",
-        "host":"DB_HOST",
-        "port":"DB_PORT",
-        "name":"DB_NAME"
+        "user":"",
+        "password":"",
+        "host":"MAINSTAY_DB_HOST",
+        "port":"MAINSTAY_DB_PORT",
+        "name":"MAINSTAY_DB_NAME"
     }
 }

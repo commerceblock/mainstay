@@ -1,14 +1,14 @@
 #!/bin/bash
 shopt -s expand_aliases
 
-alias btcd="bitcoind -datadir=$HOME/btc-datadir"
-alias btcl="bitcoin-cli -datadir=$HOME/btc-datadir"
+alias btcd="bitcoind -datadir=/tmp/btc-datadir"
+alias btcl="bitcoin-cli -datadir=/tmp/btc-datadir"
 
 btcl stop
 sleep 1
 
-rm -r ~/btc-datadir ;
-mkdir ~/btc-datadir ;
+rm -r /tmp/btc-datadir ;
+mkdir /tmp/btc-datadir ;
 
 printf '%s\n' '#!/bin/sh' 'rpcuser=user' \
     'rpcpassword=pass' \
@@ -18,7 +18,7 @@ printf '%s\n' '#!/bin/sh' 'rpcuser=user' \
     'server=1' \
     'regtest=1' \
     'daemon=1' \
-    'txindex=1' > ~/btc-datadir/bitcoin.conf
+    'txindex=1' > /tmp/btc-datadir/bitcoin.conf
 
 btcd
 sleep 5
