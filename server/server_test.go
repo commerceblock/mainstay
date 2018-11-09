@@ -37,7 +37,7 @@ func TestServerUpdateLatestAttestation_1LatestCommitments(t *testing.T) {
 	hash0, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 	latestCommitments := []models.LatestCommitment{models.LatestCommitment{*hash0, 0}}
 	latestCommitment, _ := models.NewCommitment([]chainhash.Hash{*hash0})
-	dbFake.setLatestCommitments(latestCommitments)
+	dbFake.SetLatestCommitments(latestCommitments)
 
 	// Test latest attestation request
 	respAttestationHash, errAttestation := server.GetLatestAttestationCommitmentHash()
@@ -94,7 +94,7 @@ func TestServerUpdateLatestAttestation_3LatestCommitments(t *testing.T) {
 		models.LatestCommitment{*hash1, 1},
 		models.LatestCommitment{*hash2, 2}}
 	latestCommitment, _ := models.NewCommitment([]chainhash.Hash{*hash0, *hash1, *hash2})
-	dbFake.setLatestCommitments(latestCommitments)
+	dbFake.SetLatestCommitments(latestCommitments)
 
 	// Test latest attestation request
 	respAttestationHash, errAttestation := server.GetLatestAttestationCommitmentHash()
@@ -178,7 +178,7 @@ func TestServerGetLatestCommitment(t *testing.T) {
 	// update server with incorrect latest commitment and test server
 	latestCommitments := []models.LatestCommitment{
 		models.LatestCommitment{*hash0, 0}, models.LatestCommitment{*hash2, 2}}
-	dbFake.setLatestCommitments(latestCommitments)
+	dbFake.SetLatestCommitments(latestCommitments)
 
 	respLatestCommitment, err = server.GetLatestCommitment()
 	assert.Equal(t, errors.New(fmt.Sprintf("%s %d", ERROR_LATEST_COMMITMENT_MISSING, 1)), err)
@@ -187,7 +187,7 @@ func TestServerGetLatestCommitment(t *testing.T) {
 	// update server with incorrect latest commitment and test server
 	latestCommitments = []models.LatestCommitment{
 		models.LatestCommitment{*hash0, 1}, models.LatestCommitment{*hash2, 2}}
-	dbFake.setLatestCommitments(latestCommitments)
+	dbFake.SetLatestCommitments(latestCommitments)
 
 	respLatestCommitment, err = server.GetLatestCommitment()
 	assert.Equal(t, errors.New(fmt.Sprintf("%s %d", ERROR_LATEST_COMMITMENT_MISSING, 0)), err)
@@ -195,7 +195,7 @@ func TestServerGetLatestCommitment(t *testing.T) {
 
 	// update server with incorrect latest commitment and test server
 	latestCommitments = []models.LatestCommitment{models.LatestCommitment{*hash2, 2}}
-	dbFake.setLatestCommitments(latestCommitments)
+	dbFake.SetLatestCommitments(latestCommitments)
 
 	respLatestCommitment, err = server.GetLatestCommitment()
 	assert.Equal(t, errors.New(fmt.Sprintf("%s %d", ERROR_LATEST_COMMITMENT_MISSING, 0)), err)
@@ -208,7 +208,7 @@ func TestServerGetLatestCommitment(t *testing.T) {
 		models.LatestCommitment{*hash2, 2}}
 	latestCommitment, err := models.NewCommitment([]chainhash.Hash{*hash0, *hash1, *hash2})
 	assert.Equal(t, nil, err)
-	dbFake.setLatestCommitments(latestCommitments)
+	dbFake.SetLatestCommitments(latestCommitments)
 
 	respLatestCommitment, err = server.GetLatestCommitment()
 	assert.Equal(t, nil, err)
@@ -236,7 +236,7 @@ func TestServerGetAttestationCommitment(t *testing.T) {
 		models.LatestCommitment{*hashX, 0},
 		models.LatestCommitment{*hashY, 1},
 		models.LatestCommitment{*hashZ, 2}}
-	dbFake.setLatestCommitments(latestCommitments0)
+	dbFake.SetLatestCommitments(latestCommitments0)
 	latestCommitment0, _ := models.NewCommitment([]chainhash.Hash{*hashX, *hashY, *hashZ})
 
 	txid0, _ := chainhash.NewHashFromStr("11111111111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
@@ -254,7 +254,7 @@ func TestServerGetAttestationCommitment(t *testing.T) {
 	latestCommitments1 := []models.LatestCommitment{
 		models.LatestCommitment{*hashX, 0},
 		models.LatestCommitment{*hashY, 1}}
-	dbFake.setLatestCommitments(latestCommitments1)
+	dbFake.SetLatestCommitments(latestCommitments1)
 	latestCommitment1, _ := models.NewCommitment([]chainhash.Hash{*hashX, *hashY})
 
 	txid1, _ := chainhash.NewHashFromStr("21111111111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")

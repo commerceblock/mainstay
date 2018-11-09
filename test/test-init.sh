@@ -21,7 +21,7 @@ printf '%s\n' '#!/bin/sh' 'rpcuser=user' \
     'txindex=1' > /tmp/btc-datadir/bitcoin.conf
 
 btcd
-sleep 5
+sleep 1
 
 btcl generate 103
 sleep 1

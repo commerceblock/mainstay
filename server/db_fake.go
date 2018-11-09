@@ -27,19 +27,53 @@ func NewDbFake() *DbFake {
 
 // Save latest attestation to attestations
 func (d *DbFake) saveAttestation(attestation models.Attestation) error {
+	for _, a := range d.attestations {
+		if a.Txid == attestation.Txid {
+			a = attestation
+			return nil
+		}
+	}
 	d.attestations = append(d.attestations, attestation)
 	return nil
 }
 
 // Save merkle commitments to the MerkleCommitment collection
 func (d *DbFake) saveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error {
-	d.merkleCommitments = append(d.merkleCommitments, commitments...)
+	var newCommitments []models.CommitmentMerkleCommitment
+	for _, commitment := range commitments {
+		found := false
+		for _, c := range d.merkleCommitments {
+			if c.MerkleRoot == commitment.MerkleRoot {
+				found = true
+				c = commitment
+				break
+			}
+		}
+		if !found {
+			newCommitments = append(newCommitments, commitment)
+		}
+	}
+	d.merkleCommitments = append(d.merkleCommitments, newCommitments...)
 	return nil
 }
 
 // Save merkle proofs to the MerkleProof collection
 func (d *DbFake) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error {
-	d.merkleProofs = append(d.merkleProofs, proofs...)
+	var newProofs []models.CommitmentMerkleProof
+	for _, proof := range proofs {
+		found := false
+		for _, p := range d.merkleProofs {
+			if p.MerkleRoot == proof.MerkleRoot {
+				found = true
+				p = proof
+				break
+			}
+		}
+		if !found {
+			newProofs = append(newProofs, proof)
+		}
+	}
+	d.merkleProofs = append(d.merkleProofs, newProofs...)
 	return nil
 }
 
@@ -53,7 +87,7 @@ func (d *DbFake) getLatestAttestationMerkleRoot() (string, error) {
 }
 
 // Set latest commitments for testing
-func (d *DbFake) setLatestCommitments(latestCommitments []models.LatestCommitment) {
+func (d *DbFake) SetLatestCommitments(latestCommitments []models.LatestCommitment) {
 	d.latestCommitments = latestCommitments
 }
 
