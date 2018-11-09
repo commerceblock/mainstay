@@ -26,6 +26,7 @@ type AttestationState int
 
 // Attestation states
 const (
+	ASTATE_ERROR              AttestationState = -1
 	ASTATE_INIT               AttestationState = 0
 	ASTATE_NEXT_COMMITMENT    AttestationState = 1
 	ASTATE_NEW_ATTESTATION    AttestationState = 2
@@ -55,6 +56,7 @@ type AttestService struct {
 	subscribers []*messengers.SubscriberZmq
 	state       AttestationState
 	attestation *models.Attestation
+	errorState  error
 }
 
 var poller *zmq.Poller // poller to add all subscriber/publisher sockets
@@ -81,7 +83,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Se
 		subscribers = append(subscribers, messengers.NewSubscriberZmq(nodeaddr, subtopics, poller))
 	}
 
-	return &AttestService{ctx, wg, config, attester, server, publisher, subscribers, ASTATE_INIT, models.NewAttestationDefault()}
+	return &AttestService{ctx, wg, config, attester, server, publisher, subscribers, ASTATE_INIT, models.NewAttestationDefault(), nil}
 }
 
 // Run Attest Service
@@ -103,6 +105,14 @@ func (s *AttestService) Run() {
 	}
 }
 
+// ASTATE_ERROR
+// - Print error state and re-initiate attestation
+func (s *AttestService) doStateError() {
+	log.Println("*AttestService* ATTESTATION SERVICE FAILURE")
+	log.Println(s.errorState)
+	s.state = ASTATE_INIT
+}
+
 // ASTATE_INIT
 // - Check if there are unconfirmed or unspent transactions in the client
 // - Update server with latest attestation information
@@ -112,11 +122,11 @@ func (s *AttestService) doStateInit() {
 
 	// find the state of the attestation
 	unconfirmed, unconfirmedTxid, unconfirmedErr := s.attester.getUnconfirmedTx()
-	if s.checkFailure(unconfirmedErr) {
+	if s.setFailure(unconfirmedErr) {
 		return // will rebound to init
 	} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
 		commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid)
-		if s.checkFailure(commitmentErr) {
+		if s.setFailure(commitmentErr) {
 			return // will rebound to init
 		}
 		s.attestation = models.NewAttestation(unconfirmedTxid, &commitment) // initialise attestation
@@ -125,19 +135,19 @@ func (s *AttestService) doStateInit() {
 		s.state = ASTATE_AWAIT_CONFIRMATION // update attestation state
 	} else {
 		success, txunspent, unspentErr := s.attester.findLastUnspent()
-		if s.checkFailure(unspentErr) {
+		if s.setFailure(unspentErr) {
 			return // will rebound to init
 		} else if success {
 			txunspentHash, _ := chainhash.NewHashFromStr(txunspent.TxID)
 			commitment, commitmentErr := s.server.GetAttestationCommitment(*txunspentHash)
-			if s.checkFailure(commitmentErr) {
+			if s.setFailure(commitmentErr) {
 				return // will rebound to init
 			} else if (commitment.GetCommitmentHash() != chainhash.Hash{}) {
 				s.attestation = models.NewAttestation(*txunspentHash, &commitment)
 				// update server with latest confirmed attestation
 				s.attestation.Confirmed = true
 				errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
-				if s.checkFailure(errUpdate) {
+				if s.setFailure(errUpdate) {
 					return // will rebound to init
 				}
 			}
@@ -161,7 +171,7 @@ func (s *AttestService) doStateNextCommitment() {
 
 	// get latest commitment hash from server
 	latestCommitment, latestErr := s.server.GetLatestCommitment()
-	if s.checkFailure(latestErr) {
+	if s.setFailure(latestErr) {
 		return // will rebound to init
 	}
 	latestCommitmentHash := latestCommitment.GetCommitmentHash()
@@ -192,26 +202,26 @@ func (s *AttestService) doStateNewAttestation() {
 
 	// Get key and address for next attestation using client commitment
 	key, keyErr := s.attester.GetNextAttestationKey(s.attestation.CommitmentHash())
-	if s.checkFailure(keyErr) {
+	if s.setFailure(keyErr) {
 		return // will rebound to init
 	}
 	paytoaddr, _ := s.attester.GetNextAttestationAddr(key, s.attestation.CommitmentHash())
 	importErr := s.attester.ImportAttestationAddr(paytoaddr)
-	if s.checkFailure(importErr) {
+	if s.setFailure(importErr) {
 		return // will rebound to init
 	}
 	log.Printf("********** pay-to addr: %s\n", paytoaddr.String())
 
 	// Generate new unsigned attestation transaction from last unspent
 	success, txunspent, unspentErr := s.attester.findLastUnspent()
-	if s.checkFailure(unspentErr) {
+	if s.setFailure(unspentErr) {
 		return // will rebound to init
 	} else if success {
 		var createErr error
 		var newTx *wire.MsgTx
 		newTx, createErr = s.attester.createAttestation(paytoaddr, txunspent, false)
 		s.attestation.Tx = *newTx
-		if s.checkFailure(createErr) {
+		if s.setFailure(createErr) {
 			return // will rebound to init
 		}
 
@@ -224,7 +234,7 @@ func (s *AttestService) doStateNewAttestation() {
 
 		s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 	} else {
-		s.checkFailure(errors.New(ERROR_UNSPENT_NOT_FOUND))
+		s.setFailure(errors.New(ERROR_UNSPENT_NOT_FOUND))
 		return // will rebound to init
 	}
 }
@@ -250,13 +260,13 @@ func (s *AttestService) doStateSignAttestation() {
 
 	// get last confirmed commitment from server
 	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()
-	if s.checkFailure(latestErr) {
+	if s.setFailure(latestErr) {
 		return // will rebound to init
 	}
 
 	// sign attestation with combined sigs and last commitment
 	signedTx, signErr := s.attester.signAttestation(&s.attestation.Tx, sigs, lastCommitmentHash)
-	if s.checkFailure(signErr) {
+	if s.setFailure(signErr) {
 		return // will rebound to init
 	}
 	s.attestation.Tx = *signedTx
@@ -273,13 +283,13 @@ func (s *AttestService) doStateSendAttestation() {
 
 	// update server with latest unconfirmed attestation, in case the service fails
 	errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
-	if s.checkFailure(errUpdate) {
+	if s.setFailure(errUpdate) {
 		return // will rebound to init
 	}
 
 	// sign attestation with combined signatures and send through client to network
 	txid, attestationErr := s.attester.sendAttestation(&s.attestation.Tx)
-	if s.checkFailure(attestationErr) {
+	if s.setFailure(attestationErr) {
 		return // will rebound to init
 	}
 	s.attestation.Txid = txid
@@ -294,7 +304,7 @@ func (s *AttestService) doStateSendAttestation() {
 func (s *AttestService) doStateAwaitConfirmation() {
 	log.Printf("*AttestService* AWAITING CONFIRMATION \ntxid: (%s)\ncommitment: (%s)\n", s.attestation.Txid.String(), s.attestation.CommitmentHash().String())
 	newTx, err := s.config.MainClient().GetTransaction(&s.attestation.Txid)
-	if s.checkFailure(err) {
+	if s.setFailure(err) {
 		return // will rebound to init
 	}
 	if newTx.BlockHash != "" {
@@ -303,7 +313,7 @@ func (s *AttestService) doStateAwaitConfirmation() {
 		// update server with latest confirmed attestation
 		s.attestation.Confirmed = true
 		errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
-		if s.checkFailure(errUpdate) {
+		if s.setFailure(errUpdate) {
 			return // will rebound to init
 		}
 
@@ -317,6 +327,9 @@ func (s *AttestService) doStateAwaitConfirmation() {
 //Main attestation service method - cycles through AttestationStates
 func (s *AttestService) doAttestation() {
 	switch s.state {
+
+	case ASTATE_ERROR:
+		s.doStateError()
 
 	case ASTATE_INIT:
 		s.doStateInit()
@@ -338,12 +351,11 @@ func (s *AttestService) doAttestation() {
 	}
 }
 
-// Set to error state and provide debugging information
-func (s *AttestService) checkFailure(err error) bool {
+// Check if there is an error and set error state
+func (s *AttestService) setFailure(err error) bool {
 	if err != nil {
-		log.Println("*AttestService* ATTESTATION SERVICE FAILURE")
-		log.Println(err)
-		s.state = ASTATE_INIT
+		s.errorState = err
+		s.state = ASTATE_ERROR
 		return true
 	}
 	return false
