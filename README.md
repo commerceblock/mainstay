@@ -4,7 +4,6 @@ The mainstay repository is an application that implements the [Mainstay protocol
 ## Prerequisites
 * Go (https://github.com/golang)
 * Bitcoin (https://github.com/bitcoin/bitcoin)
-* Ocean (https://github.com/commerceblock/ocean)
 
 ## Instructions
 
