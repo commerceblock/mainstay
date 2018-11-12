@@ -1,8 +1,8 @@
 {
     "main": {
-        "rpcurl": "localhost:18333",
-        "rpcuser": "username",
-        "rpcpass": "password",
+        "rpcurl": "MAINSTAY_MAIN_URL",
+        "rpcuser": "MAINSTAY_MAIN_USER",
+        "rpcpass": "MAINSTAY_MAIN_PASS",
         "chain": "testnet"
     },
     "clientchain": {
