@@ -58,8 +58,8 @@ func TestAttestService_Regular(t *testing.T) {
 	// set server commitment before creationg new attestation
 	hashX, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 	latestCommitment, _ := models.NewCommitment([]chainhash.Hash{*hashX})
-	latestCommitments := []models.LatestCommitment{models.LatestCommitment{*hashX, 0}}
-	dbFake.SetLatestCommitments(latestCommitments)
+	latestCommitments := []models.ClientCommitment{models.ClientCommitment{*hashX, 0}}
+	dbFake.SetClientCommitments(latestCommitments)
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEW_ATTESTATION, attestService.state)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
@@ -108,8 +108,8 @@ func TestAttestService_Regular(t *testing.T) {
 	// need to update server latest commitment
 	hashY, _ := chainhash.NewHashFromStr("baaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 	latestCommitment, _ = models.NewCommitment([]chainhash.Hash{*hashY})
-	latestCommitments = []models.LatestCommitment{models.LatestCommitment{*hashY, 0}}
-	dbFake.SetLatestCommitments(latestCommitments)
+	latestCommitments = []models.ClientCommitment{models.ClientCommitment{*hashY, 0}}
+	dbFake.SetClientCommitments(latestCommitments)
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEW_ATTESTATION, attestService.state)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
@@ -205,8 +205,8 @@ func TestAttestService_FailureNextCommitment(t *testing.T) {
 	// set server commitment before creationg new attestation
 	hashX, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 	latestCommitment, _ := models.NewCommitment([]chainhash.Hash{*hashX})
-	latestCommitments := []models.LatestCommitment{models.LatestCommitment{*hashX, 0}}
-	dbFake.SetLatestCommitments(latestCommitments)
+	latestCommitments := []models.ClientCommitment{models.ClientCommitment{*hashX, 0}}
+	dbFake.SetClientCommitments(latestCommitments)
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEW_ATTESTATION, attestService.state)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
@@ -255,8 +255,8 @@ func TestAttestService_FailureNewAttestation(t *testing.T) {
 	// set server commitment before creationg new attestation
 	hashX, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 	latestCommitment, _ := models.NewCommitment([]chainhash.Hash{*hashX})
-	latestCommitments := []models.LatestCommitment{models.LatestCommitment{*hashX, 0}}
-	dbFake.SetLatestCommitments(latestCommitments)
+	latestCommitments := []models.ClientCommitment{models.ClientCommitment{*hashX, 0}}
+	dbFake.SetClientCommitments(latestCommitments)
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEW_ATTESTATION, attestService.state)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
@@ -323,8 +323,8 @@ func TestAttestService_FailureSignAttestation(t *testing.T) {
 	// set server commitment before creationg new attestation
 	hashX, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 	latestCommitment, _ := models.NewCommitment([]chainhash.Hash{*hashX})
-	latestCommitments := []models.LatestCommitment{models.LatestCommitment{*hashX, 0}}
-	dbFake.SetLatestCommitments(latestCommitments)
+	latestCommitments := []models.ClientCommitment{models.ClientCommitment{*hashX, 0}}
+	dbFake.SetClientCommitments(latestCommitments)
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEW_ATTESTATION, attestService.state)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
@@ -401,8 +401,8 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 	// set server commitment before creationg new attestation
 	hashX, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 	latestCommitment, _ := models.NewCommitment([]chainhash.Hash{*hashX})
-	latestCommitments := []models.LatestCommitment{models.LatestCommitment{*hashX, 0}}
-	dbFake.SetLatestCommitments(latestCommitments)
+	latestCommitments := []models.ClientCommitment{models.ClientCommitment{*hashX, 0}}
+	dbFake.SetClientCommitments(latestCommitments)
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEW_ATTESTATION, attestService.state)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
@@ -473,8 +473,8 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 	// set server commitment before creationg new attestation
 	hashX, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 	latestCommitment, _ := models.NewCommitment([]chainhash.Hash{*hashX})
-	latestCommitments := []models.LatestCommitment{models.LatestCommitment{*hashX, 0}}
-	dbFake.SetLatestCommitments(latestCommitments)
+	latestCommitments := []models.ClientCommitment{models.ClientCommitment{*hashX, 0}}
+	dbFake.SetClientCommitments(latestCommitments)
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEW_ATTESTATION, attestService.state)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())

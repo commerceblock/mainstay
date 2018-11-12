@@ -11,7 +11,7 @@ import (
 
 // error consts
 const (
-	ERROR_LATEST_COMMITMENT_MISSING = "Latest commitment missing for position"
+	ERROR_LATEST_COMMITMENT_MISSING = "Client commitment missing for position"
 )
 
 // Server structure
@@ -81,10 +81,10 @@ func (s *Server) GetLatestAttestationCommitmentHash() (chainhash.Hash, error) {
 }
 
 // Return latest commitment stored in the server
-func (s *Server) GetLatestCommitment() (models.Commitment, error) {
+func (s *Server) GetClientCommitment() (models.Commitment, error) {
 
 	// get latest commitments from db
-	latestCommitments, errLatest := s.dbInterface.getLatestCommitments()
+	latestCommitments, errLatest := s.dbInterface.getClientCommitments()
 	if errLatest != nil {
 		return models.Commitment{}, errLatest
 	}

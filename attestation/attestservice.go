@@ -170,7 +170,7 @@ func (s *AttestService) doStateNextCommitment() {
 	log.Println("*AttestService* NEW ATTESTATION COMMITMENT")
 
 	// get latest commitment hash from server
-	latestCommitment, latestErr := s.server.GetLatestCommitment()
+	latestCommitment, latestErr := s.server.GetClientCommitment()
 	if s.setFailure(latestErr) {
 		return // will rebound to init
 	}

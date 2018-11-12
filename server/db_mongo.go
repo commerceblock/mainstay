@@ -20,7 +20,7 @@ const (
 	COL_NAME_ATTESTATION       = "Attestation"
 	COL_NAME_MERKLE_COMMITMENT = "MerkleCommitment"
 	COL_NAME_MERKLE_PROOF      = "MerkleProof"
-	COL_NAME_LATEST_COMMITMENT = "LatestCommitment"
+	COL_NAME_CLIENT_COMMITMENT = "ClientCommitment"
 
 	// error messages
 	ERROR_MONGO_CLIENT  = "could not create mongoDB client"
@@ -34,9 +34,9 @@ const (
 	ERROR_ATTESTATION_GET       = "could not get attestation"
 	ERROR_MERKLE_COMMITMENT_GET = "could not get merkle commitment"
 	ERROR_MERKLE_PROOF_GET      = "could not get merkle proof"
-	ERROR_LATEST_COMMITMENT_GET = "could not get latest commitment"
+	ERROR_CLIENT_COMMITMENT_GET = "could not get client commitment"
 
-	BAD_DATA_LATEST_COMMITMENT_COL = "bad data in latest commitment collection"
+	BAD_DATA_CLIENT_COMMITMENT_COL = "bad data in client commitment collection"
 	BAD_DATA_MERKLE_COMMITMENT_COL = "bad data in merkle commitment collection"
 
 	BAD_DATA_ATTESTATION_MODEL       = "bad data in attestation model"
@@ -292,33 +292,33 @@ func (d *DbMongo) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models
 }
 
 // Return latest commitments from MerkleCommitment collection
-func (d *DbMongo) getLatestCommitments() ([]models.LatestCommitment, error) {
+func (d *DbMongo) getClientCommitments() ([]models.ClientCommitment, error) {
 
 	// sort by client position to get correct commitment order
-	sortFilter := bson.NewDocument(bson.EC.Int32(models.LATEST_COMMITMENT_CLIENT_POSITION_NAME, 1))
-	res, resErr := d.db.Collection(COL_NAME_LATEST_COMMITMENT).Find(d.ctx, bson.NewDocument(), &options.FindOptions{Sort: sortFilter})
+	sortFilter := bson.NewDocument(bson.EC.Int32(models.CLIENT_COMMITMENT_CLIENT_POSITION_NAME, 1))
+	res, resErr := d.db.Collection(COL_NAME_CLIENT_COMMITMENT).Find(d.ctx, bson.NewDocument(), &options.FindOptions{Sort: sortFilter})
 	if resErr != nil {
-		return []models.LatestCommitment{},
-			errors.New(fmt.Sprintf("%s %v", ERROR_LATEST_COMMITMENT_GET, resErr))
+		return []models.ClientCommitment{},
+			errors.New(fmt.Sprintf("%s %v", ERROR_CLIENT_COMMITMENT_GET, resErr))
 	}
 
 	// iterate through commitments
-	var latestCommitments []models.LatestCommitment
+	var latestCommitments []models.ClientCommitment
 	for res.Next(d.ctx) {
 		commitmentDoc := bson.NewDocument()
 		if err := res.Decode(commitmentDoc); err != nil {
-			fmt.Printf("%s\n", BAD_DATA_LATEST_COMMITMENT_COL)
-			return []models.LatestCommitment{}, err
+			fmt.Printf("%s\n", BAD_DATA_CLIENT_COMMITMENT_COL)
+			return []models.ClientCommitment{}, err
 		}
-		commitmentModel := &models.LatestCommitment{}
+		commitmentModel := &models.ClientCommitment{}
 		modelErr := models.GetModelFromDocument(commitmentDoc, commitmentModel)
 		if modelErr != nil {
-			return []models.LatestCommitment{}, errors.New(fmt.Sprintf("%s %v", BAD_DATA_LATEST_COMMITMENT_COL, modelErr))
+			return []models.ClientCommitment{}, errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_COMMITMENT_COL, modelErr))
 		}
 		latestCommitments = append(latestCommitments, *commitmentModel)
 	}
 	if err := res.Err(); err != nil {
-		return []models.LatestCommitment{}, errors.New(fmt.Sprintf("%s %v", BAD_DATA_LATEST_COMMITMENT_COL, err))
+		return []models.ClientCommitment{}, errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_COMMITMENT_COL, err))
 	}
 	return latestCommitments, nil
 }

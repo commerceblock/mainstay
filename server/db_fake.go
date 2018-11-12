@@ -13,7 +13,7 @@ type DbFake struct {
 	attestations      []models.Attestation
 	merkleCommitments []models.CommitmentMerkleCommitment
 	merkleProofs      []models.CommitmentMerkleProof
-	latestCommitments []models.LatestCommitment
+	latestCommitments []models.ClientCommitment
 }
 
 // Return new DbFake instance
@@ -22,7 +22,7 @@ func NewDbFake() *DbFake {
 		[]models.Attestation{},
 		[]models.CommitmentMerkleCommitment{},
 		[]models.CommitmentMerkleProof{},
-		[]models.LatestCommitment{}}
+		[]models.ClientCommitment{}}
 }
 
 // Save latest attestation to attestations
@@ -87,12 +87,12 @@ func (d *DbFake) getLatestAttestationMerkleRoot() (string, error) {
 }
 
 // Set latest commitments for testing
-func (d *DbFake) SetLatestCommitments(latestCommitments []models.LatestCommitment) {
+func (d *DbFake) SetClientCommitments(latestCommitments []models.ClientCommitment) {
 	d.latestCommitments = latestCommitments
 }
 
 // Return latest commitment from fake client commitments
-func (d *DbFake) getLatestCommitments() ([]models.LatestCommitment, error) {
+func (d *DbFake) getClientCommitments() ([]models.ClientCommitment, error) {
 	return d.latestCommitments, nil
 }
 

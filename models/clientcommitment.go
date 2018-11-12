@@ -5,22 +5,22 @@ import (
 	"github.com/mongodb/mongo-go-driver/bson"
 )
 
-// struct for db LatestCommitment
-type LatestCommitment struct {
+// struct for db ClientCommitment
+type ClientCommitment struct {
 	Commitment     chainhash.Hash
 	ClientPosition int32
 }
 
 // Implement bson.Marshaler MarshalBSON() method for use with db_mongo interface
-func (c LatestCommitment) MarshalBSON() ([]byte, error) {
-	commitmentBSON := LatestCommitmentBSON{c.Commitment.String(), c.ClientPosition}
+func (c ClientCommitment) MarshalBSON() ([]byte, error) {
+	commitmentBSON := ClientCommitmentBSON{c.Commitment.String(), c.ClientPosition}
 	return bson.Marshal(commitmentBSON)
 
 }
 
 // Implement bson.Unmarshaler UnmarshalJSON() method for use with db_mongo interface
-func (c *LatestCommitment) UnmarshalBSON(b []byte) error {
-	var commitmentBSON LatestCommitmentBSON
+func (c *ClientCommitment) UnmarshalBSON(b []byte) error {
+	var commitmentBSON ClientCommitmentBSON
 	if err := bson.Unmarshal(b, &commitmentBSON); err != nil {
 		return err
 	}
@@ -35,12 +35,12 @@ func (c *LatestCommitment) UnmarshalBSON(b []byte) error {
 
 // Commitment field names
 const (
-	LATEST_COMMITMENT_CLIENT_POSITION_NAME = "client_position"
-	LATEST_COMMITMENT_COMMITMENT_NAME      = "commitment"
+	CLIENT_COMMITMENT_CLIENT_POSITION_NAME = "client_position"
+	CLIENT_COMMITMENT_COMMITMENT_NAME      = "commitment"
 )
 
-// LatestCommitmentBSON structure for mongoDB
-type LatestCommitmentBSON struct {
+// ClientCommitmentBSON structure for mongoDB
+type ClientCommitmentBSON struct {
 	Commitment     string `bson:"commitment"`
 	ClientPosition int32  `bson:"client_position"`
 }

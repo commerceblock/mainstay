@@ -7,18 +7,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Test LatestCommitment high level interface
-func TestLatestCommitment(t *testing.T) {
+// Test ClientCommitment high level interface
+func TestClientCommitment(t *testing.T) {
 	hash0, _ := chainhash.NewHashFromStr("1a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
-	latestCommitment := LatestCommitment{*hash0, int32(5)}
+	latestCommitment := ClientCommitment{*hash0, int32(5)}
 	assert.Equal(t, *hash0, latestCommitment.Commitment)
 	assert.Equal(t, int32(5), latestCommitment.ClientPosition)
 }
 
-// Test LatestCommitment BSON interface
-func TestLatestCommitmentBSON(t *testing.T) {
+// Test ClientCommitment BSON interface
+func TestClientCommitmentBSON(t *testing.T) {
 	hash0, _ := chainhash.NewHashFromStr("1a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
-	latestCommitment := LatestCommitment{*hash0, int32(5)}
+	latestCommitment := ClientCommitment{*hash0, int32(5)}
 
 	// test marshal latestCommitment model
 	bytes, errBytes := latestCommitment.MarshalBSON()
@@ -26,21 +26,21 @@ func TestLatestCommitmentBSON(t *testing.T) {
 	assert.Equal(t, nil, errBytes)
 
 	// test unmarshal latestCommitment model and verify reverse works
-	testLatestCommitment := &LatestCommitment{}
-	testLatestCommitment.UnmarshalBSON(bytes)
-	assert.Equal(t, latestCommitment.Commitment, testLatestCommitment.Commitment)
-	assert.Equal(t, latestCommitment.ClientPosition, testLatestCommitment.ClientPosition)
+	testClientCommitment := &ClientCommitment{}
+	testClientCommitment.UnmarshalBSON(bytes)
+	assert.Equal(t, latestCommitment.Commitment, testClientCommitment.Commitment)
+	assert.Equal(t, latestCommitment.ClientPosition, testClientCommitment.ClientPosition)
 
 	// test latestCommitment model to document
-	doc, docErr := GetDocumentFromModel(testLatestCommitment)
+	doc, docErr := GetDocumentFromModel(testClientCommitment)
 	assert.Equal(t, nil, docErr)
-	assert.Equal(t, latestCommitment.Commitment.String(), doc.Lookup(LATEST_COMMITMENT_COMMITMENT_NAME).StringValue())
-	assert.Equal(t, latestCommitment.ClientPosition, doc.Lookup(LATEST_COMMITMENT_CLIENT_POSITION_NAME).Int32())
+	assert.Equal(t, latestCommitment.Commitment.String(), doc.Lookup(CLIENT_COMMITMENT_COMMITMENT_NAME).StringValue())
+	assert.Equal(t, latestCommitment.ClientPosition, doc.Lookup(CLIENT_COMMITMENT_CLIENT_POSITION_NAME).Int32())
 
 	// test reverse document to latestCommitment model
-	testtestLatestCommitment := &LatestCommitment{}
-	docErr = GetModelFromDocument(doc, testtestLatestCommitment)
+	testtestClientCommitment := &ClientCommitment{}
+	docErr = GetModelFromDocument(doc, testtestClientCommitment)
 	assert.Equal(t, nil, docErr)
-	assert.Equal(t, latestCommitment.Commitment, testtestLatestCommitment.Commitment)
-	assert.Equal(t, latestCommitment.ClientPosition, testtestLatestCommitment.ClientPosition)
+	assert.Equal(t, latestCommitment.Commitment, testtestClientCommitment.Commitment)
+	assert.Equal(t, latestCommitment.ClientPosition, testtestClientCommitment.ClientPosition)
 }
