@@ -33,14 +33,31 @@ const (
 	ASTATE_SIGN_ATTESTATION   AttestationState = 3
 	ASTATE_SEND_ATTESTATION   AttestationState = 4
 	ASTATE_AWAIT_CONFIRMATION AttestationState = 5
+	ASTATE_HANDLE_UNCONFIRMED AttestationState = 6
 )
-
-// Waiting time between attestations and/or attestation confirmation attempts
-const ATTEST_WAIT_TIME = 20
 
 // error consts
 const (
 	ERROR_UNSPENT_NOT_FOUND = "No valid unspent found"
+)
+
+// waiting time schedules
+const (
+	// fixed waiting time between states
+	ATIME_FIXED = 5 * time.Second
+
+	// waiting time for sigs to arrive from multisig nodes
+	ATIME_SIGS = 1 * time.Minute
+
+	// waiting time between attemps to check if an attestation has been confirmed
+	ATIME_CONFIRMATION = 15 * time.Minute
+
+	// waiting time between consecutive attestations after one was confirmed
+	ATIME_NEW_ATTESTATION = 60 * time.Minute
+
+	// waiting time until we handle an attestation that has not been confirmed
+	// usually by increasing the fee of the previous transcation to speed up confirmation
+	ATIME_HANDLE_UNCONFIRMED = 60 * time.Minute
 )
 
 // AttestationService structure
@@ -58,6 +75,9 @@ type AttestService struct {
 	attestation *models.Attestation
 	errorState  error
 }
+
+var attestDelay time.Duration // delay between states
+var confirmTime time.Time     // delay untill confirmation
 
 var poller *zmq.Poller // poller to add all subscriber/publisher sockets
 
@@ -90,7 +110,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Se
 func (s *AttestService) Run() {
 	defer s.wg.Done()
 
-	attestDelay := 30 * time.Second // add some delay for subscribers to have time to set up
+	attestDelay = 30 * time.Second // add some delay for subscribers to have time to set up
 
 	for { //Doing attestations using attestation client and waiting for transaction confirmation
 		timer := time.NewTimer(attestDelay)
@@ -100,7 +120,9 @@ func (s *AttestService) Run() {
 			return
 		case <-timer.C:
 			s.doAttestation()
-			attestDelay = time.Duration(ATTEST_WAIT_TIME) * time.Second // add wait time
+
+			// for testing
+			// attestDelay = 1*time.Second
 		}
 	}
 }
@@ -197,6 +219,7 @@ func (s *AttestService) doStateNextCommitment() {
 // - Generate new pay to address for attestation transaction using client commitment
 // - Create new unsigned transaction using the last unspent
 // - Publish unsigned transaction to signer clients
+// - add ATIME_SIGS waiting time
 func (s *AttestService) doStateNewAttestation() {
 	log.Println("*AttestService* NEW ATTESTATION")
 
@@ -233,6 +256,8 @@ func (s *AttestService) doStateNewAttestation() {
 		s.publisher.SendMessage(txbytes.Bytes(), confpkg.TOPIC_NEW_TX)
 
 		s.state = ASTATE_SIGN_ATTESTATION // update attestation state
+		attestDelay = ATIME_SIGS          // add sigs waiting time
+		log.Printf("********** sleeping for: %s ...\n", attestDelay.String())
 	} else {
 		s.setFailure(errors.New(ERROR_UNSPENT_NOT_FOUND))
 		return // will rebound to init
@@ -278,6 +303,8 @@ func (s *AttestService) doStateSignAttestation() {
 // ASTATE_SEND_ATTESTATION
 // - Store unconfirmed attestation to server prior to sending
 // - Send attestation transaction through the client to the network
+// - add ATIME_CONFIRMATION waiting time
+// - start time for confirmation time
 func (s *AttestService) doStateSendAttestation() {
 	log.Println("*AttestService* SEND ATTESTATION")
 
@@ -296,17 +323,31 @@ func (s *AttestService) doStateSendAttestation() {
 	log.Printf("********** attestation transaction committed with txid: (%s)\n", txid)
 
 	s.state = ASTATE_AWAIT_CONFIRMATION // update attestation state
+	attestDelay = ATIME_CONFIRMATION    // add confirmation waiting time
+	log.Printf("********** sleeping for: %s ...\n", attestDelay.String())
+	confirmTime = time.Now() // set time for awaiting confirmation
 }
 
 // ASTATE_AWAIT_CONFIRMATION
 // - Check if the attestation transaction has been confirmed in the main network
 // - If confirmed, initiate new attestation, update server and signer clients
+// - Check if ATIME_HANDLE_UNCONFIRMED has elapsed since attestation was sent
+// - add ATIME_NEW_ATTESTATION if confirmed or ATIME_CONFIRMATION if not to waiting time
 func (s *AttestService) doStateAwaitConfirmation() {
 	log.Printf("*AttestService* AWAITING CONFIRMATION \ntxid: (%s)\ncommitment: (%s)\n", s.attestation.Txid.String(), s.attestation.CommitmentHash().String())
+
+	// if attestation has been unconfirmed for too long
+	// set to handle unconfirmed state
+	if time.Since(confirmTime) > ATIME_HANDLE_UNCONFIRMED {
+		s.state = ASTATE_HANDLE_UNCONFIRMED
+		return
+	}
+
 	newTx, err := s.config.MainClient().GetTransaction(&s.attestation.Txid)
 	if s.setFailure(err) {
 		return // will rebound to init
 	}
+
 	if newTx.BlockHash != "" {
 		log.Printf("********** attestation confirmed with txid: (%s)\n", s.attestation.Txid.String())
 
@@ -321,11 +362,29 @@ func (s *AttestService) doStateAwaitConfirmation() {
 		s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) //update clients
 
 		s.state = ASTATE_NEXT_COMMITMENT // update attestation state
+
+		attestDelay = ATIME_NEW_ATTESTATION - time.Since(confirmTime) // add new attestation waiting time - subtract waiting time
+	} else {
+		attestDelay = ATIME_CONFIRMATION // add confirmation waiting time
 	}
+	log.Printf("********** sleeping for: %s ...\n", attestDelay.String())
+}
+
+// ASTATE_HANDLE_UNCONFIRMED
+// - Handle attestations that have been unconfirmed for too long
+func (s *AttestService) doStateHandleUnconfirmed() {
+	log.Println("*AttestService* HANDLE UNCONFIRMED")
+
+	return
 }
 
 //Main attestation service method - cycles through AttestationStates
 func (s *AttestService) doAttestation() {
+
+	// fixed waiting time between states specific states might
+	// re-write this to set specific waiting times
+	attestDelay = ATIME_FIXED
+
 	switch s.state {
 
 	case ASTATE_ERROR:
@@ -348,6 +407,9 @@ func (s *AttestService) doAttestation() {
 
 	case ASTATE_AWAIT_CONFIRMATION:
 		s.doStateAwaitConfirmation()
+
+	case ASTATE_HANDLE_UNCONFIRMED:
+		s.doStateHandleUnconfirmed()
 	}
 }
 
