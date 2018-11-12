@@ -21,6 +21,7 @@ const (
 	COL_NAME_MERKLE_COMMITMENT = "MerkleCommitment"
 	COL_NAME_MERKLE_PROOF      = "MerkleProof"
 	COL_NAME_CLIENT_COMMITMENT = "ClientCommitment"
+	COL_NAME_CLIENT_DETAILS    = "ClientDetails"
 
 	// error messages
 	ERROR_MONGO_CLIENT  = "could not create mongoDB client"
@@ -30,18 +31,22 @@ const (
 	ERROR_ATTESTATION_SAVE       = "could not save attestation"
 	ERROR_MERKLE_COMMITMENT_SAVE = "could not save merkle commitment"
 	ERROR_MERKLE_PROOF_SAVE      = "could not save merkle proof"
+	ERROR_CLIENT_DETAILS_SAVE    = "could not save client details"
 
 	ERROR_ATTESTATION_GET       = "could not get attestation"
 	ERROR_MERKLE_COMMITMENT_GET = "could not get merkle commitment"
 	ERROR_MERKLE_PROOF_GET      = "could not get merkle proof"
 	ERROR_CLIENT_COMMITMENT_GET = "could not get client commitment"
+	ERROR_CLIENT_DETAILS_GET    = "could not get client details"
 
 	BAD_DATA_CLIENT_COMMITMENT_COL = "bad data in client commitment collection"
 	BAD_DATA_MERKLE_COMMITMENT_COL = "bad data in merkle commitment collection"
+	BAD_DATA_CLIENT_DETAILS_COL    = "bad data in client details collection"
 
 	BAD_DATA_ATTESTATION_MODEL       = "bad data in attestation model"
 	BAD_DATA_MERKLE_COMMITMENT_MODEL = "bad data in merkle commitment model"
 	BAD_DATA_MERKLE_PROOF_MODEL      = "bad data in merkle proof model"
+	BAD_DATA_CLIENT_DETAILS_MODEL    = "bad data in client details model"
 )
 
 // Method to connect to mongo database through config
@@ -191,6 +196,67 @@ func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error 
 	return nil
 }
 
+// Save client details to ClientDetails collection
+func (d *DbMongo) SaveClientDetails(details models.ClientDetails) error {
+	// get document representation of client details
+	docDetails, docErr := models.GetDocumentFromModel(details)
+	if docErr != nil {
+		return errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_DETAILS_MODEL, docErr))
+	}
+
+	newDetails := bson.NewDocument(
+		bson.EC.SubDocument("$set", docDetails),
+	)
+
+	// search if client details for position already exists
+	filterClientDetails := bson.NewDocument(
+		bson.EC.Int32(models.CLIENT_DETAILS_CLIENT_POSITION_NAME,
+			docDetails.Lookup(models.CLIENT_DETAILS_CLIENT_POSITION_NAME).Int32()),
+	)
+
+	// insert or update client details
+	t := bson.NewDocument()
+	opts := &options.FindOneAndUpdateOptions{}
+	opts.SetUpsert(true)
+	res := d.db.Collection(COL_NAME_CLIENT_DETAILS).FindOneAndUpdate(d.ctx, filterClientDetails, newDetails, opts)
+	resErr := res.Decode(t)
+	if resErr != nil && resErr != mongo.ErrNoDocuments {
+		return errors.New(fmt.Sprintf("%s %v", ERROR_CLIENT_DETAILS_SAVE, resErr))
+	}
+	return nil
+}
+
+// Get latest ClientDetails document
+func (d *DbMongo) GetClientDetails() ([]models.ClientDetails, error) {
+	// sort by client position
+	sortFilter := bson.NewDocument(bson.EC.Int32(models.CLIENT_DETAILS_CLIENT_POSITION_NAME, 1))
+	res, resErr := d.db.Collection(COL_NAME_CLIENT_DETAILS).Find(d.ctx, bson.NewDocument(), &options.FindOptions{Sort: sortFilter})
+	if resErr != nil {
+		return []models.ClientDetails{},
+			errors.New(fmt.Sprintf("%s %v", ERROR_CLIENT_DETAILS_GET, resErr))
+	}
+
+	// iterate through details
+	var details []models.ClientDetails
+	for res.Next(d.ctx) {
+		detailsDoc := bson.NewDocument()
+		if err := res.Decode(detailsDoc); err != nil {
+			return []models.ClientDetails{},
+				errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_DETAILS_COL, err))
+		}
+		detailsModel := &models.ClientDetails{}
+		modelErr := models.GetModelFromDocument(detailsDoc, detailsModel)
+		if modelErr != nil {
+			return []models.ClientDetails{}, errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_DETAILS_COL, modelErr))
+		}
+		details = append(details, *detailsModel)
+	}
+	if err := res.Err(); err != nil {
+		return []models.ClientDetails{}, errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_DETAILS_COL, err))
+	}
+	return details, nil
+}
+
 // Get Attestation collection document count
 func (d *DbMongo) getLatestAttestationCount() (int64, error) {
 	// find latest attestation count
@@ -307,8 +373,8 @@ func (d *DbMongo) getClientCommitments() ([]models.ClientCommitment, error) {
 	for res.Next(d.ctx) {
 		commitmentDoc := bson.NewDocument()
 		if err := res.Decode(commitmentDoc); err != nil {
-			fmt.Printf("%s\n", BAD_DATA_CLIENT_COMMITMENT_COL)
-			return []models.ClientCommitment{}, err
+			return []models.ClientCommitment{},
+				errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_COMMITMENT_COL, err))
 		}
 		commitmentModel := &models.ClientCommitment{}
 		modelErr := models.GetModelFromDocument(commitmentDoc, commitmentModel)
