@@ -172,6 +172,8 @@ func (s *AttestService) doStateInit() {
 				if s.setFailure(errUpdate) {
 					return // will rebound to init
 				}
+			} else {
+				s.attestation = models.NewAttestationDefault()
 			}
 			confirmedHash := s.attestation.CommitmentHash()
 			s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) // update clients

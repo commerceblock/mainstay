@@ -253,8 +253,17 @@ func TestAttestService_FailureInit(t *testing.T) {
 	assert.Equal(t, chainhash.Hash{}, attestService.attestation.Txid)
 	assert.Equal(t, false, attestService.attestation.Confirmed)
 
-	// failure - re init attestation service
+	// failure - re init attestation service with restart
 	attestService = NewAttestService(nil, nil, server, config)
+	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT again
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
+	assert.Equal(t, chainhash.Hash{}, attestService.attestation.CommitmentHash())
+	assert.Equal(t, chainhash.Hash{}, attestService.attestation.Txid)
+	assert.Equal(t, false, attestService.attestation.Confirmed)
+
+	// failure - re init attestation service from state failure
+	attestService.state = ASTATE_INIT
 	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT again
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
@@ -311,6 +320,15 @@ func TestAttestService_FailureNextCommitment(t *testing.T) {
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEW_ATTESTATION, attestService.state)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
+
+	// failure - re init attestation service from inner state failure
+	attestService.state = ASTATE_INIT
+	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
+	assert.Equal(t, chainhash.Hash{}, attestService.attestation.CommitmentHash())
+	assert.Equal(t, chainhash.Hash{}, attestService.attestation.Txid)
+	assert.Equal(t, false, attestService.attestation.Confirmed)
 }
 
 // Test Attest Service states
@@ -379,6 +397,16 @@ func TestAttestService_FailureNewAttestation(t *testing.T) {
 	assert.Equal(t, 1, len(attestService.attestation.Tx.TxIn))
 	assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
 	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
+
+	// failure - re init attestation service from inner state failure
+	attestService.state = ASTATE_INIT
+
+	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
+	assert.Equal(t, chainhash.Hash{}, attestService.attestation.CommitmentHash())
+	assert.Equal(t, chainhash.Hash{}, attestService.attestation.Txid)
+	assert.Equal(t, false, attestService.attestation.Confirmed)
 }
 
 // Test Attest Service states
@@ -457,6 +485,16 @@ func TestAttestService_FailureSignAttestation(t *testing.T) {
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_SEND_ATTESTATION, attestService.state)
 	assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
+
+	// failure - re init attestation service from inner state failure
+	attestService.state = ASTATE_INIT
+
+	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
+	assert.Equal(t, chainhash.Hash{}, attestService.attestation.CommitmentHash())
+	assert.Equal(t, chainhash.Hash{}, attestService.attestation.Txid)
+	assert.Equal(t, false, attestService.attestation.Confirmed)
 }
 
 // Test Attest Service states
@@ -529,6 +567,16 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
 	assert.Equal(t, true, attestService.attestation.Confirmed)
 	assert.Equal(t, txid, attestService.attestation.Txid)
+
+	// failure - re init attestation service from inner state failure
+	attestService.state = ASTATE_INIT
+
+	// Test ASTATE_INIT -> ASTATE_AWAIT_CONFIRMATION
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
+	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
+	assert.Equal(t, txid, attestService.attestation.Txid)
+	assert.Equal(t, true, attestService.attestation.Confirmed)
 }
 
 // Test Attest Service states
@@ -604,6 +652,16 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 
 	// failure again and check nothing has changed
 	attestService = NewAttestService(nil, nil, server, config)
+
+	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
+	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
+	assert.Equal(t, txid, attestService.attestation.Txid)
+	assert.Equal(t, true, attestService.attestation.Confirmed)
+
+	// failure - re init attestation service from inner state
+	attestService.state = ASTATE_INIT
 
 	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
 	attestService.doAttestation()
