@@ -5,7 +5,7 @@
         "rpcpass": "PASSWORD",
         "chain": "regtest"
     },
-    "ocean": {
+    "clientchain": {
         "rpcurl": "127.0.0.1:19000",
         "rpcuser": "USERNAME",
         "rpcpass": "PASSWORD",

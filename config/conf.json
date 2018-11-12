@@ -5,7 +5,7 @@
         "rpcpass": "password",
         "chain": "testnet"
     },
-    "ocean": {
+    "clientchain": {
         "rpcurl": "MAINSTAY_OCEAN_URL",
         "rpcuser": "MAINSTAY_OCEAN_USER",
         "rpcpass": "MAINSTAY_OCEAN_PASS",

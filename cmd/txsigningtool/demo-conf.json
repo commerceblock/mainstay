@@ -7,5 +7,12 @@
     },
     "misc": {
         "multisignodes": ""
+    },
+    "db": {
+        "user":"",
+        "password":"",
+        "host":"",
+        "port":"",
+        "name":""
     }
 }

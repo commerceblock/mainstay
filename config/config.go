@@ -11,7 +11,7 @@ import (
 )
 
 const MAIN_CHAIN_NAME = "main"
-const SIDE_CHAIN_NAME = "ocean"
+const SIDE_CHAIN_NAME = "clientchain"
 const CONF_PATH = "/src/mainstay/config/conf.json"
 
 const MAIN_PUBLISHER_PORT = 5000
