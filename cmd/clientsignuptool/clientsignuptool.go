@@ -1,0 +1,117 @@
+// Client signup tool
+package main
+
+import (
+	"context"
+	"encoding/hex"
+	"fmt"
+	"log"
+	"os"
+
+	"mainstay/config"
+	"mainstay/models"
+	"mainstay/server"
+
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/satori/go.uuid"
+)
+
+const CONF_PATH = "/src/mainstay/cmd/clientsignuptool/conf.json"
+
+var (
+	mainConfig *config.Config
+	dbMongo    *server.DbMongo
+)
+
+// init
+func init() {
+	confFile := config.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+	mainConfig = config.NewConfig(confFile)
+}
+
+// read client details and get client position
+func clientPosition() int32 {
+	// Read existing clients and get next available client position
+	fmt.Println("existing clients")
+	details, errDb := dbMongo.GetClientDetails()
+	if errDb != nil {
+		log.Fatal(errDb)
+	}
+	var maxClientPosition int32
+	if len(details) == 0 {
+		fmt.Println("no existing client positions")
+		return 0
+	} else {
+		for _, client := range details {
+			if client.ClientPosition > maxClientPosition {
+				maxClientPosition = client.ClientPosition
+			}
+			fmt.Printf("client_position: %d pubkey: %s\n", client.ClientPosition, client.Pubkey)
+		}
+	}
+	fmt.Println()
+	return maxClientPosition + 1
+}
+
+// main
+func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	dbMongo = server.NewDbMongo(ctx, mainConfig.DbConnectivity())
+
+	fmt.Println()
+	fmt.Println("*********************************************")
+	fmt.Println("************ Client Signup Tool *************")
+	fmt.Println("*********************************************")
+	fmt.Println()
+
+	nextClientPosition := clientPosition()
+	fmt.Printf("next available position: %d\n", nextClientPosition)
+	fmt.Println()
+
+	// Insert client pubkey details and verify
+	fmt.Println("*********************************************")
+	fmt.Println("************ Client Pubkey info *************")
+	fmt.Println("*********************************************")
+	fmt.Println()
+	fmt.Print("Insert pubkey: ")
+	var key string
+	fmt.Scanln(&key)
+	keybytes, _ := hex.DecodeString(key)
+	_, errPubkey := btcec.ParsePubKey(keybytes, btcec.S256())
+	if errPubkey != nil {
+		log.Fatal(errPubkey)
+	}
+	fmt.Println("pubkey verified")
+	fmt.Println()
+
+	// New auth token ID for client
+	fmt.Println("*********************************************")
+	fmt.Println("***** Client Auth Token identification ******")
+	fmt.Println("*********************************************")
+	fmt.Println()
+	uuid, err := uuid.NewV4()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("new-uuid: %s\n", uuid.String())
+	fmt.Println()
+
+	// Create new client details
+	fmt.Println("*********************************************")
+	fmt.Println("*********** Inserting New Client ************")
+	fmt.Println("*********************************************")
+	fmt.Println()
+	newClientDetails := models.ClientDetails{ClientPosition: nextClientPosition, AuthToken: uuid.String(), Pubkey: key}
+	saveErr := dbMongo.SaveClientDetails(newClientDetails)
+	if saveErr != nil {
+		log.Fatal(saveErr)
+	}
+	fmt.Println("NEW CLIENT DETAILS")
+	fmt.Printf("client_position: %d\n", newClientDetails.ClientPosition)
+	fmt.Printf("auth_token: %s\n", newClientDetails.AuthToken)
+	fmt.Printf("pubkey: %s\n", newClientDetails.Pubkey)
+	fmt.Println()
+	clientPosition()
+}
