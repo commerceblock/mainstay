@@ -1,5 +1,5 @@
 // Demo of the communication between listener and clients
-package main
+package doc
 
 // import (
 // 	"fmt"
