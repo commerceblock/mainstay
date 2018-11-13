@@ -131,10 +131,12 @@ func verifyTx(tx wire.MsgTx) bool {
 	}
 
 	nextAddr, _ := client.GetNextAttestationAddr(nextKey, nextHash)
-	importErr := client.ImportAttestationAddr(nextAddr)
-	if importErr != nil {
-		log.Fatal(importErr)
-	}
+
+	// skipping this -- too slow
+	// importErr := client.ImportAttestationAddr(nextAddr)
+	// if importErr != nil {
+	// 	log.Fatal(importErr)
+	// }
 
 	// exactr addr from unsigned tx and verify addresses match
 	_, txScriptAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.TxOut[0].PkScript, client.MainChainCfg)

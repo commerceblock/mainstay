@@ -77,10 +77,10 @@ func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) (*btcutil.WIF,
 	}
 
 	// Import tweaked priv key to wallet
-	importErr := w.MainClient.ImportPrivKeyRescan(tweakedWalletPriv, hash.String(), false)
-	if importErr != nil {
-		return nil, importErr
-	}
+	// importErr := w.MainClient.ImportPrivKeyRescan(tweakedWalletPriv, hash.String(), false)
+	// if importErr != nil {
+	// 	return nil, importErr
+	// }
 
 	return tweakedWalletPriv, nil
 }
