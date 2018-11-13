@@ -74,6 +74,7 @@ type AttestService struct {
 	state       AttestationState
 	attestation *models.Attestation
 	errorState  error
+	isRegtest   bool
 }
 
 var attestDelay time.Duration // delay between states
@@ -83,7 +84,7 @@ var poller *zmq.Poller // poller to add all subscriber/publisher sockets
 
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, config *confpkg.Config) *AttestService {
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, config *confpkg.Config, isRegtest bool) *AttestService {
 	// Check init txid validity
 	_, errInitTx := chainhash.NewHashFromStr(config.InitTX())
 	if errInitTx != nil {
@@ -103,7 +104,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Se
 		subscribers = append(subscribers, messengers.NewSubscriberZmq(nodeaddr, subtopics, poller))
 	}
 
-	return &AttestService{ctx, wg, config, attester, server, publisher, subscribers, ASTATE_INIT, models.NewAttestationDefault(), nil}
+	return &AttestService{ctx, wg, config, attester, server, publisher, subscribers, ASTATE_INIT, models.NewAttestationDefault(), nil, isRegtest}
 }
 
 // Run Attest Service
@@ -121,8 +122,10 @@ func (s *AttestService) Run() {
 		case <-timer.C:
 			s.doAttestation()
 
-			// for testing
-			// attestDelay = 1*time.Second
+			// for testing - overwrite delay
+			if s.isRegtest {
+				attestDelay = 5 * time.Second
+			}
 		}
 	}
 }

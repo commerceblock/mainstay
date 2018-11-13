@@ -59,7 +59,7 @@ func main() {
 
 	dbInterface := server.NewDbMongo(ctx, mainConfig.DbConnectivity())
 	server := server.NewServer(dbInterface)
-	attestService := attestation.NewAttestService(ctx, wg, server, mainConfig)
+	attestService := attestation.NewAttestService(ctx, wg, server, mainConfig, isRegtest)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
