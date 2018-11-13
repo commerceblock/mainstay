@@ -368,6 +368,7 @@ func (s *AttestService) doStateAwaitConfirmation() {
 
 		// update server with latest confirmed attestation
 		s.attestation.Confirmed = true
+		s.attestation.UpdateInfo(newTx)
 		errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
 		if s.setFailure(errUpdate) {
 			return // will rebound to init

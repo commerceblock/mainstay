@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -12,7 +11,7 @@ import (
 	"mainstay/models"
 	"mainstay/server"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcutil"
 	"github.com/satori/go.uuid"
 )
 
@@ -72,18 +71,17 @@ func main() {
 
 	// Insert client pubkey details and verify
 	fmt.Println("*********************************************")
-	fmt.Println("************ Client Pubkey info *************")
+	fmt.Println("************ Client Pubkey Address info *************")
 	fmt.Println("*********************************************")
 	fmt.Println()
-	fmt.Print("Insert pubkey: ")
-	var key string
-	fmt.Scanln(&key)
-	keybytes, _ := hex.DecodeString(key)
-	_, errPubkey := btcec.ParsePubKey(keybytes, btcec.S256())
-	if errPubkey != nil {
-		log.Fatal(errPubkey)
+	fmt.Print("Insert pubkey hash address: ")
+	var addr string
+	fmt.Scanln(&addr)
+	_, errAddr := btcutil.DecodeAddress(addr, mainConfig.MainChainCfg()) // encode to address
+	if errAddr != nil {
+		log.Fatal(errAddr)
 	}
-	fmt.Println("pubkey verified")
+	fmt.Println("addr verified")
 	fmt.Println()
 
 	// New auth token ID for client
@@ -103,7 +101,7 @@ func main() {
 	fmt.Println("*********** Inserting New Client ************")
 	fmt.Println("*********************************************")
 	fmt.Println()
-	newClientDetails := models.ClientDetails{ClientPosition: nextClientPosition, AuthToken: uuid.String(), Pubkey: key}
+	newClientDetails := models.ClientDetails{ClientPosition: nextClientPosition, AuthToken: uuid.String(), Pubkey: addr}
 	saveErr := dbMongo.SaveClientDetails(newClientDetails)
 	if saveErr != nil {
 		log.Fatal(saveErr)
