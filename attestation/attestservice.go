@@ -156,7 +156,10 @@ func (s *AttestService) doStateInit() {
 			return // will rebound to init
 		}
 		s.attestation = models.NewAttestation(unconfirmedTxid, &commitment) // initialise attestation
-		s.state = ASTATE_AWAIT_CONFIRMATION                                 // update attestation state
+		rawTx, _ := s.config.MainClient().GetRawTransaction(&unconfirmedTxid)
+		s.attestation.Tx = *rawTx.MsgTx() // set msgTx
+
+		s.state = ASTATE_AWAIT_CONFIRMATION // update attestation state
 	} else {
 		success, unspent, unspentErr := s.attester.findLastUnspent()
 		if s.setFailure(unspentErr) {
@@ -170,6 +173,11 @@ func (s *AttestService) doStateInit() {
 				s.attestation = models.NewAttestation(*unspentTxid, &commitment)
 				// update server with latest confirmed attestation
 				s.attestation.Confirmed = true
+				rawTx, _ := s.config.MainClient().GetRawTransaction(unspentTxid)
+				walletTx, _ := s.config.MainClient().GetTransaction(unspentTxid)
+				s.attestation.Tx = *rawTx.MsgTx()  // set msgTx
+				s.attestation.UpdateInfo(walletTx) // set tx info
+
 				errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
 				if s.setFailure(errUpdate) {
 					return // will rebound to init
@@ -193,7 +201,10 @@ func (s *AttestService) doStateInit() {
 				return // will rebound to init
 			}
 			s.attestation = models.NewAttestation(lastCommitmentHash, &commitment) // initialise attestation
-			s.state = ASTATE_AWAIT_CONFIRMATION                                    // update attestation state
+			rawTx, _ := s.config.MainClient().GetRawTransaction(&unconfirmedTxid)
+			s.attestation.Tx = *rawTx.MsgTx() // set msgTx
+
+			s.state = ASTATE_AWAIT_CONFIRMATION // update attestation state
 		}
 	}
 }
