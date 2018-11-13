@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/mongodb/mongo-go-driver/bson"
@@ -22,17 +23,28 @@ type Attestation struct {
 	Txid       chainhash.Hash
 	Tx         wire.MsgTx
 	Confirmed  bool
+	Info       AttestationInfo
 	commitment *Commitment
 }
 
 // Attestation constructor for defaulting some values
 func NewAttestation(txid chainhash.Hash, commitment *Commitment) *Attestation {
-	return &Attestation{txid, wire.MsgTx{}, false, commitment}
+	return &Attestation{txid, wire.MsgTx{}, false, AttestationInfo{}, commitment}
 }
 
 // Attestation constructor for defaulting all values
 func NewAttestationDefault() *Attestation {
-	return &Attestation{chainhash.Hash{}, wire.MsgTx{}, false, (*Commitment)(nil)}
+	return &Attestation{chainhash.Hash{}, wire.MsgTx{}, false, AttestationInfo{}, (*Commitment)(nil)}
+}
+
+// Update info with details from wallet transaction
+func (a *Attestation) UpdateInfo(tx *btcjson.GetTransactionResult) {
+	a.Info = AttestationInfo{
+		Txid:      tx.TxID,
+		Blockhash: tx.BlockHash,
+		Fee:       tx.Fee,
+		Time:      tx.Time,
+	}
 }
 
 // Set commitment

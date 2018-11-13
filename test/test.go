@@ -36,7 +36,7 @@ var testConf = []byte(`
         "password":"",
         "host":"localhost",
         "port":"27017",
-        "name":"mainstay1"
+        "name":"mainstay"
     }
 }
 `)
