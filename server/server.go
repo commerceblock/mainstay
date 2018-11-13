@@ -60,6 +60,14 @@ func (s *Server) UpdateLatestAttestation(attestation models.Attestation) error {
 	if errSave != nil {
 		return errSave
 	}
+
+	if attestation.Confirmed {
+		errSave = s.dbInterface.saveAttestationInfo(attestation.Info)
+		if errSave != nil {
+			return errSave
+		}
+	}
+
 	return nil
 }
 

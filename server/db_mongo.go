@@ -18,6 +18,7 @@ import (
 const (
 	// collection names
 	COL_NAME_ATTESTATION       = "Attestation"
+	COL_NAME_ATTESTATION_INFO  = "AttestationInfo"
 	COL_NAME_MERKLE_COMMITMENT = "MerkleCommitment"
 	COL_NAME_MERKLE_PROOF      = "MerkleProof"
 	COL_NAME_CLIENT_COMMITMENT = "ClientCommitment"
@@ -29,6 +30,7 @@ const (
 	ERROR_MONGO_PING    = "could not ping mongoDB database"
 
 	ERROR_ATTESTATION_SAVE       = "could not save attestation"
+	ERROR_ATTESTATION_INFO_SAVE  = "could not save attestation info"
 	ERROR_MERKLE_COMMITMENT_SAVE = "could not save merkle commitment"
 	ERROR_MERKLE_PROOF_SAVE      = "could not save merkle proof"
 	ERROR_CLIENT_DETAILS_SAVE    = "could not save client details"
@@ -44,6 +46,7 @@ const (
 	BAD_DATA_CLIENT_DETAILS_COL    = "bad data in client details collection"
 
 	BAD_DATA_ATTESTATION_MODEL       = "bad data in attestation model"
+	BAD_DATA_ATTESTATION_INFO_MODEL  = "bad data in attestation info model"
 	BAD_DATA_MERKLE_COMMITMENT_MODEL = "bad data in merkle commitment model"
 	BAD_DATA_MERKLE_PROOF_MODEL      = "bad data in merkle proof model"
 	BAD_DATA_CLIENT_DETAILS_MODEL    = "bad data in client details model"
@@ -122,6 +125,37 @@ func (d *DbMongo) saveAttestation(attestation models.Attestation) error {
 	resErr := res.Decode(t)
 	if resErr != nil && resErr != mongo.ErrNoDocuments {
 		return errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_SAVE, resErr))
+	}
+
+	return nil
+}
+
+// Save latest attestation info to the Attestation info collection
+func (d *DbMongo) saveAttestationInfo(attestationInfo models.AttestationInfo) error {
+
+	// get document representation of AttestationInfo object
+	docAttestationInfo, docErr := models.GetDocumentFromModel(attestationInfo)
+	if docErr != nil {
+		return errors.New(fmt.Sprintf("%s %v", BAD_DATA_ATTESTATION_INFO_MODEL, docErr))
+	}
+
+	newAttestationInfo := bson.NewDocument(
+		bson.EC.SubDocument("$set", docAttestationInfo),
+	)
+
+	// search if attestationInfo already exists
+	filterAttestationInfo := bson.NewDocument(
+		bson.EC.String(models.ATTESTATION_INFO_TXID_NAME, docAttestationInfo.Lookup(models.ATTESTATION_INFO_TXID_NAME).StringValue()),
+	)
+
+	// insert or update attestationInfo
+	t := bson.NewDocument()
+	opts := &options.FindOneAndUpdateOptions{}
+	opts.SetUpsert(true)
+	res := d.db.Collection(COL_NAME_ATTESTATION_INFO).FindOneAndUpdate(d.ctx, filterAttestationInfo, newAttestationInfo, opts)
+	resErr := res.Decode(t)
+	if resErr != nil && resErr != mongo.ErrNoDocuments {
+		return errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_INFO_SAVE, resErr))
 	}
 
 	return nil

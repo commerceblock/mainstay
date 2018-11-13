@@ -49,15 +49,15 @@ func TestAttestation(t *testing.T) {
 
 	// test attestation info
 	txRes := btcjson.GetTransactionResult{
-		Fee:       float64(0.0001),
 		BlockHash: "abcde34e881d9a1e6cdc3418b54bb57747106bc75e9e84426661f27f98ada3b7",
 		Time:      int64(1542121293),
-		TxID:      "f123434e881d9a1e6cdc3418b54bb57747106bc75e9e84426661f27f98ada3b7"}
+		TxID:      "4444e34e881d9a1e6cdc3418b54bb57747106bc75e9e84426661f27f98ada3b7"}
 	attestation.UpdateInfo(&txRes)
+	attestation.Info.Amount = int64(1)
 	assert.Equal(t, AttestationInfo{
-		Txid:      "f123434e881d9a1e6cdc3418b54bb57747106bc75e9e84426661f27f98ada3b7",
+		Txid:      "4444e34e881d9a1e6cdc3418b54bb57747106bc75e9e84426661f27f98ada3b7",
 		Blockhash: "abcde34e881d9a1e6cdc3418b54bb57747106bc75e9e84426661f27f98ada3b7",
-		Fee:       float64(0.0001),
+		Amount:    int64(1),
 		Time:      int64(1542121293)}, attestation.Info)
 }
 

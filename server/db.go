@@ -9,6 +9,7 @@ import (
 // Db Interface
 type Db interface {
 	saveAttestation(models.Attestation) error
+	saveAttestationInfo(models.AttestationInfo) error
 	saveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error
 	saveMerkleProofs(proofs []models.CommitmentMerkleProof) error
 

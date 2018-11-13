@@ -39,10 +39,14 @@ func NewAttestationDefault() *Attestation {
 
 // Update info with details from wallet transaction
 func (a *Attestation) UpdateInfo(tx *btcjson.GetTransactionResult) {
+	amount := int64(0)
+	if len(a.Tx.TxOut) > 0 {
+		amount = a.Tx.TxOut[0].Value
+	}
 	a.Info = AttestationInfo{
-		Txid:      tx.TxID,
+		Txid:      a.Txid.String(),
 		Blockhash: tx.BlockHash,
-		Fee:       tx.Fee,
+		Amount:    amount,
 		Time:      tx.Time,
 	}
 }

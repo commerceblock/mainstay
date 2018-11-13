@@ -11,6 +11,7 @@ import (
 // DbFake struct
 type DbFake struct {
 	attestations      []models.Attestation
+	attestationsInfo  []models.AttestationInfo
 	merkleCommitments []models.CommitmentMerkleCommitment
 	merkleProofs      []models.CommitmentMerkleProof
 	latestCommitments []models.ClientCommitment
@@ -20,6 +21,7 @@ type DbFake struct {
 func NewDbFake() *DbFake {
 	return &DbFake{
 		[]models.Attestation{},
+		[]models.AttestationInfo{},
 		[]models.CommitmentMerkleCommitment{},
 		[]models.CommitmentMerkleProof{},
 		[]models.ClientCommitment{}}
@@ -34,6 +36,18 @@ func (d *DbFake) saveAttestation(attestation models.Attestation) error {
 		}
 	}
 	d.attestations = append(d.attestations, attestation)
+	return nil
+}
+
+// Save latest attestation info to attestationsInfo
+func (d *DbFake) saveAttestationInfo(attestationInfo models.AttestationInfo) error {
+	for i, a := range d.attestationsInfo {
+		if a.Txid == attestationInfo.Txid {
+			d.attestationsInfo[i] = attestationInfo
+			return nil
+		}
+	}
+	d.attestationsInfo = append(d.attestationsInfo, attestationInfo)
 	return nil
 }
 
