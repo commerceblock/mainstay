@@ -12,7 +12,7 @@ type Db interface {
 	saveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error
 	saveMerkleProofs(proofs []models.CommitmentMerkleProof) error
 
-	getLatestAttestationMerkleRoot() (string, error)
+	getLatestAttestationMerkleRoot(bool) (string, error)
 	getClientCommitments() ([]models.ClientCommitment, error)
 	getAttestationMerkleCommitments(chainhash.Hash) ([]models.CommitmentMerkleCommitment, error)
 }

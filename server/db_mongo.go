@@ -271,7 +271,7 @@ func (d *DbMongo) getLatestAttestationCount() (int64, error) {
 }
 
 // Get Attestation entry from collection and return merkle_root field
-func (d *DbMongo) getLatestAttestationMerkleRoot() (string, error) {
+func (d *DbMongo) getLatestAttestationMerkleRoot(confirmed bool) (string, error) {
 	// first check if attestation has any documents
 	count, countErr := d.getLatestAttestationCount()
 	if countErr != nil {
@@ -282,7 +282,7 @@ func (d *DbMongo) getLatestAttestationMerkleRoot() (string, error) {
 
 	// filter by inserted date and confirmed to get latest attestation from Attestation collection
 	sortFilter := bson.NewDocument(bson.EC.Int32(models.ATTESTATION_INSERTED_AT_NAME, -1))
-	confirmedFilter := bson.NewDocument(bson.EC.Boolean(models.ATTESTATION_CONFIRMED_NAME, true))
+	confirmedFilter := bson.NewDocument(bson.EC.Boolean(models.ATTESTATION_CONFIRMED_NAME, confirmed))
 
 	attestationDoc := bson.NewDocument()
 	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx,

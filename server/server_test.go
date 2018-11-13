@@ -51,15 +51,26 @@ func TestServerUpdateLatestAttestation_1ClientCommitments(t *testing.T) {
 
 	txid, _ := chainhash.NewHashFromStr("11111111111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 	latest := models.NewAttestation(*txid, &respClientCommitment)
-	latest.Confirmed = true
 
-	// Test update latest attestation
+	// Test update latest attestation unconfirmed
 	errUpdate := server.UpdateLatestAttestation(*latest)
+	assert.Equal(t, nil, errUpdate)
+
+	respAttestationHash, errAttestation = server.GetLatestAttestationCommitmentHash(false)
+	assert.Equal(t, nil, errAttestation)
+	assert.Equal(t, latestCommitment.GetCommitmentHash(), respAttestationHash)
+
+	// Test update latest attestation confirmed
+	latest.Confirmed = true
+	errUpdate = server.UpdateLatestAttestation(*latest)
 	assert.Equal(t, nil, errUpdate)
 
 	respAttestationHash, errAttestation = server.GetLatestAttestationCommitmentHash()
 	assert.Equal(t, nil, errAttestation)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), respAttestationHash)
+
+	respAttestationHash, errAttestation = server.GetLatestAttestationCommitmentHash(false)
+	assert.Equal(t, errors.New(ERROR_ATTESTATION_GET), errAttestation)
 
 	// Test db updated correctly
 	assert.Equal(t, *txid, dbFake.attestations[0].Txid)
@@ -108,15 +119,26 @@ func TestServerUpdateLatestAttestation_3ClientCommitments(t *testing.T) {
 
 	txid, _ := chainhash.NewHashFromStr("11111111111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 	latest := models.NewAttestation(*txid, &respClientCommitment)
-	latest.Confirmed = true
 
-	// Test update latest attestation
+	// Test update latest attestation unconfirmed
 	errUpdate := server.UpdateLatestAttestation(*latest)
+	assert.Equal(t, nil, errUpdate)
+
+	respAttestationHash, errAttestation = server.GetLatestAttestationCommitmentHash(false)
+	assert.Equal(t, nil, errAttestation)
+	assert.Equal(t, latestCommitment.GetCommitmentHash(), respAttestationHash)
+
+	// Test update latest attestation confirmed
+	latest.Confirmed = true
+	errUpdate = server.UpdateLatestAttestation(*latest)
 	assert.Equal(t, nil, errUpdate)
 
 	respAttestationHash, errAttestation = server.GetLatestAttestationCommitmentHash()
 	assert.Equal(t, nil, errAttestation)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), respAttestationHash)
+
+	respAttestationHash, errAttestation = server.GetLatestAttestationCommitmentHash(false)
+	assert.Equal(t, errors.New(ERROR_ATTESTATION_GET), errAttestation)
 
 	// Test db updated correctly
 	assert.Equal(t, *txid, dbFake.attestations[0].Txid)

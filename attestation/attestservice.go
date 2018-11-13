@@ -139,6 +139,7 @@ func (s *AttestService) doStateError() {
 // - Check if there are unconfirmed or unspent transactions in the client
 // - Update server with latest attestation information
 // - If no transaction found wait, else initiate new attestation
+// - If no attestation found, check last unconfirmed from db
 func (s *AttestService) doStateInit() {
 	log.Println("*AttestService* INITIATING ATTESTATION PROCESS")
 
@@ -152,20 +153,18 @@ func (s *AttestService) doStateInit() {
 			return // will rebound to init
 		}
 		s.attestation = models.NewAttestation(unconfirmedTxid, &commitment) // initialise attestation
-		log.Printf("*AttestService* Waiting for confirmation of\ntxid: (%s)\nhash: (%s)\n", s.attestation.Txid.String(), s.attestation.CommitmentHash().String())
-
-		s.state = ASTATE_AWAIT_CONFIRMATION // update attestation state
+		s.state = ASTATE_AWAIT_CONFIRMATION                                 // update attestation state
 	} else {
-		success, txunspent, unspentErr := s.attester.findLastUnspent()
+		success, unspent, unspentErr := s.attester.findLastUnspent()
 		if s.setFailure(unspentErr) {
 			return // will rebound to init
 		} else if success {
-			txunspentHash, _ := chainhash.NewHashFromStr(txunspent.TxID)
-			commitment, commitmentErr := s.server.GetAttestationCommitment(*txunspentHash)
+			unspentTxid, _ := chainhash.NewHashFromStr(unspent.TxID)
+			commitment, commitmentErr := s.server.GetAttestationCommitment(*unspentTxid)
 			if s.setFailure(commitmentErr) {
 				return // will rebound to init
 			} else if (commitment.GetCommitmentHash() != chainhash.Hash{}) {
-				s.attestation = models.NewAttestation(*txunspentHash, &commitment)
+				s.attestation = models.NewAttestation(*unspentTxid, &commitment)
 				// update server with latest confirmed attestation
 				s.attestation.Confirmed = true
 				errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
@@ -180,7 +179,18 @@ func (s *AttestService) doStateInit() {
 
 			s.state = ASTATE_NEXT_COMMITMENT // update attestation state
 		} else {
-			log.Println("*AttestService* No unconfirmed (mempool) or unspent tx found. Sleeping...")
+			// no unspent so there must be a transaction waiting confirmation not on the mempool
+			// check server for latest unconfirmed attestation
+			lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash(false)
+			if s.setFailure(latestErr) {
+				return // will rebound to init
+			}
+			commitment, commitmentErr := s.server.GetAttestationCommitment(lastCommitmentHash)
+			if s.setFailure(commitmentErr) {
+				return // will rebound to init
+			}
+			s.attestation = models.NewAttestation(lastCommitmentHash, &commitment) // initialise attestation
+			s.state = ASTATE_AWAIT_CONFIRMATION                                    // update attestation state
 		}
 	}
 }

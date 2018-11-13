@@ -27,9 +27,9 @@ func NewDbFake() *DbFake {
 
 // Save latest attestation to attestations
 func (d *DbFake) saveAttestation(attestation models.Attestation) error {
-	for _, a := range d.attestations {
+	for i, a := range d.attestations {
 		if a.Txid == attestation.Txid {
-			a = attestation
+			d.attestations[i] = attestation
 			return nil
 		}
 	}
@@ -78,12 +78,17 @@ func (d *DbFake) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error {
 }
 
 // Return latest attestation commitment hash
-func (d *DbFake) getLatestAttestationMerkleRoot() (string, error) {
+func (d *DbFake) getLatestAttestationMerkleRoot(confirmed bool) (string, error) {
 	if len(d.attestations) == 0 {
 		return "", nil
 	}
-	latestAttestation := d.attestations[len(d.attestations)-1]
-	return latestAttestation.CommitmentHash().String(), nil
+	for i := len(d.attestations) - 1; i >= 0; i-- {
+		latestAttestation := d.attestations[i]
+		if latestAttestation.Confirmed == confirmed {
+			return latestAttestation.CommitmentHash().String(), nil
+		}
+	}
+	return "", errors.New(ERROR_ATTESTATION_GET)
 }
 
 // Set latest commitments for testing

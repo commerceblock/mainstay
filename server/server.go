@@ -64,10 +64,15 @@ func (s *Server) UpdateLatestAttestation(attestation models.Attestation) error {
 }
 
 // Return Commitment hash of latest Attestation stored in the server
-func (s *Server) GetLatestAttestationCommitmentHash() (chainhash.Hash, error) {
+func (s *Server) GetLatestAttestationCommitmentHash(confirmed ...bool) (chainhash.Hash, error) {
+	// optional param to set confirmed flag
+	confirmedParam := true
+	if len(confirmed) > 0 {
+		confirmedParam = confirmed[0]
+	}
 
 	// get attestation merkle root from db
-	merkleRoot, rootErr := s.dbInterface.getLatestAttestationMerkleRoot()
+	merkleRoot, rootErr := s.dbInterface.getLatestAttestationMerkleRoot(confirmedParam)
 	if rootErr != nil {
 		return chainhash.Hash{}, rootErr
 	} else if merkleRoot == "" { // no attestations yet
