@@ -34,7 +34,7 @@ RUN set -ex \
     && tar zxvf ${PKG} \
     && export PATH=$PATH:$HOME/bitcoin-${PKG_VER}/bin \
     && bitcoind \
-    && /go/src/mainstay/run-tests.sh
+    && /go/src/mainstay/scripts/run-tests.sh
 
 COPY docker-entrypoint.sh /
 
