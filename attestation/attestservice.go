@@ -120,12 +120,15 @@ func (s *AttestService) Run() {
 			log.Println("Shutting down Attestation Service...")
 			return
 		case <-timer.C:
+			// do next attestation state
 			s.doAttestation()
 
 			// for testing - overwrite delay
 			if s.isRegtest {
 				attestDelay = 5 * time.Second
 			}
+
+			log.Printf("********** sleeping for: %s ...\n", attestDelay.String())
 		}
 	}
 }
@@ -155,11 +158,13 @@ func (s *AttestService) doStateInit() {
 		if s.setFailure(commitmentErr) {
 			return // will rebound to init
 		}
+		log.Printf("********** found unconfirmed attestation: %s\n", unconfirmedTxid.String())
 		s.attestation = models.NewAttestation(unconfirmedTxid, &commitment) // initialise attestation
 		rawTx, _ := s.config.MainClient().GetRawTransaction(&unconfirmedTxid)
 		s.attestation.Tx = *rawTx.MsgTx() // set msgTx
 
 		s.state = ASTATE_AWAIT_CONFIRMATION // update attestation state
+		confirmTime = time.Now()
 	} else {
 		success, unspent, unspentErr := s.attester.findLastUnspent()
 		if s.setFailure(unspentErr) {
@@ -170,6 +175,7 @@ func (s *AttestService) doStateInit() {
 			if s.setFailure(commitmentErr) {
 				return // will rebound to init
 			} else if (commitment.GetCommitmentHash() != chainhash.Hash{}) {
+				log.Printf("********** found confirmed attestation: %s\n", unspentTxid.String())
 				s.attestation = models.NewAttestation(*unspentTxid, &commitment)
 				// update server with latest confirmed attestation
 				s.attestation.Confirmed = true
@@ -200,11 +206,13 @@ func (s *AttestService) doStateInit() {
 			if s.setFailure(commitmentErr) {
 				return // will rebound to init
 			}
+			log.Printf("********** found unconfirmed attestation: %s\n", lastCommitmentHash.String())
 			s.attestation = models.NewAttestation(lastCommitmentHash, &commitment) // initialise attestation
 			rawTx, _ := s.config.MainClient().GetRawTransaction(&unconfirmedTxid)
 			s.attestation.Tx = *rawTx.MsgTx() // set msgTx
 
 			s.state = ASTATE_AWAIT_CONFIRMATION // update attestation state
+			confirmTime = time.Now()
 		}
 	}
 }
@@ -228,7 +236,8 @@ func (s *AttestService) doStateNextCommitment() {
 	log.Printf("********** received commitment hash: %s\n", latestCommitmentHash.String())
 	if latestCommitmentHash == s.attestation.CommitmentHash() {
 		log.Printf("********** Skipping attestation - Client commitment already attested")
-		return // will remain at the same state
+		attestDelay = ATIME_NEW_ATTESTATION // sleep
+		return                              // will remain at the same state
 	}
 
 	// publish new commitment hash to clients
@@ -255,11 +264,11 @@ func (s *AttestService) doStateNewAttestation() {
 		return // will rebound to init
 	}
 	paytoaddr, _ := s.attester.GetNextAttestationAddr(key, s.attestation.CommitmentHash())
+	log.Printf("********** importing pay-to addr: %s ...\n", paytoaddr.String())
 	importErr := s.attester.ImportAttestationAddr(paytoaddr)
 	if s.setFailure(importErr) {
 		return // will rebound to init
 	}
-	log.Printf("********** pay-to addr: %s\n", paytoaddr.String())
 
 	// Generate new unsigned attestation transaction from last unspent
 	success, txunspent, unspentErr := s.attester.findLastUnspent()
@@ -283,7 +292,6 @@ func (s *AttestService) doStateNewAttestation() {
 
 		s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 		attestDelay = ATIME_SIGS          // add sigs waiting time
-		log.Printf("********** sleeping for: %s ...\n", attestDelay.String())
 	} else {
 		s.setFailure(errors.New(ERROR_UNSPENT_NOT_FOUND))
 		return // will rebound to init
@@ -350,8 +358,7 @@ func (s *AttestService) doStateSendAttestation() {
 
 	s.state = ASTATE_AWAIT_CONFIRMATION // update attestation state
 	attestDelay = ATIME_CONFIRMATION    // add confirmation waiting time
-	log.Printf("********** sleeping for: %s ...\n", attestDelay.String())
-	confirmTime = time.Now() // set time for awaiting confirmation
+	confirmTime = time.Now()            // set time for awaiting confirmation
 }
 
 // ASTATE_AWAIT_CONFIRMATION
@@ -388,13 +395,11 @@ func (s *AttestService) doStateAwaitConfirmation() {
 		confirmedHash := s.attestation.CommitmentHash()
 		s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) //update clients
 
-		s.state = ASTATE_NEXT_COMMITMENT // update attestation state
-
+		s.state = ASTATE_NEXT_COMMITMENT                              // update attestation state
 		attestDelay = ATIME_NEW_ATTESTATION - time.Since(confirmTime) // add new attestation waiting time - subtract waiting time
 	} else {
 		attestDelay = ATIME_CONFIRMATION // add confirmation waiting time
 	}
-	log.Printf("********** sleeping for: %s ...\n", attestDelay.String())
 }
 
 // ASTATE_HANDLE_UNCONFIRMED
