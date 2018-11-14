@@ -23,6 +23,7 @@ import (
 type AttestClient struct {
 	MainClient   *rpcclient.Client
 	MainChainCfg *chaincfg.Params
+	Fees         AttestFees
 	pk0          string
 	txid0        string
 	script0      string
@@ -63,9 +64,27 @@ func NewAttestClient(config *confpkg.Config) *AttestClient {
 			log.Fatal("Client address missing from multisig script")
 		}
 
-		return &AttestClient{config.MainClient(), config.MainChainCfg(), pk, config.InitTX(), multisig, pubkeys, numOfSigs, pkWif}
+		return &AttestClient{
+			MainClient:   config.MainClient(),
+			MainChainCfg: config.MainChainCfg(),
+			Fees:         NewAttestFees(),
+			pk0:          pk,
+			txid0:        config.InitTX(),
+			script0:      multisig,
+			pubkeys:      pubkeys,
+			numOfSigs:    numOfSigs,
+			WalletPriv:   pkWif}
 	}
-	return &AttestClient{config.MainClient(), config.MainChainCfg(), pk, config.InitTX(), multisig, []*btcec.PublicKey{}, 1, pkWif}
+	return &AttestClient{
+		MainClient:   config.MainClient(),
+		MainChainCfg: config.MainChainCfg(),
+		Fees:         NewAttestFees(),
+		pk0:          pk,
+		txid0:        config.InitTX(),
+		script0:      multisig,
+		pubkeys:      []*btcec.PublicKey{},
+		numOfSigs:    1,
+		WalletPriv:   pkWif}
 }
 
 // Get next attestation key by tweaking with latest hash
@@ -124,7 +143,7 @@ func (w *AttestClient) ImportAttestationAddr(addr btcutil.Address) error {
 }
 
 // Generate a new transaction paying to the tweaked address and add fees
-func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult, useDefaultFee bool) (*wire.MsgTx, error) {
+func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult) (*wire.MsgTx, error) {
 	inputs := []btcjson.TransactionInput{{Txid: txunspent.TxID, Vout: txunspent.Vout}}
 
 	amounts := map[btcutil.Address]btcutil.Amount{paytoaddr: btcutil.Amount(txunspent.Amount * 100000000)}
@@ -133,7 +152,7 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent bt
 		return nil, errCreate
 	}
 
-	feePerByte := GetFee(useDefaultFee)
+	feePerByte := w.Fees.GetFee()
 	fee := int64(feePerByte * msgtx.SerializeSize())
 	msgtx.TxOut[0].Value -= fee
 

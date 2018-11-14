@@ -29,6 +29,8 @@ func TestAttestClient(t *testing.T) {
 
 	lastHash := chainhash.Hash{}
 
+	client.Fees.ResetFee(true) // reset fee to minimum
+
 	// Do attestations using attest client
 	for i := 0; i < 10; i++ {
 		// Generate attestation transaction with the unspent vout
@@ -54,13 +56,17 @@ func TestAttestClient(t *testing.T) {
 		assert.Equal(t, nil, importErr)
 
 		// test creating attestation transaction
-		tx, attestationErr := client.createAttestation(addr, unspent, true)
+		tx, attestationErr := client.createAttestation(addr, unspent)
 		assert.Equal(t, nil, attestationErr)
 		assert.Equal(t, 1, len(tx.TxIn))
 		assert.Equal(t, 1, len(tx.TxOut))
 		if (unspent.Amount - (float64(tx.TxOut[0].Value) / 100000000)) <= 0 {
 			t.Fail()
 		}
+
+		// check fee value and bump
+		assert.Equal(t, client.Fees.minFee+i*client.Fees.feeIncrement, client.Fees.GetFee())
+		client.Fees.BumpFee()
 
 		// test signing and sending attestation
 		signedTx, signErr := client.signAttestation(tx, [][]byte{}, lastHash)

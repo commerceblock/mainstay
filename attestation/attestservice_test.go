@@ -123,7 +123,7 @@ func TestAttestService_Regular(t *testing.T) {
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
-	assert.Equal(t, ATIME_FIXED, attestDelay)
+	assert.Equal(t, ATIME_NEW_ATTESTATION, attestDelay)
 
 	// Test ASTATE_NEXT_COMMITMENT -> ASTATE_NEW_ATTESTATION
 	// stuck in next commitment

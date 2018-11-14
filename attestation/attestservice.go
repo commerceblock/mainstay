@@ -277,7 +277,7 @@ func (s *AttestService) doStateNewAttestation() {
 	} else if success {
 		var createErr error
 		var newTx *wire.MsgTx
-		newTx, createErr = s.attester.createAttestation(paytoaddr, txunspent, false)
+		newTx, createErr = s.attester.createAttestation(paytoaddr, txunspent)
 		s.attestation.Tx = *newTx
 		if s.setFailure(createErr) {
 			return // will rebound to init
