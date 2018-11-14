@@ -3,6 +3,7 @@ package attestation
 import (
 	"encoding/hex"
 	"log"
+	"math"
 
 	confpkg "mainstay/config"
 	"mainstay/crypto"
@@ -152,11 +153,31 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent bt
 		return nil, errCreate
 	}
 
+	// set replace-by-fee flag
+	msgtx.TxIn[0].Sequence = uint32(math.Pow(2, float64(32))) - 3
+
 	feePerByte := w.Fees.GetFee()
 	fee := int64(feePerByte * msgtx.SerializeSize())
 	msgtx.TxOut[0].Value -= fee
 
 	return msgtx, nil
+}
+
+// Create new attestation transaction by removing sigs and bumping fee of existing transaction
+func (w *AttestClient) bumpAttestationFees(msgtx *wire.MsgTx) error {
+	// first remove any sigs
+	msgtx.TxIn[0].SignatureScript = []byte{}
+
+	// bump fees and calculate fee increment
+	prevFeePerByte := w.Fees.GetFee()
+	w.Fees.BumpFee()
+	feePerByteIncrement := w.Fees.GetFee() - prevFeePerByte
+
+	// increase tx fees by fee difference
+	feeIncrement := int64(feePerByteIncrement * msgtx.SerializeSize())
+	msgtx.TxOut[0].Value -= feeIncrement
+
+	return nil
 }
 
 // Given a hash return the corresponding client private key and redeemscript
