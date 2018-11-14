@@ -187,6 +187,8 @@ func TestAttestService_HandleUnconfirmed(t *testing.T) {
 	server := server.NewServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, config, true)
 
+	attestService.attester.Fees.ResetFee(true)
+
 	// Test initial state of attest service
 	assert.Equal(t, &models.Attestation{Txid: chainhash.Hash{}, Tx: wire.MsgTx{}, Confirmed: false},
 		attestService.attestation)
@@ -220,6 +222,7 @@ func TestAttestService_HandleUnconfirmed(t *testing.T) {
 	assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
 	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
 	assert.Equal(t, ATIME_SIGS, attestDelay)
+	assert.Equal(t, attestService.attester.Fees.minFee, attestService.attester.Fees.GetFee())
 
 	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_SEND_ATTESTATION
 	attestService.doAttestation()
@@ -230,19 +233,56 @@ func TestAttestService_HandleUnconfirmed(t *testing.T) {
 	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_AWAIT_CONFIRMATION, attestService.state)
-	_ = attestService.attestation.Txid
+	txid := attestService.attestation.Txid
 	assert.Equal(t, ATIME_CONFIRMATION, attestDelay)
 
 	// set confirm time back to test what happens in handle unconfirmed case
 	confirmTime = confirmTime.Add(-ATIME_HANDLE_UNCONFIRMED)
 
-	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_AWAIT_CONFIRMATION
+	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_HANDLE_UNCONFIRMED
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_HANDLE_UNCONFIRMED, attestService.state)
 
-	// TODO....
-	// ...
-	// Also TODO: failure case after ASTATE_HANDLE_UNCONFIRMED
+	// Test ASTATE_HANDLE_UNCONFIRMED -> ASTATE_SIGN_ATTESTATION
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_SIGN_ATTESTATION, attestService.state)
+	// cant test much more here - we test this in other unit tests
+	assert.Equal(t, 1, len(attestService.attestation.Tx.TxIn))
+	assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
+	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
+	assert.Equal(t, ATIME_SIGS, attestDelay)
+	assert.Equal(t, attestService.attester.Fees.minFee+attestService.attester.Fees.feeIncrement,
+		attestService.attester.Fees.GetFee())
+
+	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_SEND_ATTESTATION
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_SEND_ATTESTATION, attestService.state)
+	assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
+	assert.Equal(t, ATIME_FIXED, attestDelay)
+
+	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_AWAIT_CONFIRMATION, attestService.state)
+	txid = attestService.attestation.Txid
+	assert.Equal(t, ATIME_CONFIRMATION, attestDelay)
+
+	// generate new block to confirm attestation
+	config.MainClient().Generate(1)
+	rawTx, _ := config.MainClient().GetRawTransaction(&txid)
+	walletTx, _ := config.MainClient().GetTransaction(&txid)
+	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_NEXT_COMMITMENT
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
+	assert.Equal(t, true, attestService.attestation.Confirmed)
+	assert.Equal(t, txid, attestService.attestation.Txid)
+	assert.Equal(t, true, attestDelay < ATIME_NEW_ATTESTATION)
+	assert.Equal(t, true, attestDelay > (ATIME_NEW_ATTESTATION-time.Since(confirmTime)))
+	assert.Equal(t, models.AttestationInfo{
+		Txid:      txid.String(),
+		Blockhash: walletTx.BlockHash,
+		Amount:    rawTx.MsgTx().TxOut[0].Value,
+		Time:      walletTx.Time}, attestService.attestation.Info)
+	assert.Equal(t, attestService.attester.Fees.minFee, attestService.attester.Fees.GetFee())
 }
 
 // Test Attest Service states

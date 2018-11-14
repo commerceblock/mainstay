@@ -73,7 +73,7 @@ func (s *Server) UpdateLatestAttestation(attestation models.Attestation) error {
 
 // Return Commitment hash of latest Attestation stored in the server
 func (s *Server) GetLatestAttestationCommitmentHash(confirmed ...bool) (chainhash.Hash, error) {
-	// optional param to set confirmed flag
+	// optional param to set confirmed flag - looks for confirmed only by default
 	confirmedParam := true
 	if len(confirmed) > 0 {
 		confirmedParam = confirmed[0]
@@ -122,15 +122,21 @@ func (s *Server) GetClientCommitment() (models.Commitment, error) {
 }
 
 // Return Commitment for a particular Attestation transaction id
-func (s *Server) GetAttestationCommitment(attestationTxid chainhash.Hash) (models.Commitment, error) {
+func (s *Server) GetAttestationCommitment(attestationTxid chainhash.Hash, confirmed ...bool) (models.Commitment, error) {
+	// optional param to set confirmed flag - looks for confirmed only by default
+	confirmedParam := true
+	if len(confirmed) > 0 {
+		confirmedParam = confirmed[0]
+	}
 
 	// get merkle commitments from db
 	merkleCommitments, merkleCommitmentsErr := s.dbInterface.getAttestationMerkleCommitments(attestationTxid)
-
 	if merkleCommitmentsErr != nil {
 		return models.Commitment{}, merkleCommitmentsErr
 	} else if len(merkleCommitments) == 0 {
-		return models.Commitment{}, nil
+		if confirmedParam { // assume first attestation
+			return models.Commitment{}, nil
+		}
 	}
 
 	// construct Commitment from MerkleCommitment commitments
@@ -141,7 +147,7 @@ func (s *Server) GetAttestationCommitment(attestationTxid chainhash.Hash) (model
 
 	commitment, errCommitment := models.NewCommitment(commitmentHashes)
 	if errCommitment != nil {
-		return models.Commitment{}, nil
+		return models.Commitment{}, errCommitment
 	}
 
 	return *commitment, nil

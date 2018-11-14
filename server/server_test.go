@@ -77,7 +77,8 @@ func TestServerUpdateLatestAttestation_1ClientCommitments(t *testing.T) {
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), respAttestationHash)
 
 	respAttestationHash, errAttestation = server.GetLatestAttestationCommitmentHash(false)
-	assert.Equal(t, errors.New(ERROR_ATTESTATION_GET), errAttestation)
+	assert.Equal(t, nil, errAttestation)
+	assert.Equal(t, chainhash.Hash{}, respAttestationHash)
 
 	assert.Equal(t, 1, len(dbFake.attestationsInfo))
 	assert.Equal(t, models.AttestationInfo{
@@ -159,7 +160,8 @@ func TestServerUpdateLatestAttestation_3ClientCommitments(t *testing.T) {
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), respAttestationHash)
 
 	respAttestationHash, errAttestation = server.GetLatestAttestationCommitmentHash(false)
-	assert.Equal(t, errors.New(ERROR_ATTESTATION_GET), errAttestation)
+	assert.Equal(t, nil, errAttestation)
+	assert.Equal(t, chainhash.Hash{}, respAttestationHash)
 
 	assert.Equal(t, 1, len(dbFake.attestationsInfo))
 	assert.Equal(t, models.AttestationInfo{
@@ -324,6 +326,6 @@ func TestServerGetAttestationCommitment(t *testing.T) {
 	assert.Equal(t, latestCommitment0.GetCommitmentHash(), commitment.GetCommitmentHash())
 
 	// check commitment for invalid attestation
-	commitment, err = server.GetAttestationCommitment(chainhash.Hash{})
-	assert.Equal(t, errors.New(ERROR_MERKLE_COMMITMENT_GET), err)
+	commitment, err = server.GetAttestationCommitment(chainhash.Hash{}, false)
+	assert.Equal(t, errors.New(models.ERROR_COMMITMENT_LIST_EMPTY), err)
 }

@@ -292,11 +292,16 @@ func (d *DbMongo) GetClientDetails() ([]models.ClientDetails, error) {
 }
 
 // Get Attestation collection document count
-func (d *DbMongo) getLatestAttestationCount() (int64, error) {
+func (d *DbMongo) getLatestAttestationCount(confirmed ...bool) (int64, error) {
+	// set optional confirmed filter
+	confirmedFilter := bson.NewDocument()
+	if len(confirmed) > 0 {
+		confirmedFilter = bson.NewDocument(bson.EC.Boolean(models.ATTESTATION_CONFIRMED_NAME, confirmed[0]))
+	}
 	// find latest attestation count
 	opts := options.CountOptions{}
 	opts.SetLimit(1)
-	count, countErr := d.db.Collection(COL_NAME_ATTESTATION).Count(d.ctx, nil, &opts)
+	count, countErr := d.db.Collection(COL_NAME_ATTESTATION).Count(d.ctx, confirmedFilter, &opts)
 	if countErr != nil {
 		return 0, errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_GET, countErr))
 	}
@@ -307,7 +312,7 @@ func (d *DbMongo) getLatestAttestationCount() (int64, error) {
 // Get Attestation entry from collection and return merkle_root field
 func (d *DbMongo) getLatestAttestationMerkleRoot(confirmed bool) (string, error) {
 	// first check if attestation has any documents
-	count, countErr := d.getLatestAttestationCount()
+	count, countErr := d.getLatestAttestationCount(confirmed)
 	if countErr != nil {
 		return "", countErr
 	} else if count == 0 { // no attestations yet
@@ -338,11 +343,12 @@ func (d *DbMongo) getAttestationMerkleRoot(txid chainhash.Hash) (string, error) 
 	}
 
 	// get merke_root from Attestation collection for attestation txid provided
-	filterAttestation := bson.NewDocument(bson.EC.String(models.ATTESTATION_TXID_NAME, txid.String()))
+	filterAttestation := bson.NewDocument(
+		bson.EC.String(models.ATTESTATION_TXID_NAME, txid.String()))
 
 	attestationDoc := bson.NewDocument()
 	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx, filterAttestation).Decode(attestationDoc)
-	if resErr != nil {
+	if resErr != nil && resErr != mongo.ErrNoDocuments {
 		return "", errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_GET, resErr))
 	}
 	return attestationDoc.Lookup(models.COMMITMENT_MERKLE_ROOT_NAME).StringValue(), nil

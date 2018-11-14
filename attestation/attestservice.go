@@ -154,7 +154,7 @@ func (s *AttestService) doStateInit() {
 	if s.setFailure(unconfirmedErr) {
 		return // will rebound to init
 	} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
-		commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid)
+		commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid, false)
 		if s.setFailure(commitmentErr) {
 			return // will rebound to init
 		}
@@ -202,7 +202,7 @@ func (s *AttestService) doStateInit() {
 			if s.setFailure(latestErr) {
 				return // will rebound to init
 			}
-			commitment, commitmentErr := s.server.GetAttestationCommitment(lastCommitmentHash)
+			commitment, commitmentErr := s.server.GetAttestationCommitment(lastCommitmentHash, false)
 			if s.setFailure(commitmentErr) {
 				return // will rebound to init
 			}
@@ -278,11 +278,11 @@ func (s *AttestService) doStateNewAttestation() {
 		var createErr error
 		var newTx *wire.MsgTx
 		newTx, createErr = s.attester.createAttestation(paytoaddr, txunspent)
-		s.attestation.Tx = *newTx
 		if s.setFailure(createErr) {
 			return // will rebound to init
 		}
 
+		s.attestation.Tx = *newTx
 		log.Printf("********** pre-sign txid: %s\n", s.attestation.Tx.TxHash().String())
 
 		// publish pre signed transaction
@@ -392,6 +392,8 @@ func (s *AttestService) doStateAwaitConfirmation() {
 			return // will rebound to init
 		}
 
+		s.attester.Fees.ResetFee(s.isRegtest) // reset client fees
+
 		confirmedHash := s.attestation.CommitmentHash()
 		s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) //update clients
 
@@ -404,10 +406,27 @@ func (s *AttestService) doStateAwaitConfirmation() {
 
 // ASTATE_HANDLE_UNCONFIRMED
 // - Handle attestations that have been unconfirmed for too long
+// - Bump attestation fees and re-initiate sign and send process
 func (s *AttestService) doStateHandleUnconfirmed() {
 	log.Println("*AttestService* HANDLE UNCONFIRMED")
 
-	return
+	log.Printf("********** bumping fees for attestation txid: %s\n", s.attestation.Tx.TxHash().String())
+	currentTx := &s.attestation.Tx
+	bumpErr := s.attester.bumpAttestationFees(currentTx)
+	if s.setFailure(bumpErr) {
+		return // will rebound to init
+	}
+
+	s.attestation.Tx = *currentTx
+	log.Printf("********** new pre-sign txid: %s\n", s.attestation.Tx.TxHash().String())
+
+	// re-publish pre signed transaction
+	var txbytes bytes.Buffer
+	s.attestation.Tx.Serialize(&txbytes)
+	s.publisher.SendMessage(txbytes.Bytes(), confpkg.TOPIC_NEW_TX)
+
+	s.state = ASTATE_SIGN_ATTESTATION // update attestation state
+	attestDelay = ATIME_SIGS          // add sigs waiting time
 }
 
 //Main attestation service method - cycles through AttestationStates

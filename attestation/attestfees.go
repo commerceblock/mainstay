@@ -52,7 +52,7 @@ func NewAttestFees() AttestFees {
 
 // Get current fee
 func (a AttestFees) GetFee() int {
-	log.Printf("*Fees* Using current fee value: %d\n", a.currentFee)
+	log.Printf("*Fees* Current fee value: %d\n", a.currentFee)
 	return a.currentFee
 }
 

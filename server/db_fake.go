@@ -96,6 +96,16 @@ func (d *DbFake) getLatestAttestationMerkleRoot(confirmed bool) (string, error) 
 	if len(d.attestations) == 0 {
 		return "", nil
 	}
+	count := 0
+	for _, atst := range d.attestations { // calculate count for specific confirmed/unconfirmed
+		if atst.Confirmed == confirmed {
+			count += 1
+		}
+	}
+	if count == 0 {
+		return "", nil
+	}
+
 	for i := len(d.attestations) - 1; i >= 0; i-- {
 		latestAttestation := d.attestations[i]
 		if latestAttestation.Confirmed == confirmed {
@@ -132,9 +142,5 @@ func (d *DbFake) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models.
 		}
 	}
 
-	// not found - error
-	if len(merkleCommitments) == 0 {
-		return merkleCommitments, errors.New(ERROR_MERKLE_COMMITMENT_GET)
-	}
 	return merkleCommitments, nil
 }
