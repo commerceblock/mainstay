@@ -47,7 +47,6 @@ func (s *Server) updateAttestationCommitment(commitment models.Commitment) error
 
 // Update latest Attestation in the server
 func (s *Server) UpdateLatestAttestation(attestation models.Attestation) error {
-
 	errSave := s.dbInterface.saveAttestation(attestation)
 	if errSave != nil {
 		return errSave

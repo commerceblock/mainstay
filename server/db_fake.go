@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-
 	"mainstay/models"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -117,7 +116,7 @@ func (d *DbFake) getLatestAttestationMerkleRoot(confirmed bool) (string, error) 
 	for i := len(d.attestations) - 1; i >= 0; i-- {
 		latestAttestation := d.attestations[i]
 		if latestAttestation.Confirmed == confirmed {
-			return latestAttestation.CommitmentHash().String(), nil
+			return d.attestations[i].CommitmentHash().String(), nil
 		}
 	}
 	return "", errors.New(ERROR_ATTESTATION_GET)
