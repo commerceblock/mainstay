@@ -292,7 +292,7 @@ func (d *DbMongo) GetClientDetails() ([]models.ClientDetails, error) {
 }
 
 // Get Attestation collection document count
-func (d *DbMongo) getLatestAttestationCount(confirmed ...bool) (int64, error) {
+func (d *DbMongo) getAttestationCount(confirmed ...bool) (int64, error) {
 	// set optional confirmed filter
 	confirmedFilter := bson.NewDocument()
 	if len(confirmed) > 0 {
@@ -312,7 +312,7 @@ func (d *DbMongo) getLatestAttestationCount(confirmed ...bool) (int64, error) {
 // Get Attestation entry from collection and return merkle_root field
 func (d *DbMongo) getLatestAttestationMerkleRoot(confirmed bool) (string, error) {
 	// first check if attestation has any documents
-	count, countErr := d.getLatestAttestationCount(confirmed)
+	count, countErr := d.getAttestationCount(confirmed)
 	if countErr != nil {
 		return "", countErr
 	} else if count == 0 { // no attestations yet
@@ -335,7 +335,7 @@ func (d *DbMongo) getLatestAttestationMerkleRoot(confirmed bool) (string, error)
 // Return Commitment from MerkleCommitment commitments for attestation with given txid hash
 func (d *DbMongo) getAttestationMerkleRoot(txid chainhash.Hash) (string, error) {
 	// first check if attestation has any documents
-	count, countErr := d.getLatestAttestationCount()
+	count, countErr := d.getAttestationCount()
 	if countErr != nil {
 		return "", countErr
 	} else if count == 0 { // no attestations yet
