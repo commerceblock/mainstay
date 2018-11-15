@@ -31,9 +31,10 @@ const (
 	ASTATE_NEXT_COMMITMENT    AttestationState = 1
 	ASTATE_NEW_ATTESTATION    AttestationState = 2
 	ASTATE_SIGN_ATTESTATION   AttestationState = 3
-	ASTATE_SEND_ATTESTATION   AttestationState = 4
-	ASTATE_AWAIT_CONFIRMATION AttestationState = 5
-	ASTATE_HANDLE_UNCONFIRMED AttestationState = 6
+    ASTATE_PRE_SEND_STORE     AttestationState = 4
+	ASTATE_SEND_ATTESTATION   AttestationState = 5
+	ASTATE_AWAIT_CONFIRMATION AttestationState = 6
+	ASTATE_HANDLE_UNCONFIRMED AttestationState = 7
 )
 
 // error consts
@@ -331,22 +332,29 @@ func (s *AttestService) doStateSignAttestation() {
 	s.attestation.Tx = *signedTx
 	s.attestation.Txid = s.attestation.Tx.TxHash()
 
-	s.state = ASTATE_SEND_ATTESTATION // update attestation state
+	s.state = ASTATE_PRE_SEND_STORE // update attestation state
+}
+
+// ASTATE_PRE_SEND_STORE
+// - Store unconfirmed attestation to server prior to sending
+func (s *AttestService) doStatePreSendStore() {
+    log.Println("*AttestService* PRE SEND STORE")
+
+    // update server with latest unconfirmed attestation, in case the service fails
+    errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
+    if s.setFailure(errUpdate) {
+        return // will rebound to init
+    }
+
+    s.state = ASTATE_SEND_ATTESTATION // update attestation state
 }
 
 // ASTATE_SEND_ATTESTATION
-// - Store unconfirmed attestation to server prior to sending
 // - Send attestation transaction through the client to the network
 // - add ATIME_CONFIRMATION waiting time
 // - start time for confirmation time
 func (s *AttestService) doStateSendAttestation() {
 	log.Println("*AttestService* SEND ATTESTATION")
-
-	// update server with latest unconfirmed attestation, in case the service fails
-	errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
-	if s.setFailure(errUpdate) {
-		return // will rebound to init
-	}
 
 	// sign attestation with combined signatures and send through client to network
 	txid, attestationErr := s.attester.sendAttestation(&s.attestation.Tx)
@@ -452,6 +460,9 @@ func (s *AttestService) doAttestation() {
 
 	case ASTATE_SIGN_ATTESTATION:
 		s.doStateSignAttestation()
+
+    case ASTATE_PRE_SEND_STORE:
+        s.doStatePreSendStore()
 
 	case ASTATE_SEND_ATTESTATION:
 		s.doStateSendAttestation()

@@ -80,10 +80,15 @@ func TestAttestService_Regular(t *testing.T) {
 	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
 	assert.Equal(t, ATIME_SIGS, attestDelay)
 
-	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_SEND_ATTESTATION
+    // Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_PRE_SEND_STORE, attestService.state)
+    assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
+    assert.Equal(t, ATIME_FIXED, attestDelay)
+
+	// Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_SEND_ATTESTATION, attestService.state)
-	assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
 	assert.Equal(t, ATIME_FIXED, attestDelay)
 
 	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
@@ -146,10 +151,15 @@ func TestAttestService_Regular(t *testing.T) {
 	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
 	assert.Equal(t, ATIME_SIGS, attestDelay)
 
-	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_SEND_ATTESTATION
+    // Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_PRE_SEND_STORE, attestService.state)
+    assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
+    assert.Equal(t, ATIME_FIXED, attestDelay)
+
+	// Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_SEND_ATTESTATION, attestService.state)
-	assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
 	assert.Equal(t, ATIME_FIXED, attestDelay)
 
 	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
@@ -177,7 +187,7 @@ func TestAttestService_Regular(t *testing.T) {
 }
 
 // Test Attest Service when Attestation remains unconfirmed
-func TestAttestService_HandleUnconfirmed(t *testing.T) {
+func TestAttestService_Unconfirmed(t *testing.T) {
 
 	// Test INIT
 	test := test.NewTest(false, false)
@@ -224,10 +234,15 @@ func TestAttestService_HandleUnconfirmed(t *testing.T) {
 	assert.Equal(t, ATIME_SIGS, attestDelay)
 	assert.Equal(t, attestService.attester.Fees.minFee, attestService.attester.Fees.GetFee())
 
-	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_SEND_ATTESTATION
+    // Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_PRE_SEND_STORE, attestService.state)
+    assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
+    assert.Equal(t, ATIME_FIXED, attestDelay)
+
+	// Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_SEND_ATTESTATION, attestService.state)
-	assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
 	assert.Equal(t, ATIME_FIXED, attestDelay)
 
 	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
@@ -254,10 +269,15 @@ func TestAttestService_HandleUnconfirmed(t *testing.T) {
 	assert.Equal(t, attestService.attester.Fees.minFee+attestService.attester.Fees.feeIncrement,
 		attestService.attester.Fees.GetFee())
 
-	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_SEND_ATTESTATION
+    // Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_PRE_SEND_STORE, attestService.state)
+    assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
+    assert.Equal(t, ATIME_FIXED, attestDelay)
+
+	// Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_SEND_ATTESTATION, attestService.state)
-	assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
 	assert.Equal(t, ATIME_FIXED, attestDelay)
 
 	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
@@ -519,10 +539,10 @@ func TestAttestService_FailureSignAttestation(t *testing.T) {
 	assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
 	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
 
-	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_SEND_ATTESTATION
-	attestService.doAttestation()
-	assert.Equal(t, ASTATE_SEND_ATTESTATION, attestService.state)
-	assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
+    // Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_PRE_SEND_STORE, attestService.state)
+    assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
 
 	// failure - re init attestation service
 	attestService = NewAttestService(nil, nil, server, config, true)
@@ -549,10 +569,10 @@ func TestAttestService_FailureSignAttestation(t *testing.T) {
 	assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
 	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
 
-	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_SEND_ATTESTATION
-	attestService.doAttestation()
-	assert.Equal(t, ASTATE_SEND_ATTESTATION, attestService.state)
-	assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
+    // Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_PRE_SEND_STORE, attestService.state)
+    assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
 
 	// failure - re init attestation service from inner state failure
 	attestService.state = ASTATE_INIT
@@ -564,6 +584,105 @@ func TestAttestService_FailureSignAttestation(t *testing.T) {
 	assert.Equal(t, chainhash.Hash{}, attestService.attestation.Txid)
 	assert.Equal(t, false, attestService.attestation.Confirmed)
 	assert.Equal(t, models.AttestationInfo{}, attestService.attestation.Info)
+}
+
+// Test Attest Service states
+// State cycle test with failures
+// Test behaviour with fail after pre send store state
+func TestAttestService_FailurePreSendStore(t *testing.T) {
+
+    // Test INIT
+    test := test.NewTest(false, false)
+    config := test.Config
+
+    dbFake := server.NewDbFake()
+    server := server.NewServer(dbFake)
+    attestService := NewAttestService(nil, nil, server, config, true)
+
+    // Test initial state of attest service
+    assert.Equal(t, &models.Attestation{Txid: chainhash.Hash{}, Tx: wire.MsgTx{}, Confirmed: false},
+        attestService.attestation)
+    assert.Equal(t, ASTATE_INIT, attestService.state)
+
+    // Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
+    assert.Equal(t, chainhash.Hash{}, attestService.attestation.CommitmentHash())
+    assert.Equal(t, chainhash.Hash{}, attestService.attestation.Txid)
+    assert.Equal(t, false, attestService.attestation.Confirmed)
+    assert.Equal(t, models.AttestationInfo{}, attestService.attestation.Info)
+
+    // Test ASTATE_NEXT_COMMITMENT -> ASTATE_NEW_ATTESTATION
+    // set server commitment before creationg new attestation
+    hashX, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+    latestCommitment, _ := models.NewCommitment([]chainhash.Hash{*hashX})
+    latestCommitments := []models.ClientCommitment{models.ClientCommitment{*hashX, 0}}
+    dbFake.SetClientCommitments(latestCommitments)
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_NEW_ATTESTATION, attestService.state)
+    assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
+
+    // Test ASTATE_NEW_ATTESTATION -> ASTATE_SIGN_ATTESTATION
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_SIGN_ATTESTATION, attestService.state)
+    // cant test much more here - we test this in other unit tests
+    assert.Equal(t, 1, len(attestService.attestation.Tx.TxIn))
+    assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
+    assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
+
+    // Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_PRE_SEND_STORE, attestService.state)
+    assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
+
+    // Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_SEND_ATTESTATION, attestService.state)
+
+    // failure - re init attestation service
+    attestService = NewAttestService(nil, nil, server, config, true)
+
+    // Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
+    assert.Equal(t, chainhash.Hash{}, attestService.attestation.CommitmentHash())
+    assert.Equal(t, chainhash.Hash{}, attestService.attestation.Txid)
+    assert.Equal(t, false, attestService.attestation.Confirmed)
+    assert.Equal(t, models.AttestationInfo{}, attestService.attestation.Info)
+
+    // Test ASTATE_NEXT_COMMITMENT -> ASTATE_NEW_ATTESTATION
+    // set server commitment before creationg new attestation
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_NEW_ATTESTATION, attestService.state)
+    assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
+
+    // Test ASTATE_NEW_ATTESTATION -> ASTATE_SIGN_ATTESTATION
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_SIGN_ATTESTATION, attestService.state)
+    // cant test much more here - we test this in other unit tests
+    assert.Equal(t, 1, len(attestService.attestation.Tx.TxIn))
+    assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
+    assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
+
+    // Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_PRE_SEND_STORE, attestService.state)
+    assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
+
+    // Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_SEND_ATTESTATION, attestService.state)
+
+    // failure - re init attestation service from inner state failure
+    attestService.state = ASTATE_INIT
+
+    // Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
+    assert.Equal(t, chainhash.Hash{}, attestService.attestation.CommitmentHash())
+    assert.Equal(t, chainhash.Hash{}, attestService.attestation.Txid)
+    assert.Equal(t, false, attestService.attestation.Confirmed)
+    assert.Equal(t, models.AttestationInfo{}, attestService.attestation.Info)
 }
 
 // Test Attest Service states
@@ -610,10 +729,14 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 	assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
 	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
 
-	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_SEND_ATTESTATION
+    // Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_PRE_SEND_STORE, attestService.state)
+    assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
+
+	// Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_SEND_ATTESTATION, attestService.state)
-	assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
 
 	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
 	attestService.doAttestation()
@@ -706,10 +829,14 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 	assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
 	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
 
-	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_SEND_ATTESTATION
+    // Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+    attestService.doAttestation()
+    assert.Equal(t, ASTATE_PRE_SEND_STORE, attestService.state)
+    assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
+
+	// Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_SEND_ATTESTATION, attestService.state)
-	assert.Equal(t, true, len(attestService.attestation.Tx.TxIn[0].SignatureScript) > 0)
 
 	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
 	attestService.doAttestation()
