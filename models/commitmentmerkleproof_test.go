@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -325,10 +324,10 @@ func TestMerkleProof_BSON(t *testing.T) {
 	assert.Equal(t, proof0.Commitment.String(), doc.Lookup(PROOF_COMMITMENT_NAME).StringValue())
 
 	for pos := range proof0.Ops {
-		arrVal, arrErr := doc.Lookup(PROOF_OPS_NAME).MutableArray().Lookup(uint(pos))
-		assert.Equal(t, nil, arrErr)
-		val := arrVal.Interface().(bson.Raw)
-		assert.Equal(t, proof0.Ops[pos].Append, val.Lookup(PROOF_OP_APPEND_NAME).Boolean())
-		assert.Equal(t, proof0.Ops[pos].Commitment.String(), val.Lookup(PROOF_OP_COMMITMENT_NAME).StringValue())
+		arrVal := doc.Lookup(PROOF_OPS_NAME).Array()[uint(pos)]
+		docOp, docOpErr := GetDocumentFromModel(arrVal)
+		assert.Equal(t, nil, docOpErr)
+		assert.Equal(t, proof0.Ops[pos].Append, docOp.Lookup(PROOF_OP_APPEND_NAME).Boolean())
+		assert.Equal(t, proof0.Ops[pos].Commitment.String(), docOp.Lookup(PROOF_OP_COMMITMENT_NAME).StringValue())
 	}
 }
