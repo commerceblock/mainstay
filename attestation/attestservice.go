@@ -31,7 +31,7 @@ const (
 	ASTATE_NEXT_COMMITMENT    AttestationState = 1
 	ASTATE_NEW_ATTESTATION    AttestationState = 2
 	ASTATE_SIGN_ATTESTATION   AttestationState = 3
-    ASTATE_PRE_SEND_STORE     AttestationState = 4
+	ASTATE_PRE_SEND_STORE     AttestationState = 4
 	ASTATE_SEND_ATTESTATION   AttestationState = 5
 	ASTATE_AWAIT_CONFIRMATION AttestationState = 6
 	ASTATE_HANDLE_UNCONFIRMED AttestationState = 7
@@ -338,15 +338,15 @@ func (s *AttestService) doStateSignAttestation() {
 // ASTATE_PRE_SEND_STORE
 // - Store unconfirmed attestation to server prior to sending
 func (s *AttestService) doStatePreSendStore() {
-    log.Println("*AttestService* PRE SEND STORE")
+	log.Println("*AttestService* PRE SEND STORE")
 
-    // update server with latest unconfirmed attestation, in case the service fails
-    errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
-    if s.setFailure(errUpdate) {
-        return // will rebound to init
-    }
+	// update server with latest unconfirmed attestation, in case the service fails
+	errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
+	if s.setFailure(errUpdate) {
+		return // will rebound to init
+	}
 
-    s.state = ASTATE_SEND_ATTESTATION // update attestation state
+	s.state = ASTATE_SEND_ATTESTATION // update attestation state
 }
 
 // ASTATE_SEND_ATTESTATION
@@ -461,8 +461,8 @@ func (s *AttestService) doAttestation() {
 	case ASTATE_SIGN_ATTESTATION:
 		s.doStateSignAttestation()
 
-    case ASTATE_PRE_SEND_STORE:
-        s.doStatePreSendStore()
+	case ASTATE_PRE_SEND_STORE:
+		s.doStatePreSendStore()
 
 	case ASTATE_SEND_ATTESTATION:
 		s.doStateSendAttestation()
