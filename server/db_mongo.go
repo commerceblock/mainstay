@@ -54,7 +54,7 @@ const (
 )
 
 // Method to connect to mongo database through config
-func dbConnect(ctx context.Context, dbConnectivity config.DbConnectivity) (*mongo.Database, error) {
+func dbConnect(ctx context.Context, dbConnectivity config.DbConfig) (*mongo.Database, error) {
 	// get this from config
 	uri := fmt.Sprintf(`mongodb://%s:%s@%s:%s/%s`,
 		dbConnectivity.User,
@@ -85,12 +85,12 @@ func dbConnect(ctx context.Context, dbConnectivity config.DbConnectivity) (*mong
 // DbMongo struct
 type DbMongo struct {
 	ctx            context.Context
-	dbConnectivity config.DbConnectivity
+	dbConnectivity config.DbConfig
 	db             *mongo.Database
 }
 
 // Return new DbMongo instance
-func NewDbMongo(ctx context.Context, dbConnectivity config.DbConnectivity) *DbMongo {
+func NewDbMongo(ctx context.Context, dbConnectivity config.DbConfig) *DbMongo {
 	db, errConnect := dbConnect(ctx, dbConnectivity)
 	if errConnect != nil {
 		log.Fatal(errConnect)

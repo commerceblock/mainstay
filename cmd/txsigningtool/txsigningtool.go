@@ -71,12 +71,18 @@ func init() {
 			log.Fatal(err)
 		}
 
-		confFile := confpkg.GetConfFile(os.Getenv("GOPATH") + DEMO_CONF_PATH)
+		confFile, confErr := confpkg.GetConfFile(os.Getenv("GOPATH") + DEMO_CONF_PATH)
+		if confErr != nil {
+			log.Fatal(confErr)
+		}
 		config = confpkg.NewConfig(confFile)
 		pk0 = test.PRIV_CLIENT
 		script = test.SCRIPT
 	} else {
-		confFile := confpkg.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+		confFile, confErr := confpkg.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+		if confErr != nil {
+			log.Fatal(confErr)
+		}
 		config = confpkg.NewConfig(confFile)
 	}
 

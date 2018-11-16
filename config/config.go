@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"strings"
 
@@ -10,16 +11,26 @@ import (
 	"github.com/btcsuite/btcd/rpcclient"
 )
 
-const MAIN_CHAIN_NAME = "main"
-const SIDE_CHAIN_NAME = "clientchain"
-const CONF_PATH = "/src/mainstay/config/conf.json"
+// config name consts
+const (
+	MAIN_CHAIN_NAME = "main"
 
-const MAIN_PUBLISHER_PORT = 5000
-const MAIN_LISTENER_PORT = 6000
-const TOPIC_NEW_HASH = "H"
-const TOPIC_NEW_TX = "T"
-const TOPIC_CONFIRMED_HASH = "C"
-const TOPIC_SIGS = "S"
+	CONF_PATH = "/src/mainstay/config/conf.json"
+
+	MISC_NAME = "misc"
+)
+
+// zmq config consts
+const (
+	MISC_MULTISIGNODES_NAME = "multisignodes"
+
+	MAIN_PUBLISHER_PORT  = 5000
+	MAIN_LISTENER_PORT   = 6000
+	TOPIC_NEW_HASH       = "H"
+	TOPIC_NEW_TX         = "T"
+	TOPIC_CONFIRMED_HASH = "C"
+	TOPIC_SIGS           = "S"
+)
 
 // Config struct
 // Client connections and other parameters required
@@ -31,7 +42,7 @@ type Config struct {
 	initTX         string
 	initPK         string
 	multisigScript string
-	dbConnectivity DbConnectivity
+	dbConfig       DbConfig
 }
 
 // Get Main Client
@@ -50,8 +61,8 @@ func (c *Config) MultisigNodes() []string {
 }
 
 // Get Tx Signers host names
-func (c *Config) DbConnectivity() DbConnectivity {
-	return c.dbConnectivity
+func (c *Config) DbConfig() DbConfig {
+	return c.dbConfig
 }
 
 // Get init TX
@@ -90,20 +101,44 @@ func NewConfig(customConf ...[]byte) *Config {
 	if len(customConf) > 0 { //custom config provided
 		conf = customConf[0]
 	} else {
-		conf = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+		var confErr error
+		conf, confErr = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+		if confErr != nil {
+			log.Fatal(confErr)
+		}
 	}
 
-	mainClient := GetRPC(MAIN_CHAIN_NAME, conf)
-	mainClientCfg := GetChainCfgParams(MAIN_CHAIN_NAME, conf)
+	// get main rpc client
+	mainClient, rpcErr := GetRPC(MAIN_CHAIN_NAME, conf)
+	if rpcErr != nil {
+		log.Fatal(rpcErr)
+	}
 
-	multisignodes := strings.Split(GetEnvFromConf("misc", "multisignodes", conf), ",")
+	// get main rpc client chain parameters
+	mainClientCfg, paramsErr := GetChainCfgParams(MAIN_CHAIN_NAME, conf)
+	if paramsErr != nil {
+		log.Fatal(paramsErr)
+	}
 
-	dbConnectivity := GetDbConnectivity(conf)
+	// get multisig node hosts
+	multisigNodesVal, multisigErr := GetParamFromConf(MISC_NAME, MISC_MULTISIGNODES_NAME, conf)
+	if multisigErr != nil {
+		log.Fatal(multisigErr)
+	}
+	multisignodes := strings.Split(multisigNodesVal, ",")
+
+	// get db connectivity details
+	dbConnectivity, dbErr := GetDbConfig(conf)
+	if dbErr != nil {
+		log.Fatal(dbErr)
+	}
+
 	return &Config{mainClient, mainClientCfg, multisignodes, "", "", "", dbConnectivity}
 }
 
 // Return SidechainClient depending on whether unit test config or actual config
-func NewClientFromConfig(isTest bool, customConf ...[]byte) clients.SidechainClient {
+func NewClientFromConfig(chainName string, isTest bool, customConf ...[]byte) clients.SidechainClient {
+	// mock side client rpc for unit-test / regtest
 	if isTest {
 		return clients.NewSidechainClientFake()
 	}
@@ -112,14 +147,34 @@ func NewClientFromConfig(isTest bool, customConf ...[]byte) clients.SidechainCli
 	if len(customConf) > 0 { //custom config provided
 		conf = customConf[0]
 	} else {
-		conf = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+		var confErr error
+		conf, confErr = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+		if confErr != nil {
+			log.Fatal(confErr)
+		}
 	}
-	return clients.NewSidechainClientOcean(GetRPC(SIDE_CHAIN_NAME, conf))
+
+	// get side client rpc
+	sideClient, rpcErr := GetRPC(chainName, conf)
+	if rpcErr != nil {
+		log.Fatal(rpcErr)
+	}
+	return clients.NewSidechainClientOcean(sideClient)
 }
 
-// DbDetails struct
+// db config parameter names
+const (
+	DB_USER_NAME     = "user"
+	DB_PASSWORD_NAME = "password"
+	DB_HOST_NAME     = "host"
+	DB_PORT_NAME     = "port"
+	DB_NAME_NAME     = "name"
+	DB_NAME          = "db"
+)
+
+// DbConfig struct
 // Database connectivity details
-type DbConnectivity struct {
+type DbConfig struct {
 	User     string
 	Password string
 	Host     string
@@ -127,13 +182,41 @@ type DbConnectivity struct {
 	Name     string
 }
 
-// Return DbConnectivity from conf options
-func GetDbConnectivity(conf []byte) DbConnectivity {
-	return DbConnectivity{
-		User:     GetEnvFromConf("db", "user", conf),
-		Password: GetEnvFromConf("db", "password", conf),
-		Host:     GetEnvFromConf("db", "host", conf),
-		Port:     GetEnvFromConf("db", "port", conf),
-		Name:     GetEnvFromConf("db", "name", conf),
+// Return DbConfig from conf options
+func GetDbConfig(conf []byte) (DbConfig, error) {
+
+	// db connectivity parameters
+
+	user, userErr := GetParamFromConf(DB_NAME, DB_USER_NAME, conf)
+	if userErr != nil {
+		return DbConfig{}, userErr
 	}
+
+	password, passwordErr := GetParamFromConf(DB_NAME, DB_PASSWORD_NAME, conf)
+	if passwordErr != nil {
+		return DbConfig{}, passwordErr
+	}
+
+	host, hostErr := GetParamFromConf(DB_NAME, DB_HOST_NAME, conf)
+	if hostErr != nil {
+		return DbConfig{}, hostErr
+	}
+
+	port, portErr := GetParamFromConf(DB_NAME, DB_PORT_NAME, conf)
+	if portErr != nil {
+		return DbConfig{}, portErr
+	}
+
+	name, nameErr := GetParamFromConf(DB_NAME, DB_NAME_NAME, conf)
+	if nameErr != nil {
+		return DbConfig{}, nameErr
+	}
+
+	return DbConfig{
+		User:     user,
+		Password: password,
+		Host:     host,
+		Port:     port,
+		Name:     name,
+	}, nil
 }

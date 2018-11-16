@@ -3,40 +3,45 @@ package config
 import (
 	"bytes"
 	"encoding/json"
-	"log"
+	"errors"
 )
 
 // Handle reading conf files and parsing configuration options
 
+const (
+	ERROR_CONFIG_NAME_NOT_FOUND  = "config client name not found"
+	ERROR_CONFIG_VALUE_NOT_FOUND = "config value not found"
+)
+
 type ClientCfg map[string]interface{}
 
 // Get config for a specific client from conf file
-func getCfg(name string, conf []byte) ClientCfg {
+func getCfg(name string, conf []byte) (ClientCfg, error) {
 	file := bytes.NewReader(conf)
 	dec := json.NewDecoder(file)
 	var j map[string]map[string]interface{}
 	err := dec.Decode(&j)
 	if err != nil {
-		log.Fatal(err)
+		return ClientCfg{}, errors.New(ERROR_CONFIG_NAME_NOT_FOUND)
 	}
 	val, ok := j[name]
 	if !ok {
-		log.Fatal(err)
+		return ClientCfg{}, errors.New(ERROR_CONFIG_NAME_NOT_FOUND)
 	}
-	return val
+	return val, nil
 }
 
 // Get string values of config options for a client
-func (conf ClientCfg) getValue(key string) string {
+func (conf ClientCfg) getValue(key string) (string, error) {
 	val, ok := conf[key]
 	if !ok {
-		log.Fatalf("%s not found in conf file", key)
+		return "", errors.New(ERROR_CONFIG_VALUE_NOT_FOUND)
 	}
 	str, ok := val.(string)
 	if !ok {
-		log.Fatalf("%s not string in conf file", key)
+		return "", errors.New(ERROR_CONFIG_VALUE_NOT_FOUND)
 	}
-	return str
+	return str, nil
 }
 
 // Try get string values of config options for a client

@@ -24,7 +24,10 @@ var (
 
 // init
 func init() {
-	confFile := config.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+	if confErr != nil {
+		log.Fatal(confErr)
+	}
 	mainConfig = config.NewConfig(confFile)
 }
 
@@ -57,7 +60,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dbMongo = server.NewDbMongo(ctx, mainConfig.DbConnectivity())
+	dbMongo = server.NewDbMongo(ctx, mainConfig.DbConfig())
 
 	fmt.Println()
 	fmt.Println("*********************************************")

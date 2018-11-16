@@ -50,9 +50,12 @@ func init() {
 		}
 	}
 
-	confFile := config.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+	if confErr != nil {
+		log.Fatal(confErr)
+	}
 	mainConfig = config.NewConfig(confFile)
-	oceanClient = config.NewClientFromConfig(false, confFile)
+	oceanClient = config.NewClientFromConfig(SIDE_NAME, false, confFile)
 }
 
 // main method

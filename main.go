@@ -57,7 +57,7 @@ func main() {
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	dbInterface := server.NewDbMongo(ctx, mainConfig.DbConnectivity())
+	dbInterface := server.NewDbMongo(ctx, mainConfig.DbConfig())
 	server := server.NewServer(dbInterface)
 	attestService := attestation.NewAttestService(ctx, wg, server, mainConfig, isRegtest)
 
