@@ -14,5 +14,10 @@
         "host":"MAINSTAY_DB_HOST",
         "port":"MAINSTAY_DB_PORT",
         "name":"MAINSTAY_DB_NAME"
+    },
+    "fees": {
+        "minFee": "MAINSTAY_FEES_MIN",
+        "maxFee": "MAINSTAY_FEES_MAX",
+        "feeIncrement": "MAINSTAY_FEES_INCREMENT"
     }
 }

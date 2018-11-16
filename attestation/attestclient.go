@@ -68,7 +68,7 @@ func NewAttestClient(config *confpkg.Config) *AttestClient {
 		return &AttestClient{
 			MainClient:   config.MainClient(),
 			MainChainCfg: config.MainChainCfg(),
-			Fees:         NewAttestFees(),
+			Fees:         NewAttestFees(config.FeesConfig()),
 			pk0:          pk,
 			txid0:        config.InitTX(),
 			script0:      multisig,
@@ -79,7 +79,7 @@ func NewAttestClient(config *confpkg.Config) *AttestClient {
 	return &AttestClient{
 		MainClient:   config.MainClient(),
 		MainChainCfg: config.MainChainCfg(),
-		Fees:         NewAttestFees(),
+		Fees:         NewAttestFees(config.FeesConfig()),
 		pk0:          pk,
 		txid0:        config.InitTX(),
 		script0:      multisig,

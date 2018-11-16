@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"mainstay/config"
 )
 
 // Utility functions to get best bitcoin fees from a remote API
@@ -39,12 +41,30 @@ type AttestFees struct {
 // New AttestFees instance
 // Limit values taken from configuration
 // Current fee value reset from api
-func NewAttestFees() AttestFees {
+func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
+
+	// min fee with upper limit max_fee default
+	minFee := DEFAULT_MIN_FEE
+	if feesConfig.MinFee > 0 && feesConfig.MinFee < DEFAULT_MAX_FEE {
+		minFee = feesConfig.MinFee
+	}
+
+	// max fee with lower limit min_fee && 0 and max fee default
+	maxFee := DEFAULT_MAX_FEE
+	if feesConfig.MaxFee > 0 && feesConfig.MaxFee > minFee && feesConfig.MaxFee < DEFAULT_MAX_FEE {
+		maxFee = feesConfig.MaxFee
+	}
+
+	// fee increment with lower limit 0
+	feeIncrement := DEFAULT_FEE_INCREMENT
+	if feesConfig.FeeIncrement > 0 {
+		feeIncrement = feesConfig.FeeIncrement
+	}
 
 	attestFees := AttestFees{
-		minFee:       DEFAULT_MIN_FEE,
-		maxFee:       DEFAULT_MAX_FEE,
-		feeIncrement: DEFAULT_FEE_INCREMENT}
+		minFee:       minFee,
+		maxFee:       maxFee,
+		feeIncrement: feeIncrement}
 
 	attestFees.ResetFee()
 	return attestFees

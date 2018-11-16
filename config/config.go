@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"mainstay/clients"
@@ -43,30 +44,36 @@ type Config struct {
 	initPK         string
 	multisigScript string
 	dbConfig       DbConfig
+	feesConfig     FeesConfig
 }
 
 // Get Main Client
-func (c *Config) MainClient() *rpcclient.Client {
+func (c Config) MainClient() *rpcclient.Client {
 	return c.mainClient
 }
 
 // Get Main Client Cfg
-func (c *Config) MainChainCfg() *chaincfg.Params {
+func (c Config) MainChainCfg() *chaincfg.Params {
 	return c.mainChainCfg
 }
 
 // Get Tx Signers host names
-func (c *Config) MultisigNodes() []string {
+func (c Config) MultisigNodes() []string {
 	return c.multisigNodes
 }
 
-// Get Tx Signers host names
-func (c *Config) DbConfig() DbConfig {
+// Get Database configuration
+func (c Config) DbConfig() DbConfig {
 	return c.dbConfig
 }
 
+// Get Fees configuration
+func (c Config) FeesConfig() FeesConfig {
+	return c.feesConfig
+}
+
 // Get init TX
-func (c *Config) InitTX() string {
+func (c Config) InitTX() string {
 	return c.initTX
 }
 
@@ -133,7 +140,9 @@ func NewConfig(customConf ...[]byte) (*Config, error) {
 		return nil, dbErr
 	}
 
-	return &Config{mainClient, mainClientCfg, multisignodes, "", "", "", dbConnectivity}, nil
+	feesConfig := GetFeesConfig(conf)
+
+	return &Config{mainClient, mainClientCfg, multisignodes, "", "", "", dbConnectivity, feesConfig}, nil
 }
 
 // Return SidechainClient depending on whether unit test config or actual config
@@ -219,4 +228,60 @@ func GetDbConfig(conf []byte) (DbConfig, error) {
 		Port:     port,
 		Name:     name,
 	}, nil
+}
+
+// fee config parameter names
+const (
+	FEES_NAME               = "fees"
+	FEES_MIN_FEE_NAME       = "minFee"
+	FEES_MAX_FEE_NAME       = "maxFee"
+	FEES_FEE_INCREMENT_NAME = "feeIncrement"
+)
+
+// FeeConfig struct
+// Configuration on fee limits for attestation service
+type FeesConfig struct {
+	MinFee       int
+	MaxFee       int
+	FeeIncrement int
+}
+
+// Return FeeConfig from conf options
+func GetFeesConfig(conf []byte) FeesConfig {
+	// try getting all config parameters
+	// all are optional so if no value is found
+	// we set to invalid value
+
+	minFeeStr := TryGetParamFromConf(FEES_NAME, FEES_MIN_FEE_NAME, conf)
+	var minFee int
+	minFeeInt, minFeeErr := strconv.Atoi(minFeeStr)
+	if minFeeErr != nil {
+		minFee = -1
+	} else {
+		minFee = minFeeInt
+	}
+
+	maxFeeStr := TryGetParamFromConf(FEES_NAME, FEES_MAX_FEE_NAME, conf)
+	var maxFee int
+	maxFeeInt, maxFeeErr := strconv.Atoi(maxFeeStr)
+	if maxFeeErr != nil {
+		maxFee = -1
+	} else {
+		maxFee = maxFeeInt
+	}
+
+	feeIncrementStr := TryGetParamFromConf(FEES_NAME, FEES_FEE_INCREMENT_NAME, conf)
+	var feeIncrement int
+	feeIncrementInt, feeIncrementErr := strconv.Atoi(feeIncrementStr)
+	if feeIncrementErr != nil {
+		feeIncrement = -1
+	} else {
+		feeIncrement = feeIncrementInt
+	}
+
+	return FeesConfig{
+		MinFee:       minFee,
+		MaxFee:       maxFee,
+		FeeIncrement: feeIncrement,
+	}
 }

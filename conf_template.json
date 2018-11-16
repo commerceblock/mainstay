@@ -20,5 +20,10 @@
         "host":"localhost",
         "port":"27017",
         "name":"mainstay"
+    },
+    "fees": {
+        "minFee": "5",
+        "maxFee": "50",
+        "feeIncrement": "2"
     }
 }

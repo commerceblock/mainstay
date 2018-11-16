@@ -281,3 +281,78 @@ func TestConfigActual(t *testing.T) {
 		Name:     "mainstay",
 	}, config.DbConfig())
 }
+
+// Test config for Optional fees parameters
+func TestConfigFees(t *testing.T) {
+	var configErr error
+	var config *Config
+	var testConf = []byte(`
+    {
+        "main": {
+            "rpcurl": "localhost:18443",
+            "rpcuser": "user",
+            "rpcpass": "pass",
+            "chain": "regtest"
+        },
+        "fees": {
+        }
+    }
+    `)
+	config, configErr = NewConfig(testConf)
+	assert.Equal(t, nil, configErr)
+	assert.Equal(t, FeesConfig{-1, -1, -1}, config.FeesConfig())
+
+	testConf = []byte(`
+    {
+        "main": {
+            "rpcurl": "localhost:18443",
+            "rpcuser": "user",
+            "rpcpass": "pass",
+            "chain": "regtest"
+        },
+        "fees": {
+            "minFee": "1"
+        }
+    }
+    `)
+	config, configErr = NewConfig(testConf)
+	assert.Equal(t, nil, configErr)
+	assert.Equal(t, FeesConfig{1, -1, -1}, config.FeesConfig())
+
+	testConf = []byte(`
+    {
+        "main": {
+            "rpcurl": "localhost:18443",
+            "rpcuser": "user",
+            "rpcpass": "pass",
+            "chain": "regtest"
+        },
+        "fees": {
+            "minFee": "invalid"
+        }
+    }
+    `)
+	config, configErr = NewConfig(testConf)
+	assert.Equal(t, nil, configErr)
+	assert.Equal(t, FeesConfig{-1, -1, -1}, config.FeesConfig())
+
+	testConf = []byte(`
+    {
+        "main": {
+            "rpcurl": "localhost:18443",
+            "rpcuser": "user",
+            "rpcpass": "pass",
+            "chain": "regtest"
+        },
+        "fees": {
+            "maxFee": "10",
+            "minFee": "5",
+            "feeIncrement": "11",
+            "something-else": "nice-value"
+        }
+    }
+    `)
+	config, configErr = NewConfig(testConf)
+	assert.Equal(t, nil, configErr)
+	assert.Equal(t, FeesConfig{5, 10, 11}, config.FeesConfig())
+}
