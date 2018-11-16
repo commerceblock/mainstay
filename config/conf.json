@@ -19,5 +19,9 @@
         "minFee": "MAINSTAY_FEES_MIN",
         "maxFee": "MAINSTAY_FEES_MAX",
         "feeIncrement": "MAINSTAY_FEES_INCREMENT"
+    },
+    "timing": {
+        "newAttestationMinutes": "MAINSTAY_NEW_ATTESTATION_MINUTES",
+        "handleUnconfirmedMinutes": "MAINSTAY_HANDLE_UNCONFIRMED_MINUTES"
     }
 }

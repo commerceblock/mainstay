@@ -25,5 +25,9 @@
         "minFee": "5",
         "maxFee": "50",
         "feeIncrement": "2"
+    },
+    "timing": {
+        "newAttestationMinutes": "60",
+        "handleUnconfirmedMinutes": "60"
     }
 }

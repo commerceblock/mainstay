@@ -45,6 +45,7 @@ type Config struct {
 	multisigScript string
 	dbConfig       DbConfig
 	feesConfig     FeesConfig
+	timingConfig   TimingConfig
 }
 
 // Get Main Client
@@ -70,6 +71,16 @@ func (c Config) DbConfig() DbConfig {
 // Get Fees configuration
 func (c Config) FeesConfig() FeesConfig {
 	return c.feesConfig
+}
+
+// Get Timing configuration
+func (c Config) TimingConfig() TimingConfig {
+	return c.timingConfig
+}
+
+// Set timing configuration
+func (c *Config) SetTimingConfig(timingConfig TimingConfig) {
+	c.timingConfig = timingConfig
 }
 
 // Get init TX
@@ -141,8 +152,19 @@ func NewConfig(customConf ...[]byte) (*Config, error) {
 	}
 
 	feesConfig := GetFeesConfig(conf)
+	timingConfig := GetTimingConfig(conf)
 
-	return &Config{mainClient, mainClientCfg, multisignodes, "", "", "", dbConnectivity, feesConfig}, nil
+	return &Config{
+		mainClient:     mainClient,
+		mainChainCfg:   mainClientCfg,
+		multisigNodes:  multisignodes,
+		initTX:         "",
+		initPK:         "",
+		multisigScript: "",
+		dbConfig:       dbConnectivity,
+		feesConfig:     feesConfig,
+		timingConfig:   timingConfig,
+	}, nil
 }
 
 // Return SidechainClient depending on whether unit test config or actual config
@@ -283,5 +305,45 @@ func GetFeesConfig(conf []byte) FeesConfig {
 		MinFee:       minFee,
 		MaxFee:       maxFee,
 		FeeIncrement: feeIncrement,
+	}
+}
+
+// timing config parameter names
+const (
+	TIMING_NAME                            = "timing"
+	TIMING_NEW_ATTESTATION_MINUTES_NAME    = "newAttestationMinutes"
+	TIMING_HANDLE_UNCONFIRMED_MINUTES_NAME = "handleUnconfirmedMinutes"
+)
+
+// Timing config struct
+// Configuration on wait time duration for various things in attestation service
+type TimingConfig struct {
+	NewAttestationMinutes    int
+	HandleUnconfirmedMinutes int
+}
+
+// Return TimingConfig from conf options
+func GetTimingConfig(conf []byte) TimingConfig {
+	attMinStr := TryGetParamFromConf(TIMING_NAME, TIMING_NEW_ATTESTATION_MINUTES_NAME, conf)
+	var attMin int
+	attMinInt, attMinIntErr := strconv.Atoi(attMinStr)
+	if attMinIntErr != nil {
+		attMin = -1
+	} else {
+		attMin = attMinInt
+	}
+
+	uncMinStr := TryGetParamFromConf(TIMING_NAME, TIMING_HANDLE_UNCONFIRMED_MINUTES_NAME, conf)
+	var uncMin int
+	uncMinInt, uncMinIntErr := strconv.Atoi(uncMinStr)
+	if uncMinIntErr != nil {
+		uncMin = -1
+	} else {
+		uncMin = uncMinInt
+	}
+
+	return TimingConfig{
+		NewAttestationMinutes:    attMin,
+		HandleUnconfirmedMinutes: uncMin,
 	}
 }

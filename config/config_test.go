@@ -356,3 +356,76 @@ func TestConfigFees(t *testing.T) {
 	assert.Equal(t, nil, configErr)
 	assert.Equal(t, FeesConfig{5, 10, 11}, config.FeesConfig())
 }
+
+// Test config for Optional timing parameters
+func TestConfigTiming(t *testing.T) {
+	var configErr error
+	var config *Config
+	var testConf = []byte(`
+    {
+        "main": {
+            "rpcurl": "localhost:18443",
+            "rpcuser": "user",
+            "rpcpass": "pass",
+            "chain": "regtest"
+        },
+        "timing": {
+        }
+    }
+    `)
+	config, configErr = NewConfig(testConf)
+	assert.Equal(t, nil, configErr)
+	assert.Equal(t, TimingConfig{-1, -1}, config.TimingConfig())
+
+	testConf = []byte(`
+    {
+        "main": {
+            "rpcurl": "localhost:18443",
+            "rpcuser": "user",
+            "rpcpass": "pass",
+            "chain": "regtest"
+        },
+        "timing": {
+            "newAttestationMinutes": "0"
+        }
+    }
+    `)
+	config, configErr = NewConfig(testConf)
+	assert.Equal(t, nil, configErr)
+	assert.Equal(t, TimingConfig{0, -1}, config.TimingConfig())
+
+	testConf = []byte(`
+    {
+        "main": {
+            "rpcurl": "localhost:18443",
+            "rpcuser": "user",
+            "rpcpass": "pass",
+            "chain": "regtest"
+        },
+        "timing": {
+            "handleUnconfirmedMinutes": "0"
+        }
+    }
+    `)
+	config, configErr = NewConfig(testConf)
+	assert.Equal(t, nil, configErr)
+	assert.Equal(t, TimingConfig{-1, 0}, config.TimingConfig())
+
+	testConf = []byte(`
+    {
+        "main": {
+            "rpcurl": "localhost:18443",
+            "rpcuser": "user",
+            "rpcpass": "pass",
+            "chain": "regtest"
+        },
+        "timing": {
+            "newAttestationMinutes": "10",
+            "handleUnconfirmedMinutes": "60"
+        }
+    }
+    `)
+	config, configErr = NewConfig(testConf)
+	assert.Equal(t, nil, configErr)
+	assert.Equal(t, TimingConfig{10, 60}, config.TimingConfig())
+}

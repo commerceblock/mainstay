@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	confpkg "mainstay/config"
 	"mainstay/models"
 	"mainstay/server"
 	"mainstay/test"
@@ -23,6 +24,11 @@ func TestAttestService_Regular(t *testing.T) {
 	// Test INIT
 	test := test.NewTest(false, false)
 	config := test.Config
+
+	// randomly test with invalid config here
+	// timing config no effect on server
+	timingConfig := confpkg.TimingConfig{-1, -1}
+	config.SetTimingConfig(timingConfig)
 
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
@@ -117,8 +123,8 @@ func TestAttestService_Regular(t *testing.T) {
 	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
 	assert.Equal(t, true, attestService.attestation.Confirmed)
 	assert.Equal(t, txid, attestService.attestation.Txid)
-	assert.Equal(t, true, attestDelay < ATIME_NEW_ATTESTATION)
-	assert.Equal(t, true, attestDelay > (ATIME_NEW_ATTESTATION-time.Since(confirmTime)))
+	assert.Equal(t, true, attestDelay < DEFAULT_ATIME_NEW_ATTESTATION)
+	assert.Equal(t, true, attestDelay > (DEFAULT_ATIME_NEW_ATTESTATION-time.Since(confirmTime)))
 	assert.Equal(t, models.AttestationInfo{
 		Txid:      txid.String(),
 		Blockhash: walletTx.BlockHash,
@@ -129,7 +135,7 @@ func TestAttestService_Regular(t *testing.T) {
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
-	assert.Equal(t, ATIME_NEW_ATTESTATION, attestDelay)
+	assert.Equal(t, DEFAULT_ATIME_NEW_ATTESTATION, attestDelay)
 
 	// Test ASTATE_NEXT_COMMITMENT -> ASTATE_NEW_ATTESTATION
 	// stuck in next commitment
@@ -178,8 +184,8 @@ func TestAttestService_Regular(t *testing.T) {
 	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
 	assert.Equal(t, true, attestService.attestation.Confirmed)
 	assert.Equal(t, txid, attestService.attestation.Txid)
-	assert.Equal(t, true, attestDelay < ATIME_NEW_ATTESTATION)
-	assert.Equal(t, true, attestDelay > (ATIME_NEW_ATTESTATION-time.Since(confirmTime)))
+	assert.Equal(t, true, attestDelay < DEFAULT_ATIME_NEW_ATTESTATION)
+	assert.Equal(t, true, attestDelay > (DEFAULT_ATIME_NEW_ATTESTATION-time.Since(confirmTime)))
 	assert.Equal(t, models.AttestationInfo{
 		Txid:      txid.String(),
 		Blockhash: walletTx.BlockHash,
@@ -193,6 +199,12 @@ func TestAttestService_Unconfirmed(t *testing.T) {
 	// Test INIT
 	test := test.NewTest(false, false)
 	config := test.Config
+
+	// randomly test custom config here
+	customAtimeNewAttestation := 5
+	customAtimeHandleUnconfirmed := 10
+	timingConfig := confpkg.TimingConfig{customAtimeNewAttestation, customAtimeHandleUnconfirmed}
+	config.SetTimingConfig(timingConfig)
 
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
@@ -253,7 +265,7 @@ func TestAttestService_Unconfirmed(t *testing.T) {
 	assert.Equal(t, ATIME_CONFIRMATION, attestDelay)
 
 	// set confirm time back to test what happens in handle unconfirmed case
-	confirmTime = confirmTime.Add(-ATIME_HANDLE_UNCONFIRMED)
+	confirmTime = confirmTime.Add(-time.Duration(customAtimeHandleUnconfirmed) * time.Minute)
 
 	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_HANDLE_UNCONFIRMED
 	attestService.doAttestation()
@@ -296,8 +308,8 @@ func TestAttestService_Unconfirmed(t *testing.T) {
 	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
 	assert.Equal(t, true, attestService.attestation.Confirmed)
 	assert.Equal(t, txid, attestService.attestation.Txid)
-	assert.Equal(t, true, attestDelay < ATIME_NEW_ATTESTATION)
-	assert.Equal(t, true, attestDelay > (ATIME_NEW_ATTESTATION-time.Since(confirmTime)))
+	assert.Equal(t, true, attestDelay < time.Duration(customAtimeNewAttestation)*time.Minute)
+	assert.Equal(t, true, attestDelay > (time.Duration(customAtimeNewAttestation)*time.Minute-time.Since(confirmTime)))
 	assert.Equal(t, models.AttestationInfo{
 		Txid:      txid.String(),
 		Blockhash: walletTx.BlockHash,
@@ -981,7 +993,7 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 		assert.Equal(t, ATIME_CONFIRMATION, attestDelay)
 
 		// set confirm time back to test what happens in handle unconfirmed case
-		confirmTime = confirmTime.Add(-ATIME_HANDLE_UNCONFIRMED)
+		confirmTime = confirmTime.Add(-DEFAULT_ATIME_HANDLE_UNCONFIRMED)
 
 		// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_HANDLE_UNCONFIRMED
 		attestService.doAttestation()
@@ -1022,7 +1034,7 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 		assert.Equal(t, models.AttestationInfo{}, attestService.attestation.Info)
 
 		// set confirm time back to test what happens in handle unconfirmed case
-		confirmTime = confirmTime.Add(-ATIME_HANDLE_UNCONFIRMED)
+		confirmTime = confirmTime.Add(-DEFAULT_ATIME_HANDLE_UNCONFIRMED)
 
 		// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_HANDLE_UNCONFIRMED
 		attestService.doAttestation()
@@ -1074,7 +1086,7 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 		assert.Equal(t, models.AttestationInfo{}, attestService.attestation.Info)
 
 		// set confirm time back to test what happens in handle unconfirmed case
-		confirmTime = confirmTime.Add(-ATIME_HANDLE_UNCONFIRMED)
+		confirmTime = confirmTime.Add(-DEFAULT_ATIME_HANDLE_UNCONFIRMED)
 
 		// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_HANDLE_UNCONFIRMED
 		attestService.doAttestation()

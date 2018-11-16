@@ -54,11 +54,11 @@ const (
 	ATIME_CONFIRMATION = 15 * time.Minute
 
 	// waiting time between consecutive attestations after one was confirmed
-	ATIME_NEW_ATTESTATION = 60 * time.Minute
+	DEFAULT_ATIME_NEW_ATTESTATION = 60 * time.Minute
 
 	// waiting time until we handle an attestation that has not been confirmed
 	// usually by increasing the fee of the previous transcation to speed up confirmation
-	ATIME_HANDLE_UNCONFIRMED = 60 * time.Minute
+	DEFAULT_ATIME_HANDLE_UNCONFIRMED = 60 * time.Minute
 )
 
 // AttestationService structure
@@ -78,8 +78,13 @@ type AttestService struct {
 	isRegtest   bool
 }
 
-var attestDelay time.Duration // delay between states
-var confirmTime time.Time     // delay untill confirmation
+var (
+	atimeNewAttestation    time.Duration // delay between attestations - DEFAULTS to DEFAULT_ATIME_NEW_ATTESTATION
+	atimeHandleUnconfirmed time.Duration // delay until handling unconfirmed - DEFAULTS to DEFAULT_ATIME_HANDLE_UNCONFIRMED
+
+	attestDelay time.Duration // handle state delay
+	confirmTime time.Time     // handle confirmation timing
+)
 
 var poller *zmq.Poller // poller to add all subscriber/publisher sockets
 
@@ -94,6 +99,16 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Se
 
 	// initiate attestation client
 	attester := NewAttestClient(config)
+
+	// initiate timing schedules
+	atimeNewAttestation = DEFAULT_ATIME_NEW_ATTESTATION
+	if config.TimingConfig().NewAttestationMinutes > 0 {
+		atimeNewAttestation = time.Duration(config.TimingConfig().NewAttestationMinutes) * time.Minute
+	}
+	atimeHandleUnconfirmed = DEFAULT_ATIME_HANDLE_UNCONFIRMED
+	if config.TimingConfig().HandleUnconfirmedMinutes > 0 {
+		atimeHandleUnconfirmed = time.Duration(config.TimingConfig().HandleUnconfirmedMinutes) * time.Minute
+	}
 
 	// Initialise publisher for sending new hashes and txs
 	// and subscribers to receive sig responses
@@ -237,8 +252,8 @@ func (s *AttestService) doStateNextCommitment() {
 	log.Printf("********** received commitment hash: %s\n", latestCommitmentHash.String())
 	if latestCommitmentHash == s.attestation.CommitmentHash() {
 		log.Printf("********** Skipping attestation - Client commitment already attested")
-		attestDelay = ATIME_NEW_ATTESTATION // sleep
-		return                              // will remain at the same state
+		attestDelay = atimeNewAttestation // sleep
+		return                            // will remain at the same state
 	}
 
 	// publish new commitment hash to clients
@@ -379,7 +394,7 @@ func (s *AttestService) doStateAwaitConfirmation() {
 
 	// if attestation has been unconfirmed for too long
 	// set to handle unconfirmed state
-	if time.Since(confirmTime) > ATIME_HANDLE_UNCONFIRMED {
+	if time.Since(confirmTime) > atimeHandleUnconfirmed {
 		s.state = ASTATE_HANDLE_UNCONFIRMED
 		return
 	}
@@ -405,8 +420,8 @@ func (s *AttestService) doStateAwaitConfirmation() {
 		confirmedHash := s.attestation.CommitmentHash()
 		s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) //update clients
 
-		s.state = ASTATE_NEXT_COMMITMENT                              // update attestation state
-		attestDelay = ATIME_NEW_ATTESTATION - time.Since(confirmTime) // add new attestation waiting time - subtract waiting time
+		s.state = ASTATE_NEXT_COMMITMENT                            // update attestation state
+		attestDelay = atimeNewAttestation - time.Since(confirmTime) // add new attestation waiting time - subtract waiting time
 	} else {
 		attestDelay = ATIME_CONFIRMATION // add confirmation waiting time
 	}
