@@ -75,7 +75,11 @@ func init() {
 		if confErr != nil {
 			log.Fatal(confErr)
 		}
-		config = confpkg.NewConfig(confFile)
+		var configErr error
+		config, configErr = confpkg.NewConfig(confFile)
+		if configErr != nil {
+			log.Fatal(configErr)
+		}
 		pk0 = test.PRIV_CLIENT
 		script = test.SCRIPT
 	} else {
@@ -83,7 +87,11 @@ func init() {
 		if confErr != nil {
 			log.Fatal(confErr)
 		}
-		config = confpkg.NewConfig(confFile)
+		var configErr error
+		config, configErr = confpkg.NewConfig(confFile)
+		if configErr != nil {
+			log.Fatal(configErr)
+		}
 	}
 
 	config.SetInitTX(tx0)

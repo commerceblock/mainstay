@@ -81,7 +81,10 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	}
 
 	// if not a regtest, then unittest
-	config := confpkg.NewConfig(testConf)
+	config, configErr := confpkg.NewConfig(testConf)
+	if configErr != nil {
+		log.Fatal(configErr)
+	}
 	oceanClient := confpkg.NewClientFromConfig("ocean", true, testConf)
 
 	// Get first unspent as initial TX for attestation chain

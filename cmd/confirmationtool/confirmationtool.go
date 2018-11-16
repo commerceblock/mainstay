@@ -54,7 +54,11 @@ func init() {
 	if confErr != nil {
 		log.Fatal(confErr)
 	}
-	mainConfig = config.NewConfig(confFile)
+	var mainConfigErr error
+	mainConfig, mainConfigErr = config.NewConfig(confFile)
+	if mainConfigErr != nil {
+		log.Fatal(mainConfigErr)
+	}
 	oceanClient = config.NewClientFromConfig(SIDE_NAME, false, confFile)
 }
 

@@ -96,7 +96,7 @@ func (c *Config) SetMultisigScript(script string) {
 }
 
 // Return Config instance
-func NewConfig(customConf ...[]byte) *Config {
+func NewConfig(customConf ...[]byte) (*Config, error) {
 	var conf []byte
 	if len(customConf) > 0 { //custom config provided
 		conf = customConf[0]
@@ -104,36 +104,36 @@ func NewConfig(customConf ...[]byte) *Config {
 		var confErr error
 		conf, confErr = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
 		if confErr != nil {
-			log.Fatal(confErr)
+			return nil, confErr
 		}
 	}
 
 	// get main rpc client
 	mainClient, rpcErr := GetRPC(MAIN_CHAIN_NAME, conf)
 	if rpcErr != nil {
-		log.Fatal(rpcErr)
+		return nil, rpcErr
 	}
 
 	// get main rpc client chain parameters
 	mainClientCfg, paramsErr := GetChainCfgParams(MAIN_CHAIN_NAME, conf)
 	if paramsErr != nil {
-		log.Fatal(paramsErr)
+		return nil, paramsErr
 	}
 
 	// get multisig node hosts
 	multisigNodesVal, multisigErr := GetParamFromConf(MISC_NAME, MISC_MULTISIGNODES_NAME, conf)
 	if multisigErr != nil {
-		log.Fatal(multisigErr)
+		return nil, multisigErr
 	}
 	multisignodes := strings.Split(multisigNodesVal, ",")
 
 	// get db connectivity details
 	dbConnectivity, dbErr := GetDbConfig(conf)
 	if dbErr != nil {
-		log.Fatal(dbErr)
+		return nil, dbErr
 	}
 
-	return &Config{mainClient, mainClientCfg, multisignodes, "", "", "", dbConnectivity}
+	return &Config{mainClient, mainClientCfg, multisignodes, "", "", "", dbConnectivity}, nil
 }
 
 // Return SidechainClient depending on whether unit test config or actual config

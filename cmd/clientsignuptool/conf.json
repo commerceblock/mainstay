@@ -5,9 +5,6 @@
         "rpcpass": "",
         "chain": ""
     },
-    "misc": {
-        "multisignodes": ""
-    },
     "db": {
         "user":"",
         "password":"",

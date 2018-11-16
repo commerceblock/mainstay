@@ -4,15 +4,5 @@
         "rpcuser": "MAINSTAY_CLIENT_USER",
         "rpcpass": "MAINSTAY_CLIENT_PASS",
         "chain": "testnet"
-    },
-    "misc": {
-        "multisignodes": ""
-    },
-    "db": {
-        "user":"",
-        "password":"",
-        "host":"",
-        "port":"",
-        "name":""
     }
 }

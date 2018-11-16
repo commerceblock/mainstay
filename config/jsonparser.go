@@ -9,7 +9,7 @@ import (
 // Handle reading conf files and parsing configuration options
 
 const (
-	ERROR_CONFIG_NAME_NOT_FOUND  = "config client name not found"
+	ERROR_CONFIG_NAME_NOT_FOUND  = "config name not found"
 	ERROR_CONFIG_VALUE_NOT_FOUND = "config value not found"
 )
 

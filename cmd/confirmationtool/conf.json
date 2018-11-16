@@ -10,12 +10,5 @@
         "rpcuser": "MAINSTAY_OCEAN_USER",
         "rpcpass": "MAINSTAY_OCEAN_PASS",
         "chain": "main"
-    },
-    "db": {
-        "user":"",
-        "password":"",
-        "host":"",
-        "port":"",
-        "name":""
     }
 }

@@ -44,7 +44,11 @@ func init() {
 		mainConfig = test.Config
 		log.Printf("Running regtest mode with -tx=%s\n", mainConfig.InitTX())
 	} else {
-		mainConfig = config.NewConfig()
+		var mainConfigErr error
+		mainConfig, mainConfigErr = config.NewConfig()
+		if mainConfigErr != nil {
+			log.Fatal(mainConfigErr)
+		}
 		mainConfig.SetInitTX(tx0)
 		mainConfig.SetInitPK(pk0)
 		mainConfig.SetMultisigScript(script)

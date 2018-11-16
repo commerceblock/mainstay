@@ -28,7 +28,11 @@ func init() {
 	if confErr != nil {
 		log.Fatal(confErr)
 	}
-	mainConfig = config.NewConfig(confFile)
+	var mainConfigErr error
+	mainConfig, mainConfigErr = config.NewConfig(confFile)
+	if mainConfigErr != nil {
+		log.Fatal(mainConfigErr)
+	}
 }
 
 // read client details and get client position
