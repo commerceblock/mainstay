@@ -8,6 +8,9 @@ import (
 )
 
 // DbFake struct
+// Implements all the high level Db methods used by attestation server
+// Minimizing as much as possible reliance to mongo and testing as much
+// as possible without the need for a proper mongo mock for testing
 type DbFake struct {
 	attestations      []models.Attestation
 	attestationsInfo  []models.AttestationInfo

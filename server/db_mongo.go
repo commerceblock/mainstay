@@ -84,9 +84,14 @@ func dbConnect(ctx context.Context, dbConnectivity config.DbConfig) (*mongo.Data
 
 // DbMongo struct
 type DbMongo struct {
-	ctx            context.Context
+	// context required by mongo interface
+	ctx context.Context
+
+	// database connectivity config
 	dbConnectivity config.DbConfig
-	db             *mongo.Database
+
+	// mongo interface connection
+	db *mongo.Database
 }
 
 // Return new DbMongo instance

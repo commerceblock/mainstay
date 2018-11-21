@@ -22,15 +22,24 @@ import (
 // Handles generating staychain next address and next transaction
 // and verifying that the correct chain of transactions is maintained
 type AttestClient struct {
-	MainClient   *rpcclient.Client
+	// rpc client connection to main bitcoin client
+	MainClient *rpcclient.Client
+
+	// chain config for main bitcoin client
 	MainChainCfg *chaincfg.Params
-	Fees         AttestFees
-	pk0          string
-	txid0        string
-	script0      string
-	pubkeys      []*btcec.PublicKey
-	numOfSigs    int
-	WalletPriv   *btcutil.WIF
+
+	// fees interface for getting latest / bumping fees
+	Fees AttestFees
+
+	// init configuration parameters
+	// store information on initial keys and txid
+	// required to set chain start and do key tweaking
+	pk0        string
+	txid0      string
+	script0    string
+	pubkeys    []*btcec.PublicKey
+	numOfSigs  int
+	WalletPriv *btcutil.WIF
 }
 
 // NewAttestClient returns a pointer to a new AttestClient instance

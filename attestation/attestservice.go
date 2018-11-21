@@ -65,13 +65,28 @@ const (
 // Encapsulates Attest Client and connectivity
 // to a Server for updates and requests
 type AttestService struct {
-	ctx         context.Context
-	wg          *sync.WaitGroup
-	config      *confpkg.Config
-	attester    *AttestClient
-	server      *server.Server
-	publisher   *messengers.PublisherZmq
+	// context required for safe service cancellation
+	ctx context.Context
+
+	// waitgroup required to maintain all goroutines
+	wg *sync.WaitGroup
+
+	// service config
+	config *confpkg.Config
+
+	// client interface for attestation creation and key tweaking
+	attester *AttestClient
+
+	// server connection for querying and/or storing information
+	server *server.Server
+
+	// zmq publisher interface used to publish hashes and txes to signers
+	publisher *messengers.PublisherZmq
+
+	// zmq subscribe interface to signers to receive tx signatures
 	subscribers []*messengers.SubscriberZmq
+
+	// mainstain current attestation state, model and error state
 	state       AttestationState
 	attestation *models.Attestation
 	errorState  error

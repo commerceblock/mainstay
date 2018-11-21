@@ -18,6 +18,7 @@ const (
 // Stores information on the latest attestation and commitment
 // Methods to get latest state by attestation service
 type Server struct {
+	// underlying database interface
 	dbInterface Db
 }
 

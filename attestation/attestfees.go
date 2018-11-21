@@ -32,10 +32,17 @@ const (
 
 // AttestFees struct
 type AttestFees struct {
-	minFee       int
-	maxFee       int
+	// minimum fee allowed for attestation transactions
+	minFee int
+
+	// maximum fee allowed for attestation transactions
+	maxFee int
+
+	// constant fee increment on fee bumping case
 	feeIncrement int
-	currentFee   int
+
+	// current fee used for attestation transactions
+	currentFee int
 }
 
 // New AttestFees instance
