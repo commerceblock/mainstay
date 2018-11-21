@@ -271,29 +271,29 @@ func TestMerkleProof_ProveCommitment(t *testing.T) {
 
 	// test proving merkle proof with complete ops and partial ops list
 	proof0 := buildMerkleProof(0, merkleTree)
-	assert.Equal(t, true, proveMerkleProof(proof0))
+	assert.Equal(t, true, ProveMerkleProof(proof0))
 	proof0.Ops = proof0.Ops[1:]
-	assert.Equal(t, false, proveMerkleProof(proof0))
+	assert.Equal(t, false, ProveMerkleProof(proof0))
 
 	proof1 := buildMerkleProof(1, merkleTree)
-	assert.Equal(t, true, proveMerkleProof(proof1))
+	assert.Equal(t, true, ProveMerkleProof(proof1))
 	proof0.Ops = proof0.Ops[1:]
-	assert.Equal(t, false, proveMerkleProof(proof0))
+	assert.Equal(t, false, ProveMerkleProof(proof0))
 
 	proof2 := buildMerkleProof(2, merkleTree)
-	assert.Equal(t, true, proveMerkleProof(proof2))
+	assert.Equal(t, true, ProveMerkleProof(proof2))
 	proof2.Ops = proof2.Ops[1:]
-	assert.Equal(t, false, proveMerkleProof(proof2))
+	assert.Equal(t, false, ProveMerkleProof(proof2))
 
 	proof3 := buildMerkleProof(3, merkleTree)
-	assert.Equal(t, true, proveMerkleProof(proof3))
+	assert.Equal(t, true, ProveMerkleProof(proof3))
 	proof3.Ops = proof3.Ops[1:]
-	assert.Equal(t, false, proveMerkleProof(proof3))
+	assert.Equal(t, false, ProveMerkleProof(proof3))
 
 	proof4 := buildMerkleProof(4, merkleTree)
-	assert.Equal(t, true, proveMerkleProof(proof4))
+	assert.Equal(t, true, ProveMerkleProof(proof4))
 	proof4.Ops = proof0.Ops[1:]
-	assert.Equal(t, false, proveMerkleProof(proof4))
+	assert.Equal(t, false, ProveMerkleProof(proof4))
 }
 
 // Test build merkle proof and verify for 3 commitment tree

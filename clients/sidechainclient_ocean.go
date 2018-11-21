@@ -3,6 +3,7 @@ package clients
 import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
+	"github.com/btcsuite/btcd/wire"
 )
 
 // SidechainClientOcean structure
@@ -56,6 +57,15 @@ func (o *SidechainClientOcean) GetBlockHash(height int64) (*chainhash.Hash, erro
 		return nil, err
 	}
 	return hash, nil
+}
+
+// GetBlock Ocean implementation using underlying rpc client
+func (o *SidechainClientOcean) GetBlock(hash *chainhash.Hash) (*wire.MsgBlock, error) {
+	block, err := o.rpc.GetBlock(hash)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
 }
 
 // GetTxBlockHash Ocean implementation using underlying rpc client

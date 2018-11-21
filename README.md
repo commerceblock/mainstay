@@ -49,8 +49,13 @@ For auth-token generation only, token generator tool `cmd/tokengeneratortool` ca
 
 The confirmation tool `cmd/confirmationtool` can be used to confirm all the attestations of a client Ocean-type network to Bitcoin and wait for any new attestations that will be happening.
 
-Running this tool will require a full Bitcoin testnet node and a full Ocean node. Connection details for these should be included in `cmd/confirmationtool/conf.json`. To run this tool you need to first fetch the `TX_HASH` from the `attestationhash` field in the Ocean genesis block and then run:
+Running this tool will require a full Bitcoin testnet node and a full Ocean node. Connection details for these should be included in `cmd/confirmationtool/conf.json`.
 
-`go run cmd/confirmationtool/confirmationtool.go -tx TX_HASH`
+The `API_HOST` field should be set to the mainstay URL. This can be updated in `cmd/confirmationtool/confirmationtool.go`.
+
+To run this tool you need to first fetch the `TX_HASH` from the `attestationhash` field in the Ocean genesis block, as well as the publicly available `REDEEM_SCRIPT` of the attestation service multisig. The tool can also be started with any other `TX_HASH` attestation found in the mainstay website. A client should use his designated `CLIENT_POSITION` that was assigned during signup and run the tool using:
+
+`go run cmd/confirmationtool/confirmationtool.go
+-tx TX_HASH -script REDEEM_SCRIPT -position CLIENT_POSITION`
 
 This will initially take some time to sync up all the attestations that have been committed so far and then will wait for any new attestations. Logging is displayed for each attestation and for full details the `-detailed` flag can be used.

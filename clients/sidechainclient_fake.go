@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 )
 
 // SidechainClientFake structure
@@ -103,6 +104,11 @@ func (f *SidechainClientFake) GetBlockHash(height int64) (*chainhash.Hash, error
 	}
 
 	return hash, nil
+}
+
+// GetBlockHash not implemented
+func (f *SidechainClientFake) GetBlock(hash *chainhash.Hash) (*wire.MsgBlock, error) {
+	return nil, nil
 }
 
 // GetTxBlockHash returns block hash of fake block for fake tx

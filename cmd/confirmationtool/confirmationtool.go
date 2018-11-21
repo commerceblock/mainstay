@@ -5,49 +5,40 @@ import (
 	"flag"
 	"log"
 	"os"
-	"time"
 
 	"mainstay/clients"
 	"mainstay/config"
-	"mainstay/crypto"
 	"mainstay/staychain"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcutil"
 )
 
 // Use staychain package to read attestations, verify and print information
 
-const MAIN_NAME = "bitcoin"
-const SIDE_NAME = "clientchain"
+const CLIENT_CHAIN_NAME = "clientchain"
 const CONF_PATH = "/src/mainstay/cmd/confirmationtool/conf.json"
-const FUNDING_TX = "bf41c0da8047b1416d5ca680e2643967b27537cdf9a41527034698c336b55313"
-const FIRST_TX = "902fd11c3166eb07864a7b8ed0a3a0fbda0f4c26423b8eee4dd94420cfbae40e"
+const API_HOST = "http://localhost:8080" // to replace with actual mainstay url
 
 var (
 	tx          string
-	pk          string
-	pkWIF       *btcutil.WIF
+	script      string
+	position    int
 	showDetails bool
 	mainConfig  *config.Config
-	oceanClient clients.SidechainClient
+	client      clients.SidechainClient
 )
 
 // init
 func init() {
 	flag.BoolVar(&showDetails, "detailed", false, "Detailed information on attestation transaction")
 	flag.StringVar(&tx, "tx", "", "Tx id from which to start searching the staychain")
-	flag.StringVar(&pk, "pk", "", "Private key for genesis attestation transaction")
+	flag.StringVar(&script, "script", "", "Redeem script of multisig used by attestaton service")
+	flag.IntVar(&position, "position", -1, "Client merkle commitment position")
 	flag.Parse()
-	if tx == "" {
-		tx = FUNDING_TX
-	}
-	if pk != "" {
-		var errPkWIF error
-		pkWIF, errPkWIF = crypto.GetWalletPrivKey(pk)
-		if errPkWIF != nil {
-			log.Fatal(errPkWIF)
-		}
+
+	if tx == "" || script == "" || position == -1 {
+		flag.PrintDefaults()
+		log.Fatalf("Need to provide all -tx, -script and -position argument.")
 	}
 
 	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
@@ -59,24 +50,18 @@ func init() {
 	if mainConfigErr != nil {
 		log.Fatal(mainConfigErr)
 	}
-	oceanClient = config.NewClientFromConfig(SIDE_NAME, false, confFile)
+	client = config.NewClientFromConfig(CLIENT_CHAIN_NAME, false, confFile)
 }
 
 // main method
 func main() {
 	defer mainConfig.MainClient().Shutdown()
-	defer oceanClient.Close()
+	defer client.Close()
 
 	txraw := getRawTxFromHash(tx)
-	tx0raw := getRawTxFromHash(FIRST_TX)
-
 	fetcher := staychain.NewChainFetcher(mainConfig.MainClient(), txraw)
 	chain := staychain.NewChain(fetcher)
-	verifier := staychain.NewChainVerifier(mainConfig.MainChainCfg(), oceanClient, tx0raw)
-
-	time.AfterFunc(5*time.Minute, func() {
-		log.Println("Exit: ", chain.Close())
-	})
+	verifier := staychain.NewChainVerifier(mainConfig.MainChainCfg(), client, position, script, API_HOST)
 
 	// await new attestations and verify
 	for transaction := range chain.Updates() {
@@ -87,9 +72,6 @@ func main() {
 			log.Fatal(err)
 		} else {
 			printAttestation(transaction, info)
-			if pkWIF != nil {
-				printDerivedKey(info)
-			}
 		}
 	}
 }
@@ -115,16 +97,13 @@ func printAttestation(tx staychain.Tx, info staychain.ChainVerifierInfo) {
 	if showDetails {
 		log.Printf("%+v\n", tx)
 	} else {
-		log.Printf("%s blockhash: %s\n", MAIN_NAME, tx.BlockHash)
+		log.Printf("BITCOIN blockhash: %s\n", tx.BlockHash)
 	}
-	log.Printf("%s blockhash: %s\n", SIDE_NAME, info.Hash().String())
-	log.Printf("%s blockheight: %d\n", SIDE_NAME, info.Height())
+	if info != (staychain.ChainVerifierInfo{}) {
+		log.Printf("CLIENT blockhash: %s\n", info.Hash().String())
+		log.Printf("CLIENT blockheight: %d\n", info.Height())
+	}
 	log.Printf("\n")
-}
-
-// print derived private key for attestation
-func printDerivedKey(info staychain.ChainVerifierInfo) {
-	tweak_hash := info.Hash()
-	tweaked_priv, _ := crypto.TweakPrivKey(pkWIF, tweak_hash.CloneBytes(), mainConfig.MainChainCfg())
-	log.Printf("%s privkey: %s\n", MAIN_NAME, tweaked_priv.String())
+	log.Printf("\n")
+	log.Printf("\n")
 }

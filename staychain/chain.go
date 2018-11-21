@@ -48,7 +48,9 @@ func (c *Chain) Close() error {
 
 // Fetch chain attestations using c.fetcher and add to updates
 func (c *Chain) fetch() {
-	var pending []Tx // appended by fetch; consumed by send
+	var pending []Tx                              // appended by fetch; consumed by send
+	pending = append(pending, c.fetcher.latestTx) // hacky - don't skip first tx
+
 	var next time.Time
 	var err error
 	for {
