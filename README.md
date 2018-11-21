@@ -43,6 +43,8 @@ The client signup tool `cmd/clientsignuptool` is used by the maintainer of the a
 
 The tool requires a connection to the DB used by the service with appropriate permissions.
 
+For auth-token generation only, token generator tool `cmd/tokengeneratortool` can be used.
+
 #### Client Confirmation Tool
 
 The confirmation tool `cmd/confirmationtool` can be used to confirm all the attestations of a client Ocean-type network to Bitcoin and wait for any new attestations that will be happening.
