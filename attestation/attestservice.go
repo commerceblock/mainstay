@@ -156,7 +156,7 @@ func (s *AttestService) Run() {
 
 			// for testing - overwrite delay
 			if s.isRegtest {
-				attestDelay = 5 * time.Second
+				attestDelay = 10 * time.Second
 			}
 
 			log.Printf("********** sleeping for: %s ...\n", attestDelay.String())

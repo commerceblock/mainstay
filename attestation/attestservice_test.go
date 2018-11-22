@@ -33,6 +33,7 @@ func TestAttestService_Regular(t *testing.T) {
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	// Test initial state of attest service
 	assert.Equal(t, &models.Attestation{Txid: chainhash.Hash{}, Tx: wire.MsgTx{}, Confirmed: false},
@@ -209,6 +210,7 @@ func TestAttestService_Unconfirmed(t *testing.T) {
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	attestService.attester.Fees.ResetFee(true)
 
@@ -330,6 +332,7 @@ func TestAttestService_FailureInit(t *testing.T) {
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	// Test initial state of attest service
 	assert.Equal(t, &models.Attestation{Txid: chainhash.Hash{}, Tx: wire.MsgTx{}, Confirmed: false},
@@ -346,6 +349,8 @@ func TestAttestService_FailureInit(t *testing.T) {
 
 	// failure - re init attestation service with restart
 	attestService = NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
+
 	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT again
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
@@ -377,6 +382,7 @@ func TestAttestService_FailureNextCommitment(t *testing.T) {
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	// Test initial state of attest service
 	assert.Equal(t, &models.Attestation{Txid: chainhash.Hash{}, Tx: wire.MsgTx{}, Confirmed: false},
@@ -403,6 +409,8 @@ func TestAttestService_FailureNextCommitment(t *testing.T) {
 
 	// failure - re init attestation service
 	attestService = NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
+
 	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
 	attestService.doAttestation()
 	assert.Equal(t, ASTATE_NEXT_COMMITMENT, attestService.state)
@@ -439,6 +447,7 @@ func TestAttestService_FailureNewAttestation(t *testing.T) {
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	// Test initial state of attest service
 	assert.Equal(t, &models.Attestation{Txid: chainhash.Hash{}, Tx: wire.MsgTx{}, Confirmed: false},
@@ -473,6 +482,7 @@ func TestAttestService_FailureNewAttestation(t *testing.T) {
 
 	// failure - re init attestation service
 	attestService = NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
 	attestService.doAttestation()
@@ -520,6 +530,7 @@ func TestAttestService_FailureSignAttestation(t *testing.T) {
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	// Test initial state of attest service
 	assert.Equal(t, &models.Attestation{Txid: chainhash.Hash{}, Tx: wire.MsgTx{}, Confirmed: false},
@@ -559,6 +570,7 @@ func TestAttestService_FailureSignAttestation(t *testing.T) {
 
 	// failure - re init attestation service
 	attestService = NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
 	attestService.doAttestation()
@@ -611,6 +623,7 @@ func TestAttestService_FailurePreSendStore(t *testing.T) {
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	// Test initial state of attest service
 	assert.Equal(t, &models.Attestation{Txid: chainhash.Hash{}, Tx: wire.MsgTx{}, Confirmed: false},
@@ -654,6 +667,7 @@ func TestAttestService_FailurePreSendStore(t *testing.T) {
 
 	// failure - re init attestation service
 	attestService = NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
 	attestService.doAttestation()
@@ -713,6 +727,7 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 	prevAttestation := models.NewAttestationDefault()
 	for i := range []int{1, 2, 3} {
 		attestService := NewAttestService(nil, nil, server, config, true)
+		attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 		// Test initial state of attest service
 		assert.Equal(t, &models.Attestation{Txid: chainhash.Hash{}, Tx: wire.MsgTx{}, Confirmed: false},
@@ -761,6 +776,7 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 
 		// failure - re init attestation service
 		attestService = NewAttestService(nil, nil, server, config, true)
+		attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 		// Test ASTATE_INIT -> ASTATE_AWAIT_CONFIRMATION
 		attestService.doAttestation()
@@ -816,6 +832,7 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	// Test initial state of attest service
 	assert.Equal(t, &models.Attestation{Txid: chainhash.Hash{}, Tx: wire.MsgTx{}, Confirmed: false},
@@ -879,6 +896,7 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 
 	// failure - re init attestation service
 	attestService = NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
 	attestService.doAttestation()
@@ -894,6 +912,7 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 
 	// failure again and check nothing has changed
 	attestService = NewAttestService(nil, nil, server, config, true)
+	attestService.attester = NewAttestClient(config, true) // set isSigner flag
 
 	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
 	attestService.doAttestation()
@@ -938,6 +957,7 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 	prevAttestation := models.NewAttestationDefault()
 	for i := range []int{1, 2, 3} {
 		attestService := NewAttestService(nil, nil, server, config, true)
+		attestService.attester = NewAttestClient(config, true) // set isSigner flag
 		attestService.attester.Fees.ResetFee(true)
 
 		// Test initial state of attest service
@@ -1012,6 +1032,7 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 
 		// failure - re init attestation service with restart
 		attestService = NewAttestService(nil, nil, server, config, true)
+		attestService.attester = NewAttestClient(config, true) // set isSigner flag
 		attestService.attester.Fees.ResetFee(true)
 
 		// Test ASTATE_INIT -> ASTATE_AWAIT_CONFIRMATION
@@ -1064,6 +1085,7 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 
 		// failure - re init attestation service with restart
 		attestService = NewAttestService(nil, nil, server, config, true)
+		attestService.attester = NewAttestClient(config, true) // set isSigner flag
 		attestService.attester.Fees.ResetFee(true)
 
 		// Test ASTATE_INIT -> ASTATE_AWAIT_CONFIRMATION

@@ -97,7 +97,7 @@ func init() {
 	config.SetInitTX(tx0)
 	config.SetInitPK(pk0)
 	config.SetMultisigScript(script)
-	client = attestation.NewAttestClient(config)
+	client = attestation.NewAttestClient(config, true) // isSigner flag set
 
 	// comms setup
 	poller = zmq.NewPoller()
@@ -145,12 +145,6 @@ func verifyTx(tx wire.MsgTx) bool {
 	}
 
 	nextAddr, _ := client.GetNextAttestationAddr(nextKey, nextHash)
-
-	// skipping this -- too slow
-	// importErr := client.ImportAttestationAddr(nextAddr)
-	// if importErr != nil {
-	// 	log.Fatal(importErr)
-	// }
 
 	// exactr addr from unsigned tx and verify addresses match
 	_, txScriptAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.TxOut[0].PkScript, client.MainChainCfg)

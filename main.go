@@ -17,7 +17,6 @@ import (
 
 var (
 	tx0        string
-	pk0        string
 	script     string
 	isRegtest  bool
 	mainConfig *config.Config
@@ -26,13 +25,12 @@ var (
 func parseFlags() {
 	flag.BoolVar(&isRegtest, "regtest", false, "Use regtest wallet configuration instead of user wallet")
 	flag.StringVar(&tx0, "tx", "", "Tx id for genesis attestation transaction")
-	flag.StringVar(&pk0, "pk", "", "Main client pk for genesis attestation transaction")
 	flag.StringVar(&script, "script", "", "Redeem script in case multisig is used")
 	flag.Parse()
 
-	if (tx0 == "" || pk0 == "") && !isRegtest {
+	if (tx0 == "" || script == "") && !isRegtest {
 		flag.PrintDefaults()
-		log.Fatalf("Need to provide both -tx and -pk argument. To use test configuration set the -regtest flag.")
+		log.Fatalf("Need to provide both -tx and -script argument. To use test configuration set the -regtest flag.")
 	}
 }
 
@@ -50,7 +48,6 @@ func init() {
 			log.Fatal(mainConfigErr)
 		}
 		mainConfig.SetInitTX(tx0)
-		mainConfig.SetInitPK(pk0)
 		mainConfig.SetMultisigScript(script)
 	}
 }

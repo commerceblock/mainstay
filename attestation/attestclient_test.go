@@ -18,7 +18,7 @@ func TestAttestClient(t *testing.T) {
 	// TEST INIT
 	test := test.NewTest(false, false)
 	sideClientFake := test.OceanClient.(*clients.SidechainClientFake)
-	client := NewAttestClient(test.Config)
+	client := NewAttestClient(test.Config, true) // set isSigner flag
 	txs := []string{client.txid0}
 
 	// Find unspent and verify is it the genesis transaction
@@ -47,7 +47,8 @@ func TestAttestClient(t *testing.T) {
 		addr, script := client.GetNextAttestationAddr(key, oceanCommitmentHash)
 
 		// test GetKeyAndScriptFromHash returns the same results
-		keyTest, scriptTest := client.GetKeyAndScriptFromHash(oceanCommitmentHash)
+		keyTest := client.GetKeyFromHash(oceanCommitmentHash)
+		scriptTest := client.GetScriptFromHash(oceanCommitmentHash)
 		assert.Equal(t, *key, keyTest)
 		assert.Equal(t, script, scriptTest)
 
@@ -123,7 +124,7 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 	// TEST INIT
 	test := test.NewTest(false, false)
 	sideClientFake := test.OceanClient.(*clients.SidechainClientFake)
-	client := NewAttestClient(test.Config)
+	client := NewAttestClient(test.Config, true) // set isSigner flag
 	txs := []string{client.txid0}
 
 	// Find unspent and verify is it the genesis transaction
@@ -152,7 +153,8 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		addr, script := client.GetNextAttestationAddr(key, oceanCommitmentHash)
 
 		// test GetKeyAndScriptFromHash returns the same results
-		keyTest, scriptTest := client.GetKeyAndScriptFromHash(oceanCommitmentHash)
+		keyTest := client.GetKeyFromHash(oceanCommitmentHash)
+		scriptTest := client.GetScriptFromHash(oceanCommitmentHash)
 		assert.Equal(t, *key, keyTest)
 		assert.Equal(t, script, scriptTest)
 
