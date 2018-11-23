@@ -89,7 +89,7 @@ func TestConfigErrors(t *testing.T) {
     }
     `)
 	_, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(BAD_DATA_CLIENT_CHAIN), configErr)
+	assert.Equal(t, nil, configErr)
 
 	testConf = []byte(`
     {

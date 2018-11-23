@@ -106,7 +106,7 @@ func GetChainCfgParams(name string, conf []byte) (*chaincfg.Params, error) {
 	} else if chain == "main" {
 		return &chaincfg.MainNetParams, nil
 	}
-	return nil, errors.New(BAD_DATA_CLIENT_CHAIN)
+	return nil, nil
 }
 
 // Get parameter from conf file argument using base name and argument name

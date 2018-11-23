@@ -12,6 +12,8 @@ The mainstay repository is an application that implements the [Mainstay protocol
 
 - Install go and the attestation service by following `scripts/build.sh`
 
+- Setup up database collections and roles using `scripts/db-init.js`
+
 - Regtest Demo
     - Start the ocean-demo `python ocean-demo/PROTOCOLS/demo.py`
     - Run `mainstay -regtest`

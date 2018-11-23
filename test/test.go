@@ -36,11 +36,11 @@ var testConf = []byte(`
         "multisignodes": "127.0.0.1:5001"
     },
     "db": {
-        "user":"",
-        "password":"",
+        "user":"serviceUser",
+        "password":"servicePass",
         "host":"localhost",
         "port":"27017",
-        "name":"mainstay"
+        "name":"mainstayX"
     }
 }
 `)
