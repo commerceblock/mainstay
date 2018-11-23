@@ -64,8 +64,8 @@ func (z AttestSignerZmq) SendNewHash(hash []byte) {
 }
 
 // Use zmq publisher to send new tx
-func (z AttestSignerZmq) SendNewTx(hash []byte) {
-	z.publisher.SendMessage(hash, TOPIC_NEW_TX)
+func (z AttestSignerZmq) SendNewTx(tx []byte) {
+	z.publisher.SendMessage(tx, TOPIC_NEW_TX)
 }
 
 // Listen to zmq subscribers to receive tx signatures

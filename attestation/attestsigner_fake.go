@@ -5,38 +5,71 @@
 package attestation
 
 import (
+	"bytes"
+
 	confpkg "mainstay/config"
+	"mainstay/crypto"
+
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 )
 
 // AttestSignerFake struct
 //
 // Implements AttestSigner interface and provides
 // mock functionality for receiving sigs from signers
-type AttestSignerFake struct{}
+type AttestSignerFake struct {
+	client *AttestClient
+}
+
+// store latest hash and transaction
+var signerTxBytes []byte
+var signerConfirmedHashBytes []byte
+var signerNewHashBytes []byte
 
 // Return new AttestSignerFake instance
 func NewAttestSignerFake(config *confpkg.Config) AttestSignerFake {
-	return AttestSignerFake{}
+
+	client := NewAttestClient(config, true) // isSigner flag set to allow signing transactions
+
+	return AttestSignerFake{client: client}
 }
 
 // Store received confirmed hash
 func (f AttestSignerFake) SendConfirmedHash(hash []byte) {
-	return
+	signerConfirmedHashBytes = hash
 }
 
 // Store received new hash
 func (f AttestSignerFake) SendNewHash(hash []byte) {
-	return
+	signerNewHashBytes = hash
 }
 
 // Store received new tx
-func (f AttestSignerFake) SendNewTx(hash []byte) {
-	return
+func (f AttestSignerFake) SendNewTx(tx []byte) {
+	signerTxBytes = tx
 }
 
 // Return signatures for received tx and hashes
 func (f AttestSignerFake) GetSigs() [][]byte {
 	var sigs [][]byte
 
+	var msgTx wire.MsgTx
+	if err := msgTx.Deserialize(bytes.NewReader(signerTxBytes)); err != nil {
+		return sigs
+	}
+	hash, hashErr := chainhash.NewHash(signerConfirmedHashBytes)
+	if hashErr != nil {
+		return sigs
+	}
+	signedMsgTx, _, signErr := f.client.SignTransaction(*hash, msgTx)
+	if signErr != nil {
+		return sigs
+	}
+	scriptSig := signedMsgTx.TxIn[0].SignatureScript
+	if len(scriptSig) > 0 {
+		sig, _ := crypto.ParseScriptSig(scriptSig)
+		sigs = append(sigs, sig[0])
+	}
 	return sigs
 }

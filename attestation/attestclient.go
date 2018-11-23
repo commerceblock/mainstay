@@ -22,9 +22,22 @@ import (
 )
 
 // AttestClient structure
-// Maintains RPC connections to main chain client
-// Handles generating staychain next address and next transaction
-// and verifying that the correct chain of transactions is maintained
+//
+// This struct maintains rpc connection to the main bitcoin client
+// It implements all the functionality required to generate new
+// attestation addresses and new attestation transactions, as well
+// as to combine signatures and send transaction to bitcoin network
+//
+// The struct stores initial configuration for txid and redeemscript
+// It parses the initial script to extract initial pubkeys and uses
+// these to generate new addresses from client commitments
+//
+// The struct includes an optional flag 'signerFlag'
+// If this is set to true this client also stores a private key
+// and can sign transactions. This option is implemented by
+// external tools used to sign transactions or in unit-tests
+// In the case that no multisig is used, client must be a signer
+//
 type AttestClient struct {
 	// rpc client connection to main bitcoin client
 	MainClient *rpcclient.Client
@@ -60,6 +73,7 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		isSigner = signerFlag[0]
 	}
 
+	multisig := config.MultisigScript()
 	var pkWif *btcutil.WIF
 	if isSigner { // signer case import private key
 		// Get initial private key from initial funding transaction of main client
@@ -75,9 +89,10 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 			log.Printf("Could not import initial private key %s\n", pk)
 			log.Fatal(importErr)
 		}
+	} else if multisig == "" {
+		log.Fatal("No multisig used - Client must be signer and include private key")
 	}
 
-	multisig := config.MultisigScript()
 	if multisig != "" { // if multisig attestation, parse pubkeys
 		pubkeys, numOfSigs := crypto.ParseRedeemScript(config.MultisigScript())
 
