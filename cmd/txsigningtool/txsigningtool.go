@@ -105,8 +105,8 @@ func init() {
 
 	// comms setup
 	poller = zmq.NewPoller()
-	topics := []string{confpkg.TOPIC_NEW_HASH, confpkg.TOPIC_NEW_TX, confpkg.TOPIC_CONFIRMED_HASH}
-	sub = messengers.NewSubscriberZmq(fmt.Sprintf("127.0.0.1:%d", confpkg.MAIN_PUBLISHER_PORT), topics, poller)
+	topics := []string{attestation.TOPIC_NEW_HASH, attestation.TOPIC_NEW_TX, attestation.TOPIC_CONFIRMED_HASH}
+	sub = messengers.NewSubscriberZmq(fmt.Sprintf("127.0.0.1:%d", attestation.MAIN_PUBLISHER_PORT), topics, poller)
 	pub = messengers.NewPublisherZmq(5001, poller)
 }
 
@@ -117,12 +117,12 @@ func main() {
 			if sub.Socket() == socket.Socket {
 				topic, msg := sub.ReadMessage()
 				switch topic {
-				case confpkg.TOPIC_NEW_TX:
+				case attestation.TOPIC_NEW_TX:
 					processTx(msg)
-				case confpkg.TOPIC_NEW_HASH:
+				case attestation.TOPIC_NEW_HASH:
 					nextHash = processHash(msg)
 					fmt.Printf("nexthash %s\n", nextHash.String())
-				case confpkg.TOPIC_CONFIRMED_HASH:
+				case attestation.TOPIC_CONFIRMED_HASH:
 					attestedHash = processHash(msg)
 					fmt.Printf("attestedhash %s\n", attestedHash.String())
 				}
@@ -186,6 +186,6 @@ func processTx(msg []byte) {
 	if len(scriptSig) > 0 {
 		sigs, _ := crypto.ParseScriptSig(scriptSig)
 		fmt.Printf("sending sig %s\n", hex.EncodeToString(sigs[0]))
-		pub.SendMessage(sigs[0], confpkg.TOPIC_SIGS)
+		pub.SendMessage(sigs[0], attestation.TOPIC_SIGS)
 	}
 }

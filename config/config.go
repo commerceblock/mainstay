@@ -18,23 +18,10 @@ import (
 
 // config name consts
 const (
-	MAIN_CHAIN_NAME = "main"
-
-	CONF_PATH = "/src/mainstay/config/conf.json"
-
-	MISC_NAME = "misc"
-)
-
-// zmq config consts
-const (
+	CONF_PATH               = "/src/mainstay/config/conf.json"
+	MAIN_CHAIN_NAME         = "main"
+	MISC_NAME               = "misc"
 	MISC_MULTISIGNODES_NAME = "multisignodes"
-
-	MAIN_PUBLISHER_PORT  = 5000
-	MAIN_LISTENER_PORT   = 6000
-	TOPIC_NEW_HASH       = "H"
-	TOPIC_NEW_TX         = "T"
-	TOPIC_CONFIRMED_HASH = "C"
-	TOPIC_SIGS           = "S"
 )
 
 // Config struct

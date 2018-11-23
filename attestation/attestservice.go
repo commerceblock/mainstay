@@ -13,13 +13,11 @@ import (
 	"time"
 
 	confpkg "mainstay/config"
-	"mainstay/messengers"
 	"mainstay/models"
 	"mainstay/server"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
-	zmq "github.com/pebbe/zmq4"
 )
 
 // Attestation Service is the main processes that handles generating
@@ -84,11 +82,8 @@ type AttestService struct {
 	// server connection for querying and/or storing information
 	server *server.Server
 
-	// zmq publisher interface used to publish hashes and txes to signers
-	publisher *messengers.PublisherZmq
-
-	// zmq subscribe interface to signers to receive tx signatures
-	subscribers []*messengers.SubscriberZmq
+	// interface to signers to send commitments/transactions and receive signatures
+	signer AttestSigner
 
 	// mainstain current attestation state, model and error state
 	state       AttestationState
@@ -105,11 +100,9 @@ var (
 	confirmTime time.Time     // handle confirmation timing
 )
 
-var poller *zmq.Poller // poller to add all subscriber/publisher sockets
-
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, config *confpkg.Config, isRegtest bool) *AttestService {
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, signer AttestSigner, config *confpkg.Config, isRegtest bool) *AttestService {
 	// Check init txid validity
 	_, errInitTx := chainhash.NewHashFromStr(config.InitTX())
 	if errInitTx != nil {
@@ -129,17 +122,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Se
 		atimeHandleUnconfirmed = time.Duration(config.TimingConfig().HandleUnconfirmedMinutes) * time.Minute
 	}
 
-	// Initialise publisher for sending new hashes and txs
-	// and subscribers to receive sig responses
-	poller = zmq.NewPoller()
-	publisher := messengers.NewPublisherZmq(confpkg.MAIN_PUBLISHER_PORT, poller)
-	var subscribers []*messengers.SubscriberZmq
-	subtopics := []string{confpkg.TOPIC_SIGS}
-	for _, nodeaddr := range config.MultisigNodes() {
-		subscribers = append(subscribers, messengers.NewSubscriberZmq(nodeaddr, subtopics, poller))
-	}
-
-	return &AttestService{ctx, wg, config, attester, server, publisher, subscribers, ASTATE_INIT, models.NewAttestationDefault(), nil, isRegtest}
+	return &AttestService{ctx, wg, config, attester, server, signer, ASTATE_INIT, models.NewAttestationDefault(), nil, isRegtest}
 }
 
 // Run Attest Service
@@ -227,7 +210,7 @@ func (s *AttestService) doStateInit() {
 				s.attestation = models.NewAttestationDefault()
 			}
 			confirmedHash := s.attestation.CommitmentHash()
-			s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) // update clients
+			s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
 
 			s.state = ASTATE_NEXT_COMMITMENT // update attestation state
 		} else {
@@ -276,7 +259,7 @@ func (s *AttestService) doStateNextCommitment() {
 	}
 
 	// publish new commitment hash to clients
-	s.publisher.SendMessage((&latestCommitmentHash).CloneBytes(), confpkg.TOPIC_NEW_HASH)
+	s.signer.SendNewHash((&latestCommitmentHash).CloneBytes())
 
 	// initialise new attestation with commitment
 	s.attestation = models.NewAttestationDefault()
@@ -323,7 +306,7 @@ func (s *AttestService) doStateNewAttestation() {
 		// publish pre signed transaction
 		var txbytes bytes.Buffer
 		s.attestation.Tx.Serialize(&txbytes)
-		s.publisher.SendMessage(txbytes.Bytes(), confpkg.TOPIC_NEW_TX)
+		s.signer.SendNewTx(txbytes.Bytes())
 
 		s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 		attestDelay = ATIME_SIGS          // add sigs waiting time
@@ -340,16 +323,7 @@ func (s *AttestService) doStateSignAttestation() {
 	log.Println("*AttestService* SIGN ATTESTATION")
 
 	// Read sigs using subscribers
-	var sigs [][]byte
-	sockets, _ := poller.Poll(-1)
-	for _, socket := range sockets {
-		for _, sub := range s.subscribers {
-			if sub.Socket() == socket.Socket {
-				_, msg := sub.ReadMessage()
-				sigs = append(sigs, msg)
-			}
-		}
-	}
+	sigs := s.signer.GetSigs()
 	log.Printf("********** received %d signatures\n", len(sigs))
 
 	// get last confirmed commitment from server
@@ -437,7 +411,7 @@ func (s *AttestService) doStateAwaitConfirmation() {
 		s.attester.Fees.ResetFee(s.isRegtest) // reset client fees
 
 		confirmedHash := s.attestation.CommitmentHash()
-		s.publisher.SendMessage((&confirmedHash).CloneBytes(), confpkg.TOPIC_CONFIRMED_HASH) //update clients
+		s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
 
 		s.state = ASTATE_NEXT_COMMITMENT                            // update attestation state
 		attestDelay = atimeNewAttestation - time.Since(confirmTime) // add new attestation waiting time - subtract waiting time
@@ -465,7 +439,7 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 	// re-publish pre signed transaction
 	var txbytes bytes.Buffer
 	s.attestation.Tx.Serialize(&txbytes)
-	s.publisher.SendMessage(txbytes.Bytes(), confpkg.TOPIC_NEW_TX)
+	s.signer.SendNewTx(txbytes.Bytes())
 
 	s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 	attestDelay = ATIME_SIGS          // add sigs waiting time

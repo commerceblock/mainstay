@@ -64,7 +64,8 @@ func main() {
 
 	dbInterface := server.NewDbMongo(ctx, mainConfig.DbConfig())
 	server := server.NewServer(dbInterface)
-	attestService := attestation.NewAttestService(ctx, wg, server, mainConfig, isRegtest)
+	signer := attestation.NewAttestSignerZmq(mainConfig)
+	attestService := attestation.NewAttestService(ctx, wg, server, signer, mainConfig, isRegtest)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
