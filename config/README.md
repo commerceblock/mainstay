@@ -1,6 +1,6 @@
 # Config
 
-## Sample Config
+## Sample Config
 
 ```
 // Sample config file parsed in config/config.go
@@ -69,7 +69,7 @@ For the base categories `db` and `signer` the following the following parameters
 - `signer` : zmq signer connectivity options
     - `signers` : list of comma separated addresses (host:port) for connectivity to signers
 
-### Optional
+### Optional
 
 All the remaining conf options are optional. These are explained below:
 
