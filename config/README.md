@@ -41,9 +41,9 @@
 }
 ```
 
-## Config Parameters
+## Config Parameters
 
-### Compulsory
+### Compulsory
 
 Currently `main` config category is compulsory.
 
