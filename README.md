@@ -14,21 +14,22 @@ The mainstay repository is an application that implements the [Mainstay protocol
 
 - Setup up database collections and roles using `scripts/db-init.js`
 
-- Regtest Demo
-    - Start the ocean-demo `python ocean-demo/PROTOCOLS/demo.py`
-    - Run `mainstay -regtest`
+- Setup `conf.json` file under `/config` by following [config guidelines](/config/README.md)
 
-- Testnet Mode
+- Run service
+    - Regtest
+        - Start the ocean-demo `python ocean-demo/PROTOCOLS/demo.py`
+        - Run `mainstay -regtest`
+    - Testnet
+        - Download and run a full Bitcoin Node on testnet mode, fully indexed and in blocksonly mode. `signrawtransaction` should also be included as a `deprecatedrpc` option. Add the connection details (actual value or ENV variable) to this node in `conf/conf.json`
 
-    - Download and run a full Bitcoin Node on testnet mode, fully indexed and in blocksonly mode. `signrawtransaction` should also be included as a `deprecatedrpc` option. Add the connection details (actual value or ENV variable) to this node in `conf/conf.json`
+        - Fund this wallet node, send all the funds to a single (m of n sig) P2SH address and store the `TX_HASH`, `PRIVKEY_x` and `REDEEM_SCRIPT` of this transaction, where `x in [0, n-1]`.
 
-    - Fund this wallet node, send all the funds to a single (m of n sig) P2SH address and store the `TX_HASH`, `PRIVKEY_x` and `REDEEM_SCRIPT` of this transaction, where `x in [0, n-1]`.
+        - The `TX_HASH` should be included in the genesis block of the Ocean network using the conf option `attestationhash`. Initiate the Ocean testnet network and add connection details (actual value or ENV variable) to one of it's nodes in `conf/conf.json`.
 
-    - The `TX_HASH` should be included in the genesis block of the Ocean network using the conf option `attestationhash`. Initiate the Ocean testnet network and add connection details (actual value or ENV variable) to one of it's nodes in `conf/conf.json`.
+        - Run `mainstay -tx TX_HASH -script REDEEM_SCRIPT` for the mainstay attestation service
 
-    - Run `mainstay -tx TX_HASH -script REDEEM_SCRIPT` for the mainstay attestation service
-
-    - Run `go run cmd/txsigningtool/txsigningtool.go -tx TX_HASH -pk PRIVKEY_x -script REDEEMSCRIPT` for `x in [0, n-1]` transaction signers of the m-of-n multisig P2SH address
+        - Run `go run cmd/txsigningtool/txsigningtool.go -tx TX_HASH -pk PRIVKEY_x -script REDEEMSCRIPT` for `x in [0, n-1]` transaction signers of the m-of-n multisig P2SH address
 
 - Unit Testing
     - `/$GOPATH/src/mainstay/run-tests.sh`
