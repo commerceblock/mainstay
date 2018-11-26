@@ -18,10 +18,8 @@ import (
 
 // config name consts
 const (
-	CONF_PATH               = "/src/mainstay/config/conf.json"
-	MAIN_CHAIN_NAME         = "main"
-	MISC_NAME               = "misc"
-	MISC_MULTISIGNODES_NAME = "multisignodes"
+	CONF_PATH       = "/src/mainstay/config/conf.json"
+	MAIN_CHAIN_NAME = "main"
 )
 
 // Config struct
@@ -30,10 +28,10 @@ const (
 type Config struct {
 	mainClient     *rpcclient.Client
 	mainChainCfg   *chaincfg.Params
-	multisigNodes  []string
 	initTX         string
 	initPK         string
 	multisigScript string
+	signerConfig   SignerConfig
 	dbConfig       DbConfig
 	feesConfig     FeesConfig
 	timingConfig   TimingConfig
@@ -49,9 +47,9 @@ func (c Config) MainChainCfg() *chaincfg.Params {
 	return c.mainChainCfg
 }
 
-// Get Tx Signers host names
-func (c Config) MultisigNodes() []string {
-	return c.multisigNodes
+// Get Signer configuration
+func (c Config) SignerConfig() SignerConfig {
+	return c.signerConfig
 }
 
 // Get Database configuration
@@ -129,13 +127,6 @@ func NewConfig(customConf ...[]byte) (*Config, error) {
 		return nil, paramsErr
 	}
 
-	// get multisig node hosts
-	multisigNodesVal, multisigErr := GetParamFromConf(MISC_NAME, MISC_MULTISIGNODES_NAME, conf)
-	if multisigErr != nil {
-		return nil, multisigErr
-	}
-	multisignodes := strings.Split(multisigNodesVal, ",")
-
 	// get db connectivity details
 	dbConnectivity, dbErr := GetDbConfig(conf)
 	if dbErr != nil {
@@ -145,13 +136,18 @@ func NewConfig(customConf ...[]byte) (*Config, error) {
 	feesConfig := GetFeesConfig(conf)
 	timingConfig := GetTimingConfig(conf)
 
+	signerConfig, signerConfigErr := GetSignerConfig(conf)
+	if signerConfigErr != nil {
+		return nil, signerConfigErr
+	}
+
 	return &Config{
 		mainClient:     mainClient,
 		mainChainCfg:   mainClientCfg,
-		multisigNodes:  multisignodes,
 		initTX:         "",
 		initPK:         "",
 		multisigScript: "",
+		signerConfig:   signerConfig,
 		dbConfig:       dbConnectivity,
 		feesConfig:     feesConfig,
 		timingConfig:   timingConfig,
@@ -205,6 +201,8 @@ type DbConfig struct {
 }
 
 // Return DbConfig from conf options
+// If DB_NAME exists in the config, then all fields are compulsory
+// IF DB_NAME does not exist, then all config fields are empty
 func GetDbConfig(conf []byte) (DbConfig, error) {
 
 	// db connectivity parameters
@@ -260,6 +258,7 @@ type FeesConfig struct {
 }
 
 // Return FeeConfig from conf options
+// All Fees Config fields are optional
 func GetFeesConfig(conf []byte) FeesConfig {
 	// try getting all config parameters
 	// all are optional so if no value is found
@@ -314,6 +313,7 @@ type TimingConfig struct {
 }
 
 // Return TimingConfig from conf options
+// All Timing Config fields are optional
 func GetTimingConfig(conf []byte) TimingConfig {
 	attMinStr := TryGetParamFromConf(TIMING_NAME, TIMING_NEW_ATTESTATION_MINUTES_NAME, conf)
 	var attMin int
@@ -337,4 +337,41 @@ func GetTimingConfig(conf []byte) TimingConfig {
 		NewAttestationMinutes:    attMin,
 		HandleUnconfirmedMinutes: uncMin,
 	}
+}
+
+// signer config parameter names
+const (
+	SIGNER_NAME           = "signer"
+	SIGNER_PUBLISHER_NAME = "publisher"
+	SIGNER_SIGNERS_NAME   = "signers"
+)
+
+// Signer config struct
+// Configuration on communication between service and signers
+// Configure host addresses and zmq TOPIC config
+type SignerConfig struct {
+	// main publisher address
+	Publisher string
+
+	// signer addresses
+	Signers []string
+}
+
+// Return SignerConfig from conf options
+// If SIGNER_NAME exists in conf, SIGNER_SIGNERS_NAME is compsulsory
+// Every other Signer Config field is optional
+func GetSignerConfig(conf []byte) (SignerConfig, error) {
+	// get signer node addresses
+	signersStr, signersErr := GetParamFromConf(SIGNER_NAME, SIGNER_SIGNERS_NAME, conf)
+	if signersErr != nil {
+		return SignerConfig{}, signersErr
+	}
+	signers := strings.Split(signersStr, ",")
+
+	publisher := TryGetParamFromConf(SIGNER_NAME, SIGNER_PUBLISHER_NAME, conf)
+
+	return SignerConfig{
+		Publisher: publisher,
+		Signers:   signers,
+	}, nil
 }

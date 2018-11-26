@@ -32,8 +32,8 @@ var testConf = []byte(`
         "rpcpass": "pass",
         "chain": "regtest"
     },
-    "misc": {
-        "multisignodes": "127.0.0.1:5001"
+    "signer": {
+        "signers": "127.0.0.1:5001"
     },
     "db": {
         "user":"serviceUser",

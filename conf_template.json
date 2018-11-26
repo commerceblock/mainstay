@@ -11,8 +11,9 @@
         "rpcpass": "PASSWORD",
         "chain": "main"
     },
-    "misc": {
-        "multisignodes": "node0:1000,node1:1001"
+    "signer": {
+        "publisher": "*:5000",
+        "signers": "node0:1000,node1:1001"
     },
     "db": {
         "user":"user",

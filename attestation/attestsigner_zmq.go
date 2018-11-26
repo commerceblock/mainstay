@@ -5,6 +5,8 @@
 package attestation
 
 import (
+	"fmt"
+
 	confpkg "mainstay/config"
 	"mainstay/messengers"
 
@@ -13,7 +15,7 @@ import (
 
 // zmq communication consts
 const (
-	MAIN_PUBLISHER_PORT = 5000 // port used by main signer publisher
+	DEFAULT_MAIN_PUBLISHER_PORT = 5000 // port used by main signer publisher
 
 	// predefined topics for publishing/subscribing via zmq
 	TOPIC_NEW_HASH       = "H"
@@ -39,14 +41,20 @@ type AttestSignerZmq struct {
 var poller *zmq.Poller
 
 // Return new AttestSignerZmq instance
-func NewAttestSignerZmq(config *confpkg.Config) AttestSignerZmq {
+func NewAttestSignerZmq(config confpkg.SignerConfig) AttestSignerZmq {
+	// get publisher addr from config, if set
+	publisherAddr := fmt.Sprintf("*:%d", DEFAULT_MAIN_PUBLISHER_PORT)
+	if config.Publisher != "" {
+		publisherAddr = config.Publisher
+	}
+
 	// Initialise publisher for sending new hashes and txs
 	// and subscribers to receive sig responses
 	poller = zmq.NewPoller()
-	publisher := messengers.NewPublisherZmq(MAIN_PUBLISHER_PORT, poller)
+	publisher := messengers.NewPublisherZmq(publisherAddr, poller)
 	var subscribers []*messengers.SubscriberZmq
 	subtopics := []string{TOPIC_SIGS}
-	for _, nodeaddr := range config.MultisigNodes() {
+	for _, nodeaddr := range config.Signers {
 		subscribers = append(subscribers, messengers.NewSubscriberZmq(nodeaddr, subtopics, poller))
 	}
 

@@ -5,8 +5,9 @@
         "rpcpass": "MAINSTAY_MAIN_PASS",
         "chain": "testnet"
     },
-    "misc": {
-        "multisignodes": "MAINSTAY_MULTISIG_NODES"
+    "signer": {
+        "publisher": "MAINSTAY_SIGNER_PUBLISHER",
+        "signers": "MAINSTAY_SIGNER_SIGNERS"
     },
     "db": {
         "user":"MAINSTAY_DB_USER",

@@ -103,11 +103,17 @@ func init() {
 	config.SetMultisigScript(script)
 	client = attestation.NewAttestClient(config, true) // isSigner flag set
 
+	// get publisher addr from config, if set
+	publisherAddr := fmt.Sprintf("127.0.0.1:%d", attestation.DEFAULT_MAIN_PUBLISHER_PORT)
+	if config.SignerConfig().Publisher != "" {
+		publisherAddr = config.SignerConfig().Publisher
+	}
+
 	// comms setup
 	poller = zmq.NewPoller()
 	topics := []string{attestation.TOPIC_NEW_HASH, attestation.TOPIC_NEW_TX, attestation.TOPIC_CONFIRMED_HASH}
-	sub = messengers.NewSubscriberZmq(fmt.Sprintf("127.0.0.1:%d", attestation.MAIN_PUBLISHER_PORT), topics, poller)
-	pub = messengers.NewPublisherZmq(5001, poller)
+	sub = messengers.NewSubscriberZmq(publisherAddr, topics, poller)
+	pub = messengers.NewPublisherZmq("*:5001", poller)
 }
 
 func main() {

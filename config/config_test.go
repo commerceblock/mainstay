@@ -99,59 +99,6 @@ func TestConfigErrors(t *testing.T) {
             "rpcpass": "",
             "chain": "testnet"
         },
-        "misc": {
-
-        }
-    }
-    `)
-	_, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_VALUE_NOT_FOUND, MISC_MULTISIGNODES_NAME)), configErr)
-
-	testConf = []byte(`
-    {
-        "main": {
-            "rpcurl": "",
-            "rpcuser": "",
-            "rpcpass": "",
-            "chain": "testnet"
-        },
-        "misc": {
-            "multisignodes": "host"
-        }
-    }
-    `)
-	_, configErr = NewConfig(testConf)
-	assert.Equal(t, nil, configErr)
-
-	testConf = []byte(`
-    {
-        "main": {
-            "rpcurl": "",
-            "rpcuser": "",
-            "rpcpass": "",
-            "chain": "testnet"
-        },
-        "misc": {
-            "multisignodes": "host"
-        },
-        "db": {
-        }
-    }
-    `)
-	_, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_VALUE_NOT_FOUND, DB_USER_NAME)), configErr)
-
-	testConf = []byte(`
-    {
-        "main": {
-            "rpcurl": "",
-            "rpcuser": "",
-            "rpcpass": "",
-            "chain": "testnet"
-        },
-        "misc": {
-            "multisignodes": "host"
-        },
         "db": {
             "user": ""
         }
@@ -167,9 +114,6 @@ func TestConfigErrors(t *testing.T) {
             "rpcuser": "",
             "rpcpass": "",
             "chain": "testnet"
-        },
-        "misc": {
-            "multisignodes": "host"
         },
         "db": {
             "user": "",
@@ -187,9 +131,6 @@ func TestConfigErrors(t *testing.T) {
             "rpcuser": "",
             "rpcpass": "",
             "chain": "testnet"
-        },
-        "misc": {
-            "multisignodes": "host"
         },
         "db": {
             "user": "",
@@ -209,9 +150,6 @@ func TestConfigErrors(t *testing.T) {
             "rpcpass": "",
             "chain": "testnet"
         },
-        "misc": {
-            "multisignodes": "host"
-        },
         "db": {
             "user": "",
             "password": "",
@@ -230,9 +168,6 @@ func TestConfigErrors(t *testing.T) {
             "rpcuser": "",
             "rpcpass": "",
             "chain": "testnet"
-        },
-        "misc": {
-            "multisignodes": "host"
         },
         "db": {
             "user": "",
@@ -259,8 +194,8 @@ func TestConfigActual(t *testing.T) {
             "rpcpass": "pass",
             "chain": "regtest"
         },
-        "misc": {
-            "multisignodes": "127.0.0.1:12345,127.0.0.1:12346"
+        "signer": {
+            "signers": "127.0.0.1:12345,127.0.0.1:12346"
         },
         "db": {
             "user":"username1",
@@ -276,7 +211,7 @@ func TestConfigActual(t *testing.T) {
 
 	assert.Equal(t, true, config.MainClient() != nil)
 	assert.Equal(t, &chaincfg.RegressionNetParams, config.MainChainCfg())
-	assert.Equal(t, []string{"127.0.0.1:12345", "127.0.0.1:12346"}, config.MultisigNodes())
+	assert.Equal(t, []string{"127.0.0.1:12345", "127.0.0.1:12346"}, config.SignerConfig().Signers)
 	assert.Equal(t, DbConfig{
 		User:     "username1",
 		Password: "password2",
@@ -432,4 +367,59 @@ func TestConfigTiming(t *testing.T) {
 	config, configErr = NewConfig(testConf)
 	assert.Equal(t, nil, configErr)
 	assert.Equal(t, TimingConfig{10, 60}, config.TimingConfig())
+}
+
+// Test config for Optional signer parameters
+func TestConfigSigner(t *testing.T) {
+	var config *Config
+	var configErr error
+	var testConf = []byte(`
+    {
+        "main": {
+            "rpcurl": "",
+            "rpcuser": "",
+            "rpcpass": "",
+            "chain": ""
+        },
+        "signer": {
+        }
+    }
+    `)
+	config, configErr = NewConfig(testConf)
+	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_VALUE_NOT_FOUND, SIGNER_SIGNERS_NAME)), configErr)
+
+	testConf = []byte(`
+    {
+        "main": {
+            "rpcurl": "",
+            "rpcuser": "",
+            "rpcpass": "",
+            "chain": ""
+        },
+        "signer": {
+            "signers": "host"
+        }
+    }
+    `)
+	config, configErr = NewConfig(testConf)
+	assert.Equal(t, nil, configErr)
+	assert.Equal(t, []string{"host"}, config.SignerConfig().Signers)
+
+	testConf = []byte(`
+    {
+        "main": {
+            "rpcurl": "",
+            "rpcuser": "",
+            "rpcpass": "",
+            "chain": ""
+        },
+        "signer": {
+            "signers": "host",
+            "publisher": "*:5000"
+        }
+    }
+    `)
+	config, configErr = NewConfig(testConf)
+	assert.Equal(t, nil, configErr)
+	assert.Equal(t, "*:5000", config.SignerConfig().Publisher)
 }
