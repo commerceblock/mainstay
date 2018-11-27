@@ -16,6 +16,7 @@ import (
 	"mainstay/models"
 	"mainstay/server"
 
+	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 )
@@ -159,6 +160,85 @@ func (s *AttestService) doStateError() {
 	s.state = ASTATE_INIT
 }
 
+// part of ASTATE_INIT
+// handle case when an unconfirmed transactions is found in the mempool
+// fetch attestation information and set service state to ASTATE_AWAIT_CONFIRMATION
+func (s *AttestService) stateInitUnconfirmed(unconfirmedTxid chainhash.Hash) {
+	commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid, false)
+	if s.setFailure(commitmentErr) {
+		return // will rebound to init
+	}
+	log.Printf("********** found unconfirmed attestation: %s\n", unconfirmedTxid.String())
+	s.attestation = models.NewAttestation(unconfirmedTxid, &commitment) // initialise attestation
+	rawTx, _ := s.config.MainClient().GetRawTransaction(&unconfirmedTxid)
+	s.attestation.Tx = *rawTx.MsgTx() // set msgTx
+
+	s.state = ASTATE_AWAIT_CONFIRMATION // update attestation state
+	confirmTime = time.Now()
+}
+
+// part of ASTATE_INIT
+// handle case when an unspent transaction is found in the wallet
+// if the unspent is a previous attestation, update database info
+// initiate a new attestation and inform signers of commitment
+func (s *AttestService) stateInitUnspent(unspent btcjson.ListUnspentResult) {
+	unspentTxid, _ := chainhash.NewHashFromStr(unspent.TxID)
+	commitment, commitmentErr := s.server.GetAttestationCommitment(*unspentTxid)
+	if s.setFailure(commitmentErr) {
+		return // will rebound to init
+	} else if (commitment.GetCommitmentHash() != chainhash.Hash{}) {
+		log.Printf("********** found confirmed attestation: %s\n", unspentTxid.String())
+		s.attestation = models.NewAttestation(*unspentTxid, &commitment)
+		// update server with latest confirmed attestation
+		s.attestation.Confirmed = true
+		rawTx, _ := s.config.MainClient().GetRawTransaction(unspentTxid)
+		walletTx, _ := s.config.MainClient().GetTransaction(unspentTxid)
+		s.attestation.Tx = *rawTx.MsgTx()  // set msgTx
+		s.attestation.UpdateInfo(walletTx) // set tx info
+
+		errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
+		if s.setFailure(errUpdate) {
+			return // will rebound to init
+		}
+	} else {
+		log.Println("********** found unspent transaction, initiating staychain")
+		s.attestation = models.NewAttestationDefault()
+	}
+	confirmedHash := s.attestation.CommitmentHash()
+	s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
+
+	s.state = ASTATE_NEXT_COMMITMENT // update attestation state
+}
+
+// part of ASTATE_INIT
+// handles wallet failure when neither unconfirmed or unspent is found
+// above case should never actually happen - untested grey area
+// TODO: sort this state, as implementation below is incorrect
+func (s *AttestService) stateInitWalletFailure() {
+
+	log.Println("********** wallet failure")
+	s.state = ASTATE_INIT
+
+	// // no unspent so there must be a transaction waiting confirmation not on the mempool
+	// // check server for latest unconfirmed attestation
+	// lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash(false)
+	// if s.setFailure(latestErr) {
+	//     return // will rebound to init
+	// }
+	// commitment, commitmentErr := s.server.GetAttestationCommitment(lastCommitmentHash, false)
+	// if s.setFailure(commitmentErr) {
+	//     return // will rebound to init
+	// }
+	// log.Printf("********** found unconfirmed attestation: %s\n", lastCommitmentHash.String())
+	// s.attestation = models.NewAttestation(lastCommitmentHash, &commitment) // initialise attestation
+	// rawTx, _ := s.config.MainClient().GetRawTransaction(&unconfirmedTxid)
+	// s.attestation.Tx = *rawTx.MsgTx() // set msgTx
+
+	// s.state = ASTATE_AWAIT_CONFIRMATION // update attestation state
+	// confirmTime = time.Now()
+
+}
+
 // ASTATE_INIT
 // - Check if there are unconfirmed or unspent transactions in the client
 // - Update server with latest attestation information
@@ -172,65 +252,18 @@ func (s *AttestService) doStateInit() {
 	if s.setFailure(unconfirmedErr) {
 		return // will rebound to init
 	} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected
-		commitment, commitmentErr := s.server.GetAttestationCommitment(unconfirmedTxid, false)
-		if s.setFailure(commitmentErr) {
-			return // will rebound to init
-		}
-		log.Printf("********** found unconfirmed attestation: %s\n", unconfirmedTxid.String())
-		s.attestation = models.NewAttestation(unconfirmedTxid, &commitment) // initialise attestation
-		rawTx, _ := s.config.MainClient().GetRawTransaction(&unconfirmedTxid)
-		s.attestation.Tx = *rawTx.MsgTx() // set msgTx
-
-		s.state = ASTATE_AWAIT_CONFIRMATION // update attestation state
-		confirmTime = time.Now()
+		// handle init unconfirmed case
+		s.stateInitUnconfirmed(unconfirmedTxid)
 	} else {
 		success, unspent, unspentErr := s.attester.findLastUnspent()
 		if s.setFailure(unspentErr) {
 			return // will rebound to init
 		} else if success {
-			unspentTxid, _ := chainhash.NewHashFromStr(unspent.TxID)
-			commitment, commitmentErr := s.server.GetAttestationCommitment(*unspentTxid)
-			if s.setFailure(commitmentErr) {
-				return // will rebound to init
-			} else if (commitment.GetCommitmentHash() != chainhash.Hash{}) {
-				log.Printf("********** found confirmed attestation: %s\n", unspentTxid.String())
-				s.attestation = models.NewAttestation(*unspentTxid, &commitment)
-				// update server with latest confirmed attestation
-				s.attestation.Confirmed = true
-				rawTx, _ := s.config.MainClient().GetRawTransaction(unspentTxid)
-				walletTx, _ := s.config.MainClient().GetTransaction(unspentTxid)
-				s.attestation.Tx = *rawTx.MsgTx()  // set msgTx
-				s.attestation.UpdateInfo(walletTx) // set tx info
-
-				errUpdate := s.server.UpdateLatestAttestation(*s.attestation)
-				if s.setFailure(errUpdate) {
-					return // will rebound to init
-				}
-			} else {
-				s.attestation = models.NewAttestationDefault()
-			}
-			confirmedHash := s.attestation.CommitmentHash()
-			s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
-
-			s.state = ASTATE_NEXT_COMMITMENT // update attestation state
+			// handle init unspent case
+			s.stateInitUnspent(unspent)
 		} else {
-			// no unspent so there must be a transaction waiting confirmation not on the mempool
-			// check server for latest unconfirmed attestation
-			lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash(false)
-			if s.setFailure(latestErr) {
-				return // will rebound to init
-			}
-			commitment, commitmentErr := s.server.GetAttestationCommitment(lastCommitmentHash, false)
-			if s.setFailure(commitmentErr) {
-				return // will rebound to init
-			}
-			log.Printf("********** found unconfirmed attestation: %s\n", lastCommitmentHash.String())
-			s.attestation = models.NewAttestation(lastCommitmentHash, &commitment) // initialise attestation
-			rawTx, _ := s.config.MainClient().GetRawTransaction(&unconfirmedTxid)
-			s.attestation.Tx = *rawTx.MsgTx() // set msgTx
-
-			s.state = ASTATE_AWAIT_CONFIRMATION // update attestation state
-			confirmTime = time.Now()
+			// handle wallet failure case
+			s.stateInitWalletFailure()
 		}
 	}
 }
