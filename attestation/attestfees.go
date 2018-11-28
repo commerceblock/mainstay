@@ -23,6 +23,13 @@ const (
 	DEFAULT_FEE_INCREMENT = 5
 )
 
+// warnings for arguments
+const (
+	WARNING_INVALID_MIN_FEE_ARG       = "Warning - Invalid min fee argument"
+	WARNING_INVALID_MAX_FEE_ARG       = "Warning - Invalid max fee argument"
+	WARNING_INVALID_FEE_INCREMENT_ARG = "Warning - Invalid fee increment argument"
+)
+
 // fee api config
 const (
 	// response format:
@@ -58,19 +65,28 @@ func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 	minFee := DEFAULT_MIN_FEE
 	if feesConfig.MinFee > 0 && feesConfig.MinFee < DEFAULT_MAX_FEE {
 		minFee = feesConfig.MinFee
+	} else {
+		log.Println(WARNING_INVALID_MIN_FEE_ARG)
 	}
+	log.Printf("Min fee set to: %d\n", minFee)
 
 	// max fee with lower limit min_fee && 0 and max fee default
 	maxFee := DEFAULT_MAX_FEE
 	if feesConfig.MaxFee > 0 && feesConfig.MaxFee > minFee && feesConfig.MaxFee < DEFAULT_MAX_FEE {
 		maxFee = feesConfig.MaxFee
+	} else {
+		log.Println(WARNING_INVALID_MAX_FEE_ARG)
 	}
+	log.Printf("Max fee set to: %d\n", maxFee)
 
 	// fee increment with lower limit 0
 	feeIncrement := DEFAULT_FEE_INCREMENT
 	if feesConfig.FeeIncrement > 0 {
 		feeIncrement = feesConfig.FeeIncrement
+	} else {
+		log.Println(WARNING_INVALID_FEE_INCREMENT_ARG)
 	}
+	log.Printf("Fee increment set to: %d\n", feeIncrement)
 
 	attestFees := AttestFees{
 		minFee:       minFee,

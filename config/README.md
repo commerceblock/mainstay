@@ -60,6 +60,16 @@ Currently `main` config category is compulsory. This should be made optional in 
     - `rpcpass` : password for rpc connectivity
     - `chain`: chain name for inner config, i.e. testnet/regtest/main
 
+
+The `staychain` category is compulsory and can be set from either .conf file or command line arguments. The configuration below is optional as preferred entry is via command line - [options](#command-line-options).
+
+- `staychain` : configuration options for staychain parameters
+    - `initTx` : initial transaction sets the state for the staychain
+    - `initScript` : initial script used to derive subsequent staychain addresses
+    - `topupTx` : transaction to topup the mainstay service
+    - `topupScript` : script that requires signing for the topup
+
+
 Several other subcategories become compulsory only if the base category exists in the `.conf` file.
 
 For the base categories `db` and `signer` the following parameters are compulsory:
@@ -77,15 +87,6 @@ For the base categories `db` and `signer` the following parameters are compulsor
 ### Optional
 
 All the remaining conf options are optional. These are explained below:
-
-- `staychain` : configuration options for staychain parameters
-    - `initTx` : initial transaction sets the state for the staychain
-    - `initScript` : initial script used to derive subsequent staychain addresses
-    - `topupTx` : transaction to topup the mainstay service
-    - `topupScript` : script that requires signing for the topup
-
-The above configuration is optional as preferred entry is via command line.
-Values need to be provided either through cmd arguments or .conf file.
 
 - `signer`
     - `publisher` : optionally provide host address for main service zmq publisher
@@ -105,7 +106,7 @@ Default values are set in `attestation/attestfees.go`
 
 Default values are set in `attestation/attestservice.go`
 
-### Command line options
+### Command Line Options
 
 Currently only parameters in the `staychain` category can be parsed through command line arguments.
 
@@ -115,7 +116,7 @@ These command line arguments are:
 - `txTopup` : argument for topupTx as above
 - `scriptTopup` : argument for topupScript as above
 
-### Env variables
+### Env Variables
 
 All config parameters can be replaced with env variables. An example of this is `config/conf.json`.
 
@@ -123,7 +124,7 @@ The Config struct works by first looking for an env variable with the name set a
 
 If the config argument is not to be used, __no value__ should be set in the conf file. Warnings for invalid argument values are provided in runtime.
 
-### Client chain parameters
+### Client Chain Parameters
 
 Parameters used for client chain confirmation tools and are not part of Config struct used by service.
 
