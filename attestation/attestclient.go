@@ -29,6 +29,15 @@ const (
 
 	ERROR_INSUFFICIENT_FUNDS = `Insufficient unspent vout value
     (less than the maxFee target)`
+
+	ERROR_MISSING_MULTISIG = `No multisig used - Client must be signer
+    and include private key`
+
+	ERROR_MISSING_ADDRESS = `Client address missing from multisig script`
+
+	ERROR_INVALID_PK = `Invalid private key`
+
+	ERROR_FAILURE_IMPORTING_PK = `Could not import initial private key`
 )
 
 // coin in satoshis
@@ -94,16 +103,16 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		var errPkWif error
 		pkWif, errPkWif = crypto.GetWalletPrivKey(pk)
 		if errPkWif != nil {
-			log.Printf("Invalid private key %s\n", pk)
+			log.Printf("%s %s\n", ERROR_INVALID_PK, pk)
 			log.Fatal(errPkWif)
 		}
 		importErr := config.MainClient().ImportPrivKeyRescan(pkWif, "init", false)
 		if importErr != nil {
-			log.Printf("Could not import initial private key %s\n", pk)
+			log.Printf("%s %s\n", ERROR_FAILURE_IMPORTING_PK, pk)
 			log.Fatal(importErr)
 		}
 	} else if multisig == "" {
-		log.Fatal("No multisig used - Client must be signer and include private key")
+		log.Fatal(ERROR_MISSING_MULTISIG)
 	}
 
 	if multisig != "" { // if multisig attestation, parse pubkeys
@@ -118,7 +127,7 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 				}
 			}
 			if !myFound {
-				log.Fatal("Client address missing from multisig script")
+				log.Fatal(ERROR_MISSING_ADDRESS)
 			}
 		}
 
@@ -212,7 +221,8 @@ func (w *AttestClient) ImportAttestationAddr(addr btcutil.Address) error {
 // Generate a new transaction paying to the tweaked address and add fees
 // Transaction inputs are generated using the previous unspent in the wallet
 // Fees are calculated using AttestFees interface and RBF flag is set manually
-func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult) (*wire.MsgTx, error) {
+func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult) (
+	*wire.MsgTx, error) {
 	inputs := []btcjson.TransactionInput{{Txid: txunspent.TxID, Vout: txunspent.Vout}}
 
 	amounts := map[btcutil.Address]btcutil.Amount{
@@ -305,7 +315,8 @@ func (w *AttestClient) SignTransaction(hash chainhash.Hash, msgTx wire.MsgTx) (
 	// Sign transaction
 	rawTxInput := btcjson.RawTxInput{prevTxId.String(), 0,
 		hex.EncodeToString(prevTx.MsgTx().TxOut[0].PkScript), redeemScript}
-	signedMsgTx, _, errSign := w.MainClient.SignRawTransaction3(&msgTx, []btcjson.RawTxInput{rawTxInput}, []string{key.String()})
+	signedMsgTx, _, errSign := w.MainClient.SignRawTransaction3(
+		&msgTx, []btcjson.RawTxInput{rawTxInput}, []string{key.String()})
 	if errSign != nil {
 		return nil, "", errSign
 	}
