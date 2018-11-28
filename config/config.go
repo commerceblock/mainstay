@@ -18,23 +18,37 @@ import (
 
 // config name consts
 const (
-	CONF_PATH       = "/src/mainstay/config/conf.json"
-	MAIN_CHAIN_NAME = "main"
+	CONF_PATH                   = "/src/mainstay/config/conf.json"
+	MAIN_CHAIN_NAME             = "main"
+	STAYCHAIN_NAME              = "staychain"
+	STAYCHAIN_REGTEST_NAME      = "regtest"
+	STAYCHAIN_INIT_TX_NAME      = "initTx"
+	STAYCHAIN_INIT_SCRIPT_NAME  = "initScript"
+	STAYCHAIN_TOPUP_TX_NAME     = "topupTx"
+	STAYCHAIN_TOPUP_SCRIPT_NAME = "topupScript"
 )
 
 // Config struct
 // Client connections and other parameters required
 // by ocean attestation service and testing
 type Config struct {
-	mainClient     *rpcclient.Client
-	mainChainCfg   *chaincfg.Params
-	initTX         string
-	initPK         string
-	multisigScript string
-	signerConfig   SignerConfig
-	dbConfig       DbConfig
-	feesConfig     FeesConfig
-	timingConfig   TimingConfig
+	// main bitcoin rpc connectivity
+	mainClient   *rpcclient.Client
+	mainChainCfg *chaincfg.Params
+
+	// core staychain config parameters
+	regtest     bool
+	initTX      string
+	initPK      string
+	initScript  string
+	topupTx     string
+	topupScript string
+
+	// additional parameter categories
+	signerConfig SignerConfig
+	dbConfig     DbConfig
+	feesConfig   FeesConfig
+	timingConfig TimingConfig
 }
 
 // Get Main Client
@@ -72,14 +86,34 @@ func (c *Config) SetTimingConfig(timingConfig TimingConfig) {
 	c.timingConfig = timingConfig
 }
 
+// Get regtest flag
+func (c Config) Regtest() bool {
+	return c.regtest
+}
+
+// Set regtest flag
+func (c *Config) SetRegtest(regtest bool) {
+	c.regtest = regtest
+}
+
 // Get init TX
-func (c Config) InitTX() string {
+func (c Config) InitTx() string {
 	return c.initTX
 }
 
 // Set init TX
-func (c *Config) SetInitTX(tx string) {
+func (c *Config) SetInitTx(tx string) {
 	c.initTX = tx
+}
+
+// Get topup TX
+func (c Config) TopupTx() string {
+	return c.topupTx
+}
+
+// Set topup TX
+func (c *Config) SetTopupTx(tx string) {
+	c.topupTx = tx
 }
 
 // Get init PK
@@ -93,13 +127,23 @@ func (c *Config) SetInitPK(pk string) {
 }
 
 // Get init PK
-func (c *Config) MultisigScript() string {
-	return c.multisigScript
+func (c *Config) InitScript() string {
+	return c.initScript
 }
 
 // Set init PK
-func (c *Config) SetMultisigScript(script string) {
-	c.multisigScript = script
+func (c *Config) SetInitScript(script string) {
+	c.initScript = script
+}
+
+// Get topup PK
+func (c *Config) TopupScript() string {
+	return c.topupScript
+}
+
+// Set init PK
+func (c *Config) SetTopupScript(script string) {
+	c.topupScript = script
 }
 
 // Return Config instance
@@ -141,16 +185,27 @@ func NewConfig(customConf ...[]byte) (*Config, error) {
 		return nil, signerConfigErr
 	}
 
+	// get staychain config parameters
+	// most of these can be overriden from command line
+	regtestStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_REGTEST_NAME, conf)
+	initTxStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_INIT_TX_NAME, conf)
+	initScriptStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_INIT_SCRIPT_NAME, conf)
+	topupTxStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_TOPUP_TX_NAME, conf)
+	topupScriptStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_TOPUP_SCRIPT_NAME, conf)
+
 	return &Config{
-		mainClient:     mainClient,
-		mainChainCfg:   mainClientCfg,
-		initTX:         "",
-		initPK:         "",
-		multisigScript: "",
-		signerConfig:   signerConfig,
-		dbConfig:       dbConnectivity,
-		feesConfig:     feesConfig,
-		timingConfig:   timingConfig,
+		mainClient:   mainClient,
+		mainChainCfg: mainClientCfg,
+		regtest:      (regtestStr == "1"),
+		initTX:       initTxStr,
+		initPK:       "",
+		initScript:   initScriptStr,
+		topupTx:      topupTxStr,
+		topupScript:  topupScriptStr,
+		signerConfig: signerConfig,
+		dbConfig:     dbConnectivity,
+		feesConfig:   feesConfig,
+		timingConfig: timingConfig,
 	}, nil
 }
 

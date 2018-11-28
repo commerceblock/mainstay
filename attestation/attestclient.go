@@ -73,7 +73,7 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		isSigner = signerFlag[0]
 	}
 
-	multisig := config.MultisigScript()
+	multisig := config.InitScript()
 	var pkWif *btcutil.WIF
 	if isSigner { // signer case import private key
 		// Get initial private key from initial funding transaction of main client
@@ -94,7 +94,7 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 	}
 
 	if multisig != "" { // if multisig attestation, parse pubkeys
-		pubkeys, numOfSigs := crypto.ParseRedeemScript(config.MultisigScript())
+		pubkeys, numOfSigs := crypto.ParseRedeemScript(config.InitScript())
 
 		// verify our key is one of the multisig keys in signer case
 		if isSigner {
@@ -113,7 +113,7 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 			MainClient:   config.MainClient(),
 			MainChainCfg: config.MainChainCfg(),
 			Fees:         NewAttestFees(config.FeesConfig()),
-			txid0:        config.InitTX(),
+			txid0:        config.InitTx(),
 			script0:      multisig,
 			pubkeys:      pubkeys,
 			numOfSigs:    numOfSigs,
@@ -123,7 +123,7 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		MainClient:   config.MainClient(),
 		MainChainCfg: config.MainChainCfg(),
 		Fees:         NewAttestFees(config.FeesConfig()),
-		txid0:        config.InitTX(),
+		txid0:        config.InitTx(),
 		script0:      multisig,
 		pubkeys:      []*btcec.PublicKey{},
 		numOfSigs:    1,

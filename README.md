@@ -27,9 +27,9 @@ The mainstay repository is an application that implements the [Mainstay protocol
 
         - The `TX_HASH` should be included in the genesis block of the Ocean network using the conf option `attestationhash`. Initiate the Ocean testnet network and add connection details (actual value or ENV variable) to one of it's nodes in `conf/conf.json`.
 
-        - Run `mainstay -tx TX_HASH -script REDEEM_SCRIPT` for the mainstay attestation service
+        - Run `mainstay -tx TX_HASH -script REDEEM_SCRIPT` for the mainstay attestation service. (tx/script can also be set in .conf file)
 
-        - Run `go run cmd/txsigningtool/txsigningtool.go -tx TX_HASH -pk PRIVKEY_x -script REDEEMSCRIPT` for `x in [0, n-1]` transaction signers of the m-of-n multisig P2SH address
+        - Run `go run cmd/txsigningtool/txsigningtool.go -tx TX_HASH -pk PRIVKEY_x -script REDEEMSCRIPT` for `x in [0, n-1]` transaction signers of the m-of-n multisig P2SH address. (tx/script can also be set in .conf file)
 
 - Unit Testing
     - `/$GOPATH/src/mainstay/run-tests.sh`

@@ -20,22 +20,21 @@ import (
 )
 
 var (
-	tx0        string
-	script     string
-	isRegtest  bool
-	mainConfig *config.Config
+	tx0         string
+	script0     string
+	txTopup     string
+	scriptTopup string
+	isRegtest   bool
+	mainConfig  *config.Config
 )
 
 func parseFlags() {
 	flag.BoolVar(&isRegtest, "regtest", false, "Use regtest wallet configuration instead of user wallet")
 	flag.StringVar(&tx0, "tx", "", "Tx id for genesis attestation transaction")
-	flag.StringVar(&script, "script", "", "Redeem script in case multisig is used")
+	flag.StringVar(&script0, "script", "", "Redeem script in case multisig is used")
+	flag.StringVar(&txTopup, "txTopup", "", "Tx id for topup transaction")
+	flag.StringVar(&scriptTopup, "scriptTopup", "", "Redeem script for topup")
 	flag.Parse()
-
-	if (tx0 == "" || script == "") && !isRegtest {
-		flag.PrintDefaults()
-		log.Fatalf("Need to provide both -tx and -script argument. To use test configuration set the -regtest flag.")
-	}
 }
 
 func init() {
@@ -44,15 +43,30 @@ func init() {
 	if isRegtest {
 		test := test.NewTest(true, true)
 		mainConfig = test.Config
-		log.Printf("Running regtest mode with -tx=%s\n", mainConfig.InitTX())
+		log.Printf("Running regtest mode with -tx=%s\n", mainConfig.InitTx())
 	} else {
 		var mainConfigErr error
 		mainConfig, mainConfigErr = config.NewConfig()
 		if mainConfigErr != nil {
 			log.Fatal(mainConfigErr)
 		}
-		mainConfig.SetInitTX(tx0)
-		mainConfig.SetMultisigScript(script)
+
+		// if either tx or script not set throw error
+		if tx0 == "" || script0 == "" {
+			if mainConfig.InitTx() == "" || mainConfig.InitScript() == "" {
+				flag.PrintDefaults()
+				log.Fatalf(`Need to provide both -tx and -script argument.
+                    To use test configuration set the -regtest flag.`)
+			}
+		} else {
+			mainConfig.SetInitTx(tx0)
+			mainConfig.SetInitScript(script0)
+		}
+		if txTopup != "" && scriptTopup != "" {
+			mainConfig.SetTopupTx(txTopup)
+			mainConfig.SetTopupScript(scriptTopup)
+		}
+		mainConfig.SetRegtest(isRegtest)
 	}
 }
 
@@ -65,7 +79,7 @@ func main() {
 	dbInterface := server.NewDbMongo(ctx, mainConfig.DbConfig())
 	server := server.NewServer(dbInterface)
 	signer := attestation.NewAttestSignerZmq(mainConfig.SignerConfig())
-	attestService := attestation.NewAttestService(ctx, wg, server, signer, mainConfig, isRegtest)
+	attestService := attestation.NewAttestService(ctx, wg, server, signer, mainConfig)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)

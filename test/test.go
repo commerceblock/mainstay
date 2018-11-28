@@ -103,10 +103,11 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 		}
 	}
 
-	config.SetInitTX(tx0.TxID)
+	config.SetInitTx(tx0.TxID)
 	config.SetInitPK(PRIV_MAIN)
-	config.SetMultisigScript(SCRIPT)
+	config.SetInitScript(SCRIPT)
 
+	config.SetRegtest(true)
 	return &Test{config, oceanClient}
 }
 

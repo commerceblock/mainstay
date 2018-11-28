@@ -1,4 +1,8 @@
 {
+    "staychain" : {
+        "initTx": "MAINSTAY_INIT_TX",
+        "initScript": "MAINSTAY_INIT_SCRIPT"
+    },
     "main": {
         "rpcurl": "MAINSTAY_CLIENT_URL",
         "rpcuser": "MAINSTAY_CLIENT_USER",

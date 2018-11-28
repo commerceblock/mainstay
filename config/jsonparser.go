@@ -19,7 +19,7 @@ const (
 
 type ClientCfg map[string]interface{}
 
-// Get config for a specific client from conf file
+// Get config for a specific base name from conf file
 func getCfg(name string, conf []byte) (ClientCfg, error) {
 	file := bytes.NewReader(conf)
 	dec := json.NewDecoder(file)
@@ -35,7 +35,7 @@ func getCfg(name string, conf []byte) (ClientCfg, error) {
 	return val, nil
 }
 
-// Get string values of config options for a client
+// Get string values of config options for a base category
 func (conf ClientCfg) getValue(key string) (string, error) {
 	val, ok := conf[key]
 	if !ok {
@@ -48,7 +48,7 @@ func (conf ClientCfg) getValue(key string) (string, error) {
 	return str, nil
 }
 
-// Try get string values of config options for a client
+// Try get string values of config options for a base category
 func (conf ClientCfg) tryGetValue(key string) string {
 	val, ok := conf[key]
 	if !ok {

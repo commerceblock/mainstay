@@ -103,11 +103,11 @@ var (
 
 // NewAttestService returns a pointer to an AttestService instance
 // Initiates Attest Client and Attest Server
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, signer AttestSigner, config *confpkg.Config, isRegtest bool) *AttestService {
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, signer AttestSigner, config *confpkg.Config) *AttestService {
 	// Check init txid validity
-	_, errInitTx := chainhash.NewHashFromStr(config.InitTX())
+	_, errInitTx := chainhash.NewHashFromStr(config.InitTx())
 	if errInitTx != nil {
-		log.Fatalf("Incorrect initial transaction id %s\n", config.InitTX())
+		log.Fatalf("Incorrect initial transaction id %s\n", config.InitTx())
 	}
 
 	// initiate attestation client
@@ -123,7 +123,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Se
 		atimeHandleUnconfirmed = time.Duration(config.TimingConfig().HandleUnconfirmedMinutes) * time.Minute
 	}
 
-	return &AttestService{ctx, wg, config, attester, server, signer, ASTATE_INIT, models.NewAttestationDefault(), nil, isRegtest}
+	return &AttestService{ctx, wg, config, attester, server, signer, ASTATE_INIT, models.NewAttestationDefault(), nil, config.Regtest()}
 }
 
 // Run Attest Service

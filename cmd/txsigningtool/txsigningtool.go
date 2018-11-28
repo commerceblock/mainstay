@@ -57,9 +57,9 @@ func parseFlags() {
 	flag.StringVar(&script, "script", "", "Redeem script in case multisig is used")
 	flag.Parse()
 
-	if (tx0 == "" || pk0 == "") && !isRegtest {
+	if pk0 == "" && !isRegtest {
 		flag.PrintDefaults()
-		log.Fatalf("Need to provide both -tx and -pk argument. To use test configuration set the -regtest flag.")
+		log.Fatalf("Need to provide -pk argument. To use test configuration set the -regtest flag.")
 	}
 }
 
@@ -96,11 +96,20 @@ func init() {
 		if configErr != nil {
 			log.Fatal(configErr)
 		}
+
+		// if either tx or script not set throw error
+		if tx0 == "" || script == "" {
+			if config.InitTx() == "" || config.InitScript() == "" {
+				flag.PrintDefaults()
+				log.Fatalf(`Need to provide both -tx and -script argument.
+                    To use test configuration set the -regtest flag.`)
+			}
+		}
 	}
 
-	config.SetInitTX(tx0)
+	config.SetInitTx(tx0)
 	config.SetInitPK(pk0)
-	config.SetMultisigScript(script)
+	config.SetInitScript(script)
 	client = attestation.NewAttestClient(config, true) // isSigner flag set
 
 	// get publisher addr from config, if set
