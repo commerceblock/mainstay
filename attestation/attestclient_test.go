@@ -6,6 +6,7 @@ package attestation
 
 import (
 	"encoding/hex"
+	"errors"
 	"testing"
 
 	"mainstay/clients"
@@ -67,7 +68,7 @@ func TestAttestClient(t *testing.T) {
 		assert.Equal(t, nil, attestationErr)
 		assert.Equal(t, 1, len(tx.TxIn))
 		assert.Equal(t, 1, len(tx.TxOut))
-		if (unspent.Amount - (float64(tx.TxOut[0].Value) / 100000000)) <= 0 {
+		if (unspent.Amount - (float64(tx.TxOut[0].Value) / COIN)) <= 0 {
 			t.Fail()
 		}
 
@@ -175,7 +176,7 @@ func TestAttestClient_WithNoSigner(t *testing.T) {
 		assert.Equal(t, nil, attestationErr)
 		assert.Equal(t, 1, len(tx.TxIn))
 		assert.Equal(t, 1, len(tx.TxOut))
-		if (unspent.Amount - (float64(tx.TxOut[0].Value) / 100000000)) <= 0 {
+		if (unspent.Amount - (float64(tx.TxOut[0].Value) / COIN)) <= 0 {
 			t.Fail()
 		}
 
@@ -300,7 +301,7 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		assert.Equal(t, nil, attestationErr)
 		assert.Equal(t, 1, len(tx.TxIn))
 		assert.Equal(t, 1, len(tx.TxOut))
-		if (unspent.Amount - (float64(tx.TxOut[0].Value) / 100000000)) <= 0 {
+		if (unspent.Amount - (float64(tx.TxOut[0].Value) / COIN)) <= 0 {
 			t.Fail()
 		}
 		currentValue := tx.TxOut[0].Value
@@ -312,12 +313,21 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		txid, sendErr := client.sendAttestation(signedTx)
 		assert.Equal(t, nil, sendErr)
 
+		// test fees too high
+		prevMaxFee := client.Fees.maxFee
+		client.Fees.maxFee = 999999999999
+		tx, attestationErr = client.createAttestation(addr, unspent)
+		assert.Equal(t, errors.New(ERROR_INSUFFICIENT_FUNDS), attestationErr)
+		client.Fees.maxFee = prevMaxFee
+		tx, attestationErr = client.createAttestation(addr, unspent)
+		assert.Equal(t, nil, attestationErr)
+
 		// test attestation transaction fee bumping
 		bumpErr := client.bumpAttestationFees(tx)
 		assert.Equal(t, nil, bumpErr)
 		assert.Equal(t, 1, len(tx.TxIn))
 		assert.Equal(t, 1, len(tx.TxOut))
-		if (unspent.Amount - (float64(tx.TxOut[0].Value) / 100000000)) <= 0 {
+		if (unspent.Amount - (float64(tx.TxOut[0].Value) / COIN)) <= 0 {
 			t.Fail()
 		}
 		newFee := client.Fees.GetFee()
