@@ -1,14 +1,14 @@
 {
-    "bitcoin": {
-        "rpcurl": "localhost:18332",
-        "rpcuser": "user",
-        "rpcpass": "pass",
+    "main": {
+        "rpcurl": "MAINSTAY_CONFIRMATION_URL",
+        "rpcuser": "MAINSTAY_CONFIRMATION_USER",
+        "rpcpass": "MAINSTAY_CONFIRMATION_PASS",
         "chain": "testnet"
     },
-    "ocean": {
-        "rpcurl": "explorer",
-        "rpcuser": "bitcoinrpc",
-        "rpcpass": "acc1e7a299bc49449912e235b54dbce5",
+    "clientchain": {
+        "rpcurl": "MAINSTAY_OCEAN_URL",
+        "rpcuser": "MAINSTAY_OCEAN_USER",
+        "rpcpass": "MAINSTAY_OCEAN_PASS",
         "chain": "main"
     }
 }

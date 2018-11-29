@@ -1,13 +1,18 @@
 FROM golang:1.10.3-stretch
 
-ENV PKG_VER 0.17.0
+ENV PKG_VER 0.16.3
 ENV PKG bitcoin-${PKG_VER}-x86_64-linux-gnu.tar.gz
 ENV PKG_URL https://bitcoincore.org/bin/bitcoin-core-${PKG_VER}/${PKG}
 
-COPY . $GOPATH/src/ocean-attestation
+COPY . $GOPATH/src/mainstay
 
 RUN set -x \
-    && cd $GOPATH/src/ocean-attestation \
+    && apt update \
+    && apt install -y libzmq3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN set -x \
+    && cd $GOPATH/src/mainstay \
     && go get ./... \
     && go get github.com/stretchr/testify/assert \
     && go build \
@@ -29,9 +34,9 @@ RUN set -ex \
     && tar zxvf ${PKG} \
     && export PATH=$PATH:$HOME/bitcoin-${PKG_VER}/bin \
     && bitcoind \
-    && /go/src/ocean-attestation/run-tests.sh
+    && /go/src/mainstay/scripts/run-tests.sh
 
 COPY docker-entrypoint.sh /
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["ocean-attestation"]
+CMD ["mainstay"]

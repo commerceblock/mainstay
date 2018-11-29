@@ -1,0 +1,15 @@
+{
+    "main": {
+        "rpcurl": "",
+        "rpcuser": "",
+        "rpcpass": "",
+        "chain": ""
+    },
+    "db": {
+        "user":"MAINSTAY_DB_USER",
+        "password":"MAINSTAY_DB_PASS",
+        "host":"MAINSTAY_DB_HOST",
+        "port":"MAINSTAY_DB_PORT",
+        "name":"MAINSTAY_DB_NAME"
+    }
+}

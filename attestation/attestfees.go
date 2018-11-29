@@ -1,67 +1,169 @@
+// Copyright (c) 2018 CommerceBlock Team
+// Use of this source code is governed by an MIT
+// license that can be found in the LICENSE file.
+
 package attestation
 
 import (
-    "net/http"
-    "encoding/json"
-    "log"
+	"encoding/json"
+	"log"
+	"net/http"
+
+	"mainstay/config"
 )
 
 // Utility functions to get best bitcoin fees from a remote API
+// Provide min/max values from config and increment fee based
+// on schedule, timing and upper/lower limits
 
-// default fee in satoshis
-const FEE_PER_BYTE = 20
+// default fee per byte values in satoshis
+const (
+	DEFAULT_MIN_FEE       = 10
+	DEFAULT_MAX_FEE       = 100
+	DEFAULT_FEE_INCREMENT = 5
+)
 
-// response format:
-// { "fastestFee": 40, "halfHourFee": 20, "hourFee": 10 }
-const FEE_API_URL = "https://bitcoinfees.earn.com/api/v1/fees/recommended"
+// warnings for arguments
+const (
+	WARNING_INVALID_MIN_FEE_ARG       = "Warning - Invalid min fee argument"
+	WARNING_INVALID_MAX_FEE_ARG       = "Warning - Invalid max fee argument"
+	WARNING_INVALID_FEE_INCREMENT_ARG = "Warning - Invalid fee increment argument"
+)
 
-// default fee type to use from response
-// options: fastestFee, halfHourFee, hourFee
-const BEST_FEE_TYPE = "hourFee"
+// fee api config
+const (
+	// response format:
+	// { "fastestFee": 40, "halfHourFee": 20, "hourFee": 10 }
+	FEE_API_URL = "https://bitcoinfees.earn.com/api/v1/fees/recommended"
 
-// GetFee returns the best fee based on the parameters provided
-func GetFee(defaultFee bool, customFeeType ...string) int {
-    if defaultFee {
-        log.Printf("*Fees* Using default fee value: %d\n", FEE_PER_BYTE)
-        return FEE_PER_BYTE
-    }
+	// default fee type to use from response
+	// options: fastestFee, halfHourFee, hourFee
+	DEFAULT_BEST_FEE_TYPE = "hourFee"
+)
 
-    var feeType = BEST_FEE_TYPE
-    if len(customFeeType) > 0 {
-        feeType = customFeeType[0]
-    }
+// AttestFees struct
+type AttestFees struct {
+	// minimum fee allowed for attestation transactions
+	minFee int
 
-    fee := GetFeeFromAPI(feeType)
-    if fee < FEE_PER_BYTE {
-        log.Printf("*Fees* Using default fee value: %d\n", FEE_PER_BYTE)
-        return FEE_PER_BYTE
-    }
-    log.Printf("*Fees* Using fee of type %s and value %d from API\n", feeType, int(fee))
-    return fee
+	// maximum fee allowed for attestation transactions
+	maxFee int
+
+	// constant fee increment on fee bumping case
+	feeIncrement int
+
+	// current fee used for attestation transactions
+	currentFee int
+}
+
+// New AttestFees instance
+// Limit values taken from configuration
+// Current fee value reset from api
+func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
+
+	// min fee with upper limit max_fee default
+	minFee := DEFAULT_MIN_FEE
+	if feesConfig.MinFee > 0 && feesConfig.MinFee < DEFAULT_MAX_FEE {
+		minFee = feesConfig.MinFee
+	} else {
+		log.Println(WARNING_INVALID_MIN_FEE_ARG)
+	}
+	log.Printf("Min fee set to: %d\n", minFee)
+
+	// max fee with lower limit min_fee && 0 and max fee default
+	maxFee := DEFAULT_MAX_FEE
+	if feesConfig.MaxFee > 0 && feesConfig.MaxFee > minFee && feesConfig.MaxFee < DEFAULT_MAX_FEE {
+		maxFee = feesConfig.MaxFee
+	} else {
+		log.Println(WARNING_INVALID_MAX_FEE_ARG)
+	}
+	log.Printf("Max fee set to: %d\n", maxFee)
+
+	// fee increment with lower limit 0
+	feeIncrement := DEFAULT_FEE_INCREMENT
+	if feesConfig.FeeIncrement > 0 {
+		feeIncrement = feesConfig.FeeIncrement
+	} else {
+		log.Println(WARNING_INVALID_FEE_INCREMENT_ARG)
+	}
+	log.Printf("Fee increment set to: %d\n", feeIncrement)
+
+	attestFees := AttestFees{
+		minFee:       minFee,
+		maxFee:       maxFee,
+		feeIncrement: feeIncrement}
+
+	attestFees.ResetFee()
+	return attestFees
+}
+
+// Get current fee
+func (a AttestFees) GetFee() int {
+	log.Printf("*Fees* Current fee value: %d\n", a.currentFee)
+	return a.currentFee
+}
+
+// Reset current fee, getting latest best value from API
+// Minimum option value to set current fee to minFee
+func (a *AttestFees) ResetFee(useMinimum ...bool) {
+	var fee int
+	if len(useMinimum) > 0 && useMinimum[0] {
+		fee = a.minFee
+	} else {
+		fee = getBestFee()
+		if fee < a.minFee {
+			fee = a.minFee
+		} else if fee > a.maxFee {
+			fee = a.maxFee
+		}
+	}
+	a.currentFee = fee
+	log.Printf("*Fees* Current fee set to value: %d\n", a.currentFee)
+}
+
+// Bump fee upon request using increment value and not allowing values higher than max configured fee
+func (a *AttestFees) BumpFee() {
+	a.currentFee += a.feeIncrement
+	log.Printf("*Fees* Bumping fee value to: %d\n", a.currentFee)
+	if a.currentFee > a.maxFee {
+		log.Printf("*Fees* Max allowed fee value reached: %d\n", a.currentFee)
+		a.currentFee = a.maxFee
+	}
+}
+
+// getBestFee returns the best fee for the type requested from the API
+func getBestFee(customFeeType ...string) int {
+	var feeType = DEFAULT_BEST_FEE_TYPE
+	if len(customFeeType) > 0 {
+		feeType = customFeeType[0]
+	}
+
+	fee := getFeeFromAPI(feeType)
+	return fee
 }
 
 // GetFeeFromAPI attempts to get the best bitcoinfee from the fee API specified
-func GetFeeFromAPI(feeType string) int {
-    resp, getErr := http.Get(FEE_API_URL)
-    if getErr!=nil {
-       log.Printf("*Fees* API request failed - Using default fee value: %d\n", FEE_PER_BYTE)
-       return FEE_PER_BYTE
-    }
+func getFeeFromAPI(feeType string) int {
+	resp, getErr := http.Get(FEE_API_URL)
+	if getErr != nil {
+		log.Println("*Fees* API request failed")
+		return -1
+	}
 
-    defer resp.Body.Close()
-    dec := json.NewDecoder(resp.Body)
-    var respJson map[string]float64
-    decErr := dec.Decode(&respJson)
-    if decErr!=nil {
-        log.Printf("*Fees* API response decoding failed - Using default fee value: %d\n", FEE_PER_BYTE)
-       return FEE_PER_BYTE
-    }
+	defer resp.Body.Close()
+	dec := json.NewDecoder(resp.Body)
+	var respJson map[string]float64
+	decErr := dec.Decode(&respJson)
+	if decErr != nil {
+		log.Println("*Fees* API response decoding failed")
+		return -1
+	}
 
-    fee, ok := respJson[feeType]
-    if !ok {
-        log.Printf("*Fees* API response incorrect format - Using default fee value: %d\n", FEE_PER_BYTE)
-       return FEE_PER_BYTE
-    }
+	fee, ok := respJson[feeType]
+	if !ok {
+		log.Println("*Fees* API response incorrect format")
+		return -1
+	}
 
-    return int(fee)
+	return int(fee)
 }

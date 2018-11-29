@@ -1,14 +1,41 @@
 {
+    "staychain": {
+        "initTx": "87e56bda501ba6a022f12e178e9f1ac03fb2c07f04e1dfa62ac9e1d83cd840e1",
+        "initScript": "51210381324c14a482646e9ad7cf82372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae",
+        "topupTx": "97e56bda501ba6a022f12e178e9f1ac03fb2c07f04e1dfa62ac9e1d83cd840e1",
+        "topupScript": "51210381324c14a482646e9ad7cf92372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae",
+        "regtest": "1"
+    },
     "main": {
         "rpcurl": "127.0.0.1:18000",
         "rpcuser": "USERNAME",
         "rpcpass": "PASSWORD",
         "chain": "regtest"
     },
-    "ocean": {
+    "clientchain": {
         "rpcurl": "127.0.0.1:19000",
         "rpcuser": "USERNAME",
         "rpcpass": "PASSWORD",
         "chain": "main"
+    },
+    "signer": {
+        "publisher": "*:5000",
+        "signers": "node0:1000,node1:1001"
+    },
+    "db": {
+        "user":"user",
+        "password":"pssword",
+        "host":"localhost",
+        "port":"27017",
+        "name":"mainstay"
+    },
+    "fees": {
+        "minFee": "5",
+        "maxFee": "50",
+        "feeIncrement": "2"
+    },
+    "timing": {
+        "newAttestationMinutes": "60",
+        "handleUnconfirmedMinutes": "60"
     }
 }

@@ -1,10 +1,10 @@
-# ocean-attestation
-The ocean-attestation repository is an application that implements the [Mainstay protocol](https://www.commerceblock.com/wp-content/uploads/2018/03/commerceblock-mainstay-whitepaper.pdf) designed by [CommerceBlock](https://www.commerceblock.com). It is a Go daemon performing attestations of the [Ocean](https://github.com/commerceblock/ocean) network to Bitcoin. It also includes a Confirmation tool that can be run in parallel to the Ocean/Bitcoin networks and confirm these attestations.
+# mainstay
+The mainstay repository is an application that implements the [Mainstay protocol](https://www.commerceblock.com/wp-content/uploads/2018/03/commerceblock-mainstay-whitepaper.pdf) designed by [CommerceBlock](https://www.commerceblock.com). It is a Go daemon performing attestations of the [Ocean](https://github.com/commerceblock/ocean) network and other client commitments to Bitcoin. It also includes a Confirmation tool that can be run in parallel to the Bitcoin network in order confirm the attestations and prove that the commitments were included in the attestation.
 
 ## Prerequisites
 * Go (https://github.com/golang)
 * Bitcoin (https://github.com/bitcoin/bitcoin)
-* Ocean (https://github.com/commerceblock/ocean)
+* Zmq (https://github.com/zeromq/libzmq)
 
 ## Instructions
 
@@ -12,29 +12,55 @@ The ocean-attestation repository is an application that implements the [Mainstay
 
 - Install go and the attestation service by following `scripts/build.sh`
 
-- Regtest Demo
-    - Start the ocean-demo `python ocean-demo/PROTOCOLS/demo.py`
-    - Run `ocean-attestation -regtest`
+- Setup up database collections and roles using `scripts/db-init.js`
 
-- Testnet Mode
+- Setup `conf.json` file under `/config` by following [config guidelines](/config/README.md)
 
-    - Download and run a full Bitcoin Node on testnet mode, fully indexed and in blocksonly mode. `signrawtransaction` should also be included as a `deprecatedrpc` option. Add the connection details (actual value or ENV variable) to this node in `conf/conf.json`
+- Run service
+    - Regtest
+        - Start the ocean-demo `python ocean-demo/PROTOCOLS/demo.py`
+        - Run `mainstay -regtest`
+    - Testnet
+        - Download and run a full Bitcoin Node on testnet mode, fully indexed and in blocksonly mode. `signrawtransaction` should also be included as a `deprecatedrpc` option. Add the connection details (actual value or ENV variable) to this node in `conf/conf.json`
 
-    - Fund this wallet node, send all the funds to a single address and store the `TX_HASH` and `PRIVKEY` of this transaction.
+        - Fund this wallet node, send all the funds to a single (m of n sig) P2SH address and store the `TX_HASH`, `PRIVKEY_x` and `REDEEM_SCRIPT` of this transaction, where `x in [0, n-1]`.
 
-    - The `TX_HASH` should be included in the genesis block of the Ocean network using the conf option `attestationhash`. Initiate the Ocean testnet network and add connection details (actual value or ENV variable) to one of it's nodes in `conf/conf.json`.
+        - The `TX_HASH` should be included in the genesis block of the Ocean network using the conf option `attestationhash`. Initiate the Ocean testnet network and add connection details (actual value or ENV variable) to one of it's nodes in `conf/conf.json`.
 
-    - Run `ocean-attestation -tx TX_HASH`
+        - Run `mainstay -tx TX_HASH -script REDEEM_SCRIPT` for the mainstay attestation service. (tx/script can also be set in .conf file)
+
+        - Run `go run cmd/txsigningtool/txsigningtool.go -tx TX_HASH -pk PRIVKEY_x -script REDEEMSCRIPT` for `x in [0, n-1]` transaction signers of the m-of-n multisig P2SH address. (tx/script can also be set in .conf file)
 
 - Unit Testing
-    - `/$GOPATH/src/ocean-attestation/run-tests.sh`
+    - `/$GOPATH/src/mainstay/run-tests.sh`
 
-### Confirmation Tool
+### Tools
 
-The confirmation tool `cmd/confirmationtool` can be used to confirm all the attestations of the Ocean network to Bitcoin and wait for any new attestations that will be happening.
+#### Transaction Signing Tool
 
-Running this tool will require a full Bitcoin testnet node and a full Ocean node. Connection details for these should be included in `cmd/confirmationtool/conf.json`. To run this tool you need to first fetch the `TX_HASH` from the `attestationhash` field in the Ocean genesis block and then run:
+The transaction signing tool `cmd/txsigningtool` is a tool used by each signer of the attestation multisig to sign attestation transactions. The tool subscribes to the main attestation service in order to receive confirmed attestation hashes for tweaking priv key before signing, new commitment hashes to verify new destination address and new bitcoin attestation transactions to sign and publish signature for attestation service to receive.
 
-`go run cmd/confirmationtool/confirmationtool.go -tx TX_HASH`
+The tool maintains a connection to a Bitcoin Node for transaction validation and signing.
+
+#### Client Signup Tool
+
+The client signup tool `cmd/clientsignuptool` is used by the maintainer of the attestation service to sign up new clients. The client will provide a P2PKH address that will be required to verify the signature of new commitments sent to the attestation API. The tool assigns a new position to the client in the CMR and provides an auth_token for authorizing API POST requests of new commitments submitted by the client.
+
+The tool requires a connection to the DB used by the service with appropriate permissions.
+
+For auth-token generation only, token generator tool `cmd/tokengeneratortool` can be used.
+
+#### Client Confirmation Tool
+
+The confirmation tool `cmd/confirmationtool` can be used to confirm all the attestations of a client Ocean-type network to Bitcoin and wait for any new attestations that will be happening.
+
+Running this tool will require a full Bitcoin testnet node and a full Ocean node. Connection details for these should be included in `cmd/confirmationtool/conf.json`.
+
+The `API_HOST` field should be set to the mainstay URL. This can be updated in `cmd/confirmationtool/confirmationtool.go`.
+
+To run this tool you need to first fetch the `TX_HASH` from the `attestationhash` field in the Ocean genesis block, as well as the publicly available `REDEEM_SCRIPT` of the attestation service multisig. The tool can also be started with any other `TX_HASH` attestation found in the mainstay website. A client should use his designated `CLIENT_POSITION` that was assigned during signup and run the tool using:
+
+`go run cmd/confirmationtool/confirmationtool.go
+-tx TX_HASH -script REDEEM_SCRIPT -position CLIENT_POSITION`
 
 This will initially take some time to sync up all the attestations that have been committed so far and then will wait for any new attestations. Logging is displayed for each attestation and for full details the `-detailed` flag can be used.

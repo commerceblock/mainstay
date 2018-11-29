@@ -1,14 +1,14 @@
 #!/bin/bash
 shopt -s expand_aliases
 
-alias btcd="bitcoind -datadir=$HOME/btc-datadir"
-alias btcl="bitcoin-cli -datadir=$HOME/btc-datadir"
+alias btcd="bitcoind -datadir=/tmp/btc-datadir"
+alias btcl="bitcoin-cli -datadir=/tmp/btc-datadir"
 
 btcl stop
 sleep 1
 
-rm -r ~/btc-datadir ;
-mkdir ~/btc-datadir ;
+rm -r /tmp/btc-datadir ;
+mkdir /tmp/btc-datadir ;
 
 printf '%s\n' '#!/bin/sh' 'rpcuser=user' \
     'rpcpassword=pass' \
@@ -18,15 +18,17 @@ printf '%s\n' '#!/bin/sh' 'rpcuser=user' \
     'server=1' \
     'regtest=1' \
     'daemon=1' \
-    'txindex=1' > ~/btc-datadir/bitcoin.conf
+    'txindex=1' > /tmp/btc-datadir/bitcoin.conf
 
 btcd
-sleep 5
+sleep 1
 
 btcl generate 103
 sleep 1
 
-btcl sendtoaddress $(btcl getnewaddress) $(btcl getbalance) "" "" true
+btcl importaddress "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB"
+btcl importaddress "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332102f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e7552ae" "" true true
+btcl sendtoaddress "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB" $(btcl getbalance) "" "" true
 sleep 1
 
 btcl generate 1
