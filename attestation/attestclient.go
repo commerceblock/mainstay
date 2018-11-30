@@ -411,7 +411,7 @@ func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]crypto.Sig, h
 					redeemScriptBytes, _ = hex.DecodeString(w.script0)
 				}
 				combinedScriptSig := crypto.CreateScriptSig(sigs[i][:w.numOfSigs], redeemScriptBytes)
-				signedMsgTx.TxIn[0].SignatureScript = combinedScriptSig
+				signedMsgTx.TxIn[i].SignatureScript = combinedScriptSig
 			}
 		}
 	}

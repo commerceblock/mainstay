@@ -22,7 +22,8 @@ import (
 // Attest Client Test for AttestClient struct and methods
 // Chaining calls together because it is easier to test
 // Using intermediate calls to provide data for next calls
-func TestAttestClient(t *testing.T) {
+// Test case with single Client Signer
+func TestAttestClient_Signer(t *testing.T) {
 	// TEST INIT
 	test := test.NewTest(false, false)
 	sideClientFake := test.OceanClient.(*clients.SidechainClientFake)
@@ -128,7 +129,7 @@ func TestAttestClient(t *testing.T) {
 
 // Attest Client Test for AttestClient struct and methods
 // Test 2 attest clients, one signing, one not signing
-func TestAttestClient_WithNoSigner(t *testing.T) {
+func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 	// TEST INIT
 	test := test.NewTest(false, false)
 	sideClientFake := test.OceanClient.(*clients.SidechainClientFake)

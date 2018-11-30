@@ -236,7 +236,7 @@ func TestConfigStaychain(t *testing.T) {
         "staychain": {
             "initTx": "87e56bda501ba6a022f12e178e9f1ac03fb2c07f04e1dfa62ac9e1d83cd840e1",
             "initScript": "51210381324c14a482646e9ad7cf82372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae",
-            "topupTx": "97e56bda501ba6a022f12e178e9f1ac03fb2c07f04e1dfa62ac9e1d83cd840e1",
+            "topupAddress": "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB",
             "topupScript": "51210381324c14a482646e9ad7cf92372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae",
             "regtest": "1"
         }
@@ -247,7 +247,7 @@ func TestConfigStaychain(t *testing.T) {
 
 	assert.Equal(t, "87e56bda501ba6a022f12e178e9f1ac03fb2c07f04e1dfa62ac9e1d83cd840e1", config.InitTx())
 	assert.Equal(t, "51210381324c14a482646e9ad7cf82372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae", config.InitScript())
-	assert.Equal(t, "97e56bda501ba6a022f12e178e9f1ac03fb2c07f04e1dfa62ac9e1d83cd840e1", config.TopupTx())
+	assert.Equal(t, "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB", config.TopupAddress())
 	assert.Equal(t, "51210381324c14a482646e9ad7cf92372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae", config.TopupScript())
 	assert.Equal(t, true, config.Regtest())
 
@@ -260,8 +260,8 @@ func TestConfigStaychain(t *testing.T) {
 	config.SetInitScript("bb")
 	assert.Equal(t, "bb", config.InitScript())
 
-	config.SetTopupTx("cc")
-	assert.Equal(t, "cc", config.TopupTx())
+	config.SetTopupAddress("cc")
+	assert.Equal(t, "cc", config.TopupAddress())
 
 	config.SetTopupScript("dd")
 	assert.Equal(t, "dd", config.TopupScript())
@@ -283,7 +283,7 @@ func TestConfigStaychain(t *testing.T) {
 
 	assert.Equal(t, "", config.InitTx())
 	assert.Equal(t, "", config.InitScript())
-	assert.Equal(t, "", config.TopupTx())
+	assert.Equal(t, "", config.TopupAddress())
 	assert.Equal(t, "", config.TopupScript())
 	assert.Equal(t, false, config.Regtest())
 }

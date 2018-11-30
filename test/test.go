@@ -47,7 +47,7 @@ var testConf = []byte(`
 
 // test parameters for a 1-2 multisig redeemScript and P2SH address
 
-// address - "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB"
+const ADDRESS = "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB"
 const SCRIPT = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332102f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e7552ae"
 
 // address - "2N9z6a8BQB1xWmesCJcBWZm1R3f1PZcwrGz"
