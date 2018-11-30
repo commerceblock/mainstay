@@ -337,7 +337,7 @@ func (s *AttestService) doStateNewAttestation() {
 	} else if success {
 		var createErr error
 		var newTx *wire.MsgTx
-		newTx, createErr = s.attester.createAttestation(paytoaddr, txunspent)
+		newTx, createErr = s.attester.createAttestation(paytoaddr, []btcjson.ListUnspentResult{txunspent})
 		if s.setFailure(createErr) {
 			return // will rebound to init
 		}

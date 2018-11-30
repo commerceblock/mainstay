@@ -14,6 +14,7 @@ import (
 	"mainstay/models"
 	"mainstay/test"
 
+	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/stretchr/testify/assert"
 )
@@ -64,7 +65,7 @@ func TestAttestClient(t *testing.T) {
 		assert.Equal(t, nil, importErr)
 
 		// test creating attestation transaction
-		tx, attestationErr := client.createAttestation(addr, unspent)
+		tx, attestationErr := client.createAttestation(addr, []btcjson.ListUnspentResult{unspent})
 		assert.Equal(t, nil, attestationErr)
 		assert.Equal(t, 1, len(tx.TxIn))
 		assert.Equal(t, 1, len(tx.TxOut))
@@ -172,7 +173,7 @@ func TestAttestClient_WithNoSigner(t *testing.T) {
 		assert.Equal(t, nil, importErr)
 
 		// test creating attestation transaction
-		tx, attestationErr := client.createAttestation(addr, unspent)
+		tx, attestationErr := client.createAttestation(addr, []btcjson.ListUnspentResult{unspent})
 		assert.Equal(t, nil, attestationErr)
 		assert.Equal(t, 1, len(tx.TxIn))
 		assert.Equal(t, 1, len(tx.TxOut))
@@ -297,7 +298,7 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		assert.Equal(t, nil, importErr)
 
 		// test creating attestation transaction
-		tx, attestationErr := client.createAttestation(addr, unspent)
+		tx, attestationErr := client.createAttestation(addr, []btcjson.ListUnspentResult{unspent})
 		assert.Equal(t, nil, attestationErr)
 		assert.Equal(t, 1, len(tx.TxIn))
 		assert.Equal(t, 1, len(tx.TxOut))
@@ -316,10 +317,10 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		// test fees too high
 		prevMaxFee := client.Fees.maxFee
 		client.Fees.maxFee = 999999999999
-		tx, attestationErr = client.createAttestation(addr, unspent)
+		tx, attestationErr = client.createAttestation(addr, []btcjson.ListUnspentResult{unspent})
 		assert.Equal(t, errors.New(ERROR_INSUFFICIENT_FUNDS), attestationErr)
 		client.Fees.maxFee = prevMaxFee
-		tx, attestationErr = client.createAttestation(addr, unspent)
+		tx, attestationErr = client.createAttestation(addr, []btcjson.ListUnspentResult{unspent})
 		assert.Equal(t, nil, attestationErr)
 
 		// test attestation transaction fee bumping

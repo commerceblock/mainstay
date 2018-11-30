@@ -216,48 +216,65 @@ func (w *AttestClient) ImportAttestationAddr(addr btcutil.Address) error {
 	return nil
 }
 
-// Generate a new transaction paying to the tweaked address and add fees
-// Transaction inputs are generated using the previous unspent in the wallet
+// Generate a new transaction paying to the tweaked address
+// Transaction inputs are generated using the previous attestation
+// unspent as well as any additional topup inputs paid to wallet
 // Fees are calculated using AttestFees interface and RBF flag is set manually
-func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult) (
+func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []btcjson.ListUnspentResult) (
 	*wire.MsgTx, error) {
-	inputs := []btcjson.TransactionInput{{Txid: txunspent.TxID, Vout: txunspent.Vout}}
 
+	// add inputs and amount for each unspent tx
+	var inputs []btcjson.TransactionInput
 	amounts := map[btcutil.Address]btcutil.Amount{
-		paytoaddr: btcutil.Amount(txunspent.Amount * COIN)}
-	msgtx, errCreate := w.MainClient.CreateRawTransaction(inputs, amounts, nil)
+		paytoaddr: btcutil.Amount(0)}
+
+	// pay all funds to single address
+	for i := 0; i < len(unspent); i++ {
+		inputs = append(inputs, btcjson.TransactionInput{
+			Txid: unspent[i].TxID,
+			Vout: unspent[i].Vout,
+		})
+		amounts[paytoaddr] += btcutil.Amount(unspent[i].Amount * COIN)
+	}
+
+	// attempt to create raw transaction
+	msgTx, errCreate := w.MainClient.CreateRawTransaction(inputs, amounts, nil)
 	if errCreate != nil {
 		return nil, errCreate
 	}
 
 	// set replace-by-fee flag
-	msgtx.TxIn[0].Sequence = uint32(math.Pow(2, float64(32))) - 3
+	// TODO: ? - currently only set RBF flag for attestation vin
+	msgTx.TxIn[0].Sequence = uint32(math.Pow(2, float64(32))) - 3
 
 	// return error if txout value is less than maxFee target
-	maxFee := int64(w.Fees.maxFee * msgtx.SerializeSize())
-	if msgtx.TxOut[0].Value < maxFee {
+	maxFee := int64(w.Fees.maxFee * msgTx.SerializeSize())
+	if msgTx.TxOut[0].Value < maxFee {
 		return nil, errors.New(ERROR_INSUFFICIENT_FUNDS)
 	}
 
 	// print warning if txout value less than 100*maxfee target
-	if msgtx.TxOut[0].Value < 100*maxFee {
+	if msgTx.TxOut[0].Value < 100*maxFee {
 		log.Println(WARING_INSUFFICIENT_FUNDS)
 	}
 
+	// add fees using best fee-per-byte estimate
 	feePerByte := w.Fees.GetFee()
-	fee := int64(feePerByte * msgtx.SerializeSize())
-	msgtx.TxOut[0].Value -= fee
+	fee := int64(feePerByte * msgTx.SerializeSize())
+	msgTx.TxOut[0].Value -= fee
 
-	return msgtx, nil
+	return msgTx, nil
 }
 
 // Create new attestation transaction by removing sigs and
 // bumping fee of existing transaction with incremented fee
 // The latest fee is fetched from the AttestFees API, which
 // has fixed uppwer/lower fee limit and fee increment
-func (w *AttestClient) bumpAttestationFees(msgtx *wire.MsgTx) error {
+func (w *AttestClient) bumpAttestationFees(msgTx *wire.MsgTx) error {
 	// first remove any sigs
-	msgtx.TxIn[0].SignatureScript = []byte{}
+	for i := 0; i < len(msgTx.TxIn); i++ {
+		msgTx.TxIn[i].SignatureScript = []byte{}
+	}
 
 	// bump fees and calculate fee increment
 	prevFeePerByte := w.Fees.GetFee()
@@ -265,8 +282,8 @@ func (w *AttestClient) bumpAttestationFees(msgtx *wire.MsgTx) error {
 	feePerByteIncrement := w.Fees.GetFee() - prevFeePerByte
 
 	// increase tx fees by fee difference
-	feeIncrement := int64(feePerByteIncrement * msgtx.SerializeSize())
-	msgtx.TxOut[0].Value -= feeIncrement
+	feeIncrement := int64(feePerByteIncrement * msgTx.SerializeSize())
+	msgTx.TxOut[0].Value -= feeIncrement
 
 	return nil
 }
@@ -377,7 +394,7 @@ func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs []crypto.Sig, has
 	return signedMsgTx, nil
 }
 
-// Send the latest attestation transaction
+// Send the latest attestation transaction through rpc bitcoin client connection
 func (w *AttestClient) sendAttestation(msgtx *wire.MsgTx) (chainhash.Hash, error) {
 
 	// send signed attestation
