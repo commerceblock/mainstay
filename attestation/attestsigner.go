@@ -4,6 +4,10 @@
 
 package attestation
 
+import (
+	"mainstay/crypto"
+)
+
 // AttestSigner interface
 //
 // Provides the interface for communication with
@@ -20,5 +24,5 @@ type AttestSigner interface {
 	SendConfirmedHash([]byte)
 	SendNewHash([]byte)
 	SendNewTx([]byte)
-	GetSigs() [][]byte
+	GetSigs() []crypto.Sig
 }

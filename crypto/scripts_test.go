@@ -73,13 +73,13 @@ func TestScript(t *testing.T) {
 	assert.Equal(t, sig2, hex.EncodeToString(sigsTest[1]))
 
 	// Test empty CreateScriptsig
-	emptyScriptSigTest := CreateScriptSig([][]byte{}, []byte{})
+	emptyScriptSigTest := CreateScriptSig([]Sig{}, []byte{})
 	assert.Equal(t, []byte{byte(0), byte(0)}, emptyScriptSigTest)
 
 	// Test CreateScriptsig
 	sig1Bytes, _ := hex.DecodeString(sig1)
 	sig2Bytes, _ := hex.DecodeString(sig2)
 	redeemScriptBytes, _ := hex.DecodeString(redeemScript)
-	scriptSigTest := CreateScriptSig([][]byte{sig1Bytes, sig2Bytes}, redeemScriptBytes)
+	scriptSigTest := CreateScriptSig([]Sig{sig1Bytes, sig2Bytes}, redeemScriptBytes)
 	assert.Equal(t, scriptSig, hex.EncodeToString(scriptSigTest))
 }

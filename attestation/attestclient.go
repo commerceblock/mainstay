@@ -111,7 +111,9 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		}
 	} else if multisig == "" {
 		log.Fatal(ERROR_MISSING_MULTISIG)
-	} else { // if multisig is set, parse pubkeys
+	}
+
+	if multisig != "" { // if multisig is set, parse pubkeys
 		pubkeys, numOfSigs := crypto.ParseRedeemScript(config.InitScript())
 
 		// verify our key is one of the multisig keys in signer case
@@ -337,8 +339,10 @@ func (w *AttestClient) SignTransaction(hash chainhash.Hash, msgTx wire.MsgTx) (
 	return signedMsgTx, redeemScript, nil
 }
 
-// Sign the latest attestation transaction with the combined signatures
-func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]byte, hash chainhash.Hash) (
+// Sign the attestation transaction provided with the received signatures
+// In the client signer case, client additionally adds sigs as well to the transaction
+// Sigs are then combined and added to the attestation transaction inputs
+func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs []crypto.Sig, hash chainhash.Hash) (
 	*wire.MsgTx, error) {
 	// set tx pointer and redeem script
 	signedMsgTx := msgtx

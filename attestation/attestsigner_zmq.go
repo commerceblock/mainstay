@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	confpkg "mainstay/config"
+	"mainstay/crypto"
 	"mainstay/messengers"
 
 	zmq "github.com/pebbe/zmq4"
@@ -77,14 +78,14 @@ func (z AttestSignerZmq) SendNewTx(tx []byte) {
 }
 
 // Listen to zmq subscribers to receive tx signatures
-func (z AttestSignerZmq) GetSigs() [][]byte {
-	var sigs [][]byte
+func (z AttestSignerZmq) GetSigs() []crypto.Sig {
+	var sigs []crypto.Sig
 	sockets, _ := poller.Poll(-1)
 	for _, socket := range sockets {
 		for _, sub := range z.subscribers {
 			if sub.Socket() == socket.Socket {
 				_, msg := sub.ReadMessage()
-				sigs = append(sigs, msg)
+				sigs = append(sigs, crypto.Sig(msg))
 			}
 		}
 	}
