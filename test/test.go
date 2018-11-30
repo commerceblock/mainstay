@@ -107,6 +107,10 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	config.SetInitPK(PRIV_MAIN)
 	config.SetInitScript(SCRIPT)
 
+	// set topupScript-topupAddress same as init script/addr
+	config.SetTopupScript(SCRIPT)
+	config.SetTopupAddress(ADDRESS)
+
 	config.SetRegtest(true)
 	return &Test{config, oceanClient}
 }
