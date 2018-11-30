@@ -78,7 +78,7 @@ func TestAttestClient(t *testing.T) {
 		client.Fees.BumpFee()
 
 		// test signing and sending attestation
-		signedTx, signErr := client.signAttestation(tx, []crypto.Sig{}, lastHash)
+		signedTx, signErr := client.signAttestation(tx, [][]crypto.Sig{}, lastHash)
 		assert.Equal(t, nil, signErr)
 		txid, sendErr := client.sendAttestation(signedTx)
 		assert.Equal(t, nil, sendErr)
@@ -186,9 +186,8 @@ func TestAttestClient_WithNoSigner(t *testing.T) {
 		client.Fees.BumpFee()
 
 		// test signing and sending attestation
-		signedTx, signErr := client.signAttestation(tx, []crypto.Sig{}, lastHash)
-		assert.Equal(t, nil, signErr)
-		assert.Equal(t, 0, len(signedTx.TxIn[0].SignatureScript))
+		signedTx, signErr := client.signAttestation(tx, [][]crypto.Sig{}, lastHash)
+		assert.Equal(t, errors.New(ERROR_SIGS_MISSING_FOR_TX), signErr)
 
 		txid, sendErr := client.sendAttestation(signedTx)
 		assert.Equal(t, true, sendErr != nil)
@@ -203,7 +202,7 @@ func TestAttestClient_WithNoSigner(t *testing.T) {
 		assert.Equal(t, 1, len(sigsSigner))
 
 		// test signing and sending attestation again
-		signedTx, signErr = client.signAttestation(tx, []crypto.Sig{sigsSigner[0]}, lastHash)
+		signedTx, signErr = client.signAttestation(tx, [][]crypto.Sig{[]crypto.Sig{sigsSigner[0]}}, lastHash)
 		assert.Equal(t, nil, signErr)
 		assert.Equal(t, true, len(signedTx.TxIn[0].SignatureScript) > 0)
 
@@ -309,7 +308,7 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		currentFee := client.Fees.GetFee()
 
 		// test signing and sending attestation
-		signedTx, signErr := client.signAttestation(tx, []crypto.Sig{}, lastHash)
+		signedTx, signErr := client.signAttestation(tx, [][]crypto.Sig{}, lastHash)
 		assert.Equal(t, nil, signErr)
 		txid, sendErr := client.sendAttestation(signedTx)
 		assert.Equal(t, nil, sendErr)
@@ -337,7 +336,7 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		assert.Equal(t, client.Fees.minFee+client.Fees.feeIncrement, newFee)
 
 		// test signing and sending attestation again
-		signedTx, signErr = client.signAttestation(tx, []crypto.Sig{}, lastHash)
+		signedTx, signErr = client.signAttestation(tx, [][]crypto.Sig{}, lastHash)
 		assert.Equal(t, nil, signErr)
 		txid, sendErr = client.sendAttestation(signedTx)
 		assert.Equal(t, nil, sendErr)

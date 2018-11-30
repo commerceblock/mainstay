@@ -24,5 +24,5 @@ type AttestSigner interface {
 	SendConfirmedHash([]byte)
 	SendNewHash([]byte)
 	SendNewTx([]byte)
-	GetSigs() []crypto.Sig
+	GetSigs() [][]crypto.Sig
 }

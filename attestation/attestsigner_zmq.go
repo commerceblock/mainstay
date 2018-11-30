@@ -78,7 +78,7 @@ func (z AttestSignerZmq) SendNewTx(tx []byte) {
 }
 
 // Listen to zmq subscribers to receive tx signatures
-func (z AttestSignerZmq) GetSigs() []crypto.Sig {
+func (z AttestSignerZmq) GetSigs() [][]crypto.Sig {
 	var sigs []crypto.Sig
 	sockets, _ := poller.Poll(-1)
 	for _, socket := range sockets {
@@ -89,5 +89,5 @@ func (z AttestSignerZmq) GetSigs() []crypto.Sig {
 			}
 		}
 	}
-	return sigs
+	return [][]crypto.Sig{sigs}
 }

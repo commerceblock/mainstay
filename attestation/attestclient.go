@@ -38,6 +38,9 @@ const (
 	ERROR_INVALID_PK = `Invalid private key`
 
 	ERROR_FAILURE_IMPORTING_PK = `Could not import initial private key`
+
+	ERROR_SIGS_MISSING_FOR_TX  = `Missing signatures for transaction`
+	ERROR_SIGS_MISSING_FOR_VIN = `Missing signatures for transaction input`
 )
 
 // coin in satoshis
@@ -359,7 +362,7 @@ func (w *AttestClient) SignTransaction(hash chainhash.Hash, msgTx wire.MsgTx) (
 // Sign the attestation transaction provided with the received signatures
 // In the client signer case, client additionally adds sigs as well to the transaction
 // Sigs are then combined and added to the attestation transaction inputs
-func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs []crypto.Sig, hash chainhash.Hash) (
+func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]crypto.Sig, hash chainhash.Hash) (
 	*wire.MsgTx, error) {
 	// set tx pointer and redeem script
 	signedMsgTx := msgtx
@@ -373,19 +376,41 @@ func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs []crypto.Sig, has
 		}
 	}
 
-	// MultiSig case - combine sigs and create new scriptSig
+	// Check for multisig case
+	// Almost always multisig is used, but we retain this backward compatible
 	if redeemScript != "" {
-		mySigs, script := crypto.ParseScriptSig(signedMsgTx.TxIn[0].SignatureScript)
-		if len(mySigs) > 0 && len(script) > 0 && hex.EncodeToString(script) == redeemScript {
-			combinedSigs := append(mySigs, sigs...)
-
-			// take only numOfSigs required
-			combinedScriptSig := crypto.CreateScriptSig(combinedSigs[:w.numOfSigs], script)
-			signedMsgTx.TxIn[0].SignatureScript = combinedScriptSig
-		} else { // no mySigs - just used received client sigs and script
-			if len(sigs) >= w.numOfSigs {
-				redeemScriptBytes, _ := hex.DecodeString(redeemScript)
-				combinedScriptSig := crypto.CreateScriptSig(sigs[:w.numOfSigs], redeemScriptBytes)
+		for i := 0; i < len(signedMsgTx.TxIn); i++ {
+			// attempt to get mySigs first
+			mySigs, script := crypto.ParseScriptSig(signedMsgTx.TxIn[i].SignatureScript)
+			if len(mySigs) > 0 && len(script) > 0 {
+				if len(sigs) > i {
+					mySigs = append(mySigs, sigs[i]...)
+				}
+				// check we have the required number of sigs for vin
+				if len(mySigs) < w.numOfSigs {
+					return nil, errors.New(ERROR_SIGS_MISSING_FOR_VIN)
+				}
+				// take up to numOfSigs sigs
+				combinedScriptSig := crypto.CreateScriptSig(mySigs[:w.numOfSigs], script)
+				signedMsgTx.TxIn[i].SignatureScript = combinedScriptSig
+			} else {
+				// check we have all the sigs required
+				if len(sigs) < len(signedMsgTx.TxIn) {
+					return nil, errors.New(ERROR_SIGS_MISSING_FOR_TX)
+				}
+				if len(sigs[i]) < w.numOfSigs {
+					return nil, errors.New(ERROR_SIGS_MISSING_FOR_VIN)
+				}
+				// no mySigs - just use received client sigs and script
+				var redeemScriptBytes []byte
+				if i == 0 {
+					// for vin 0, use last attestation script
+					redeemScriptBytes, _ = hex.DecodeString(redeemScript)
+				} else {
+					// for any other vin, use initial/topup script as we assume topup use only
+					redeemScriptBytes, _ = hex.DecodeString(w.script0)
+				}
+				combinedScriptSig := crypto.CreateScriptSig(sigs[i][:w.numOfSigs], redeemScriptBytes)
 				signedMsgTx.TxIn[0].SignatureScript = combinedScriptSig
 			}
 		}
