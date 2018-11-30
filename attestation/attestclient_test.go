@@ -23,7 +23,7 @@ import (
 )
 
 const TOPUP_LEVEL = 3 // level at which to do the topup transaction
-const ITER_NUM = 6    // num of iterations
+const ITER_NUM = 5    // num of iterations
 
 // Find transaction unspent for a specific address
 func getUnspentForAddress(addr string, unspent []btcjson.ListUnspentResult) btcjson.ListUnspentResult {
@@ -42,6 +42,32 @@ func createTopupUnspent(t *testing.T, config *confpkg.Config) chainhash.Hash {
 	topupTxHash, topupTxErr := config.MainClient().SendToAddress(topupAddr, 50*COIN)
 	assert.Equal(t, nil, topupTxErr)
 	return *topupTxHash
+}
+
+// Verify and get topup unspent transaction
+func getTopUpUnspent(t *testing.T, client *AttestClient, config *confpkg.Config, topupHash chainhash.Hash) btcjson.ListUnspentResult {
+	unspents, _ := client.MainClient.ListUnspent()
+	topupUnspent := getUnspentForAddress(config.TopupAddress(), unspents)
+	assert.Equal(t, config.TopupAddress(), topupUnspent.Address)
+	assert.Equal(t, topupHash.String(), topupUnspent.TxID)
+	return topupUnspent
+}
+
+// verify commitment and return
+func verifyCommitment(t *testing.T, sideClientFake *clients.SidechainClientFake) *models.Commitment {
+	hash, _ := sideClientFake.GetBestBlockHash()
+	commitment, errCommitment := models.NewCommitment([]chainhash.Hash{*hash})
+	assert.Equal(t, nil, errCommitment)
+
+	return commitment
+}
+
+// verify first unspent and return
+func verifyFirstUnspent(t *testing.T, client *AttestClient) btcjson.ListUnspentResult {
+	success, unspent, errUnspent := client.findLastUnspent()
+	assert.Equal(t, true, success)
+	assert.Equal(t, nil, errUnspent)
+	return unspent
 }
 
 // verify key derivation and return address
@@ -66,6 +92,48 @@ func verifyKeysAndAddr(t *testing.T, client *AttestClient, hash chainhash.Hash) 
 	return addr
 }
 
+// verify unconfirmed attestation
+func verifyUnconfirmed(t *testing.T, client *AttestClient, txid chainhash.Hash, commitment *models.Commitment) {
+	unconf, unconfTxid, unconfErr := client.getUnconfirmedTx() // new tx is unconfirmed
+	unconfirmed := models.NewAttestation(unconfTxid, commitment)
+	assert.Equal(t, nil, unconfErr)
+	assert.Equal(t, true, unconf)
+	assert.Equal(t, txid, unconfirmed.Txid)
+	assert.Equal(t, commitment.GetCommitmentHash(), unconfirmed.CommitmentHash())
+}
+
+// verify no longer unconfirmed attestation
+func verifyNoUnconfirmed(t *testing.T, client *AttestClient) {
+	unconfRe, unconfTxidRe, unconfReErr := client.getUnconfirmedTx()
+	assert.Equal(t, nil, unconfReErr)
+	assert.Equal(t, false, unconfRe)
+	assert.Equal(t, chainhash.Hash{}, unconfTxidRe) // new tx no longer unconfirmed
+}
+
+// verify new unspent transaction and return
+func verifyNewUnspent(t *testing.T, client *AttestClient, txid chainhash.Hash) btcjson.ListUnspentResult {
+	success, unspent, errUnspentNew := client.findLastUnspent()
+	assert.Equal(t, nil, errUnspentNew)
+	assert.Equal(t, true, success)
+	assert.Equal(t, txid.String(), unspent.TxID) // last unspent txnew is txnew vout
+	return unspent
+}
+
+// verify attestation transactions
+func verifyTxs(t *testing.T, client *AttestClient, txs []string) {
+	for _, txid := range txs {
+		// Verify transaction subchain correctness
+		txhash, _ := chainhash.NewHashFromStr(txid)
+		assert.Equal(t, client.verifyTxOnSubchain(*txhash), true)
+
+		txraw, err := client.MainClient.GetRawTransaction(txhash)
+		assert.Equal(t, nil, err)
+
+		// Test attestation transactions have a single vout
+		assert.Equal(t, 1, len(txraw.MsgTx().TxOut))
+	}
+}
+
 // Attest Client Test for AttestClient struct and methods
 // Chaining calls together because it is easier to test
 // Using intermediate calls to provide data for next calls
@@ -78,10 +146,8 @@ func TestAttestClient_Signer(t *testing.T) {
 	txs := []string{client.txid0}
 
 	// Find unspent and verify is it the genesis transaction
-	success, unspent, errUnspent := client.findLastUnspent()
-	assert.Equal(t, true, success)
+	unspent := verifyFirstUnspent(t, client)
 	assert.Equal(t, txs[0], unspent.TxID)
-	assert.Equal(t, nil, errUnspent)
 
 	lastHash := chainhash.Hash{}
 	topupHash := chainhash.Hash{}
@@ -91,9 +157,7 @@ func TestAttestClient_Signer(t *testing.T) {
 	// Do attestations using attest client
 	for i := 1; i <= ITER_NUM; i++ {
 		// Generate attestation transaction with the unspent vout
-		oceanhash, _ := sideClientFake.GetBestBlockHash()
-		oceanCommitment, errCommitment := models.NewCommitment([]chainhash.Hash{*oceanhash})
-		assert.Equal(t, nil, errCommitment)
+		oceanCommitment := verifyCommitment(t, sideClientFake)
 		oceanCommitmentHash := oceanCommitment.GetCommitmentHash()
 
 		// get addr
@@ -104,14 +168,11 @@ func TestAttestClient_Signer(t *testing.T) {
 		unspentAmount := unspent.Amount
 		// add topup unspent to unspent list
 		if i == TOPUP_LEVEL+1 {
-			unspents, _ := client.MainClient.ListUnspent()
-			topupUnspent := getUnspentForAddress(test.Config.TopupAddress(), unspents)
-			assert.Equal(t, test.Config.TopupAddress(), topupUnspent.Address)
-			assert.Equal(t, topupHash.String(), topupUnspent.TxID)
+			topupUnspent := getTopUpUnspent(t, client, test.Config, topupHash)
 			unspentList = append(unspentList, topupUnspent)
 			unspentAmount += topupUnspent.Amount
 		}
-
+		t.Logf("%v\n", unspentList)
 		// test creating attestation transaction
 		tx, attestationErr := client.createAttestation(addr, unspentList)
 		assert.Equal(t, nil, attestationErr)
@@ -133,12 +194,7 @@ func TestAttestClient_Signer(t *testing.T) {
 		lastHash = oceanCommitmentHash
 
 		// Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
-		unconf, unconfTxid, unconfErr := client.getUnconfirmedTx() // new tx is unconfirmed
-		unconfirmed := models.NewAttestation(unconfTxid, oceanCommitment)
-		assert.Equal(t, nil, unconfErr)
-		assert.Equal(t, true, unconf)
-		assert.Equal(t, txid, unconfirmed.Txid)
-		assert.Equal(t, oceanCommitmentHash, unconfirmed.CommitmentHash())
+		verifyUnconfirmed(t, client, txid, oceanCommitment)
 
 		// create topup unspent
 		if i == TOPUP_LEVEL {
@@ -148,33 +204,16 @@ func TestAttestClient_Signer(t *testing.T) {
 		client.MainClient.Generate(1)
 
 		// Verify no more unconfirmed transactions after new block generation
-		unconfRe, unconfTxidRe, unconfReErr := client.getUnconfirmedTx()
-		assert.Equal(t, nil, unconfReErr)
-		assert.Equal(t, false, unconfRe)
-		assert.Equal(t, chainhash.Hash{}, unconfTxidRe) // new tx no longer unconfirmed
+		verifyNoUnconfirmed(t, client)
 		txs = append(txs, txid.String())
 
 		// Now check that the new unspent is the vout from the transaction just submitted
-		var errUnspentNew error
-		success, unspent, errUnspentNew = client.findLastUnspent()
-		assert.Equal(t, nil, errUnspentNew)
-		assert.Equal(t, true, success)
-		assert.Equal(t, txid.String(), unspent.TxID) // last unspent txnew is txnew vout
+		unspent = verifyNewUnspent(t, client, txid)
 	}
 
 	assert.Equal(t, len(txs), ITER_NUM+1)
 
-	for _, txid := range txs {
-		// Verify transaction subchain correctness
-		txhash, _ := chainhash.NewHashFromStr(txid)
-		assert.Equal(t, client.verifyTxOnSubchain(*txhash), true)
-
-		txraw, err := client.MainClient.GetRawTransaction(txhash)
-		assert.Equal(t, nil, err)
-
-		// Test attestation transactions have a single vout
-		assert.Equal(t, 1, len(txraw.MsgTx().TxOut))
-	}
+	verifyTxs(t, client, txs)
 }
 
 // Attest Client Test for AttestClient struct and methods
@@ -188,10 +227,8 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 	txs := []string{client.txid0}
 
 	// Find unspent and verify is it the genesis transaction
-	success, unspent, errUnspent := client.findLastUnspent()
-	assert.Equal(t, true, success)
+	unspent := verifyFirstUnspent(t, client)
 	assert.Equal(t, txs[0], unspent.TxID)
-	assert.Equal(t, nil, errUnspent)
 
 	lastHash := chainhash.Hash{}
 	topupHash := chainhash.Hash{}
@@ -201,9 +238,7 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 	// Do attestations using attest client
 	for i := 1; i <= ITER_NUM; i++ {
 		// Generate attestation transaction with the unspent vout
-		oceanhash, _ := sideClientFake.GetBestBlockHash()
-		oceanCommitment, errCommitment := models.NewCommitment([]chainhash.Hash{*oceanhash})
-		assert.Equal(t, nil, errCommitment)
+		oceanCommitment := verifyCommitment(t, sideClientFake)
 		oceanCommitmentHash := oceanCommitment.GetCommitmentHash()
 
 		// test getting next attestation key
@@ -229,10 +264,7 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 		unspentAmount := unspent.Amount
 		// add topup unspent to unspent list
 		if i == TOPUP_LEVEL+1 {
-			unspents, _ := client.MainClient.ListUnspent()
-			topupUnspent := getUnspentForAddress(test.Config.TopupAddress(), unspents)
-			assert.Equal(t, test.Config.TopupAddress(), topupUnspent.Address)
-			assert.Equal(t, topupHash.String(), topupUnspent.TxID)
+			topupUnspent := getTopUpUnspent(t, client, test.Config, topupHash)
 			unspentList = append(unspentList, topupUnspent)
 			unspentAmount += topupUnspent.Amount
 		}
@@ -266,12 +298,15 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 
 		// test signing and sending attestation again
 		signedTx, signErr = client.signAttestation(tx, [][]crypto.Sig{[]crypto.Sig{sigs[0]}}, lastHash)
+		// exceptional top-up case - need to include additional unspent + signatures
 		if i == TOPUP_LEVEL+1 {
+			// test error for not enough sigs
 			assert.Equal(t, errors.New(ERROR_SIGS_MISSING_FOR_TX), signErr)
 			sigsTopup, sigScriptTopup := crypto.ParseScriptSig(signedTxSigner.TxIn[1].SignatureScript)
 			assert.Equal(t, client.script0, hex.EncodeToString(sigScriptTopup))
 			assert.Equal(t, 1, len(sigsTopup))
 
+			// test error for not enough sigs
 			signedTx, signErr = client.signAttestation(tx,
 				[][]crypto.Sig{[]crypto.Sig{sigs[0]}, []crypto.Sig{}}, lastHash)
 			assert.Equal(t, errors.New(ERROR_SIGS_MISSING_FOR_VIN), signErr)
@@ -293,12 +328,7 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 		lastHash = oceanCommitmentHash
 
 		// Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
-		unconf, unconfTxid, unconfErr := client.getUnconfirmedTx() // new tx is unconfirmed
-		unconfirmed := models.NewAttestation(unconfTxid, oceanCommitment)
-		assert.Equal(t, nil, unconfErr)
-		assert.Equal(t, true, unconf)
-		assert.Equal(t, txid, unconfirmed.Txid)
-		assert.Equal(t, oceanCommitmentHash, unconfirmed.CommitmentHash())
+		verifyUnconfirmed(t, client, txid, oceanCommitment)
 
 		// create topup unspent
 		if i == TOPUP_LEVEL {
@@ -308,33 +338,16 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 		client.MainClient.Generate(1)
 
 		// Verify no more unconfirmed transactions after new block generation
-		unconfRe, unconfTxidRe, unconfReErr := client.getUnconfirmedTx()
-		assert.Equal(t, nil, unconfReErr)
-		assert.Equal(t, false, unconfRe)
-		assert.Equal(t, chainhash.Hash{}, unconfTxidRe) // new tx no longer unconfirmed
+		verifyNoUnconfirmed(t, client)
 		txs = append(txs, txid.String())
 
 		// Now check that the new unspent is the vout from the transaction just submitted
-		var errUnspentNew error
-		success, unspent, errUnspentNew = client.findLastUnspent()
-		assert.Equal(t, nil, errUnspentNew)
-		assert.Equal(t, true, success)
-		assert.Equal(t, txid.String(), unspent.TxID) // last unspent txnew is txnew vout
+		unspent = verifyNewUnspent(t, client, txid)
 	}
 
 	assert.Equal(t, len(txs), ITER_NUM+1)
 
-	for _, txid := range txs {
-		// Verify transaction subchain correctness
-		txhash, _ := chainhash.NewHashFromStr(txid)
-		assert.Equal(t, client.verifyTxOnSubchain(*txhash), true)
-
-		txraw, err := client.MainClient.GetRawTransaction(txhash)
-		assert.Equal(t, nil, err)
-
-		// Test attestation transactions have a single vout
-		assert.Equal(t, 1, len(txraw.MsgTx().TxOut))
-	}
+	verifyTxs(t, client, txs)
 }
 
 // Attest Client Test for AttestClient struct and methods
@@ -347,10 +360,8 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 	txs := []string{client.txid0}
 
 	// Find unspent and verify is it the genesis transaction
-	success, unspent, errUnspent := client.findLastUnspent()
-	assert.Equal(t, true, success)
+	unspent := verifyFirstUnspent(t, client)
 	assert.Equal(t, txs[0], unspent.TxID)
-	assert.Equal(t, nil, errUnspent)
 
 	lastHash := chainhash.Hash{}
 
@@ -359,27 +370,11 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 	// Do attestations using attest client
 	for i := 1; i <= ITER_NUM; i++ {
 		// Generate attestation transaction with the unspent vout
-		oceanhash, _ := sideClientFake.GetBestBlockHash()
-		oceanCommitment, errCommitment := models.NewCommitment([]chainhash.Hash{*oceanhash})
-		assert.Equal(t, nil, errCommitment)
+		oceanCommitment := verifyCommitment(t, sideClientFake)
 		oceanCommitmentHash := oceanCommitment.GetCommitmentHash()
 
-		// test getting next attestation key
-		key, errKey := client.GetNextAttestationKey(oceanCommitmentHash)
-		assert.Equal(t, nil, errKey)
-
-		// test getting next attestation address
-		addr, script := client.GetNextAttestationAddr(key, oceanCommitmentHash)
-
-		// test GetKeyAndScriptFromHash returns the same results
-		keyTest := client.GetKeyFromHash(oceanCommitmentHash)
-		scriptTest := client.GetScriptFromHash(oceanCommitmentHash)
-		assert.Equal(t, *key, keyTest)
-		assert.Equal(t, script, scriptTest)
-
-		// test importing address
-		importErr := client.ImportAttestationAddr(addr)
-		assert.Equal(t, nil, importErr)
+		// get address
+		addr := verifyKeysAndAddr(t, client, oceanCommitmentHash)
 
 		// test creating attestation transaction
 		tx, attestationErr := client.createAttestation(addr, []btcjson.ListUnspentResult{unspent})
@@ -430,43 +425,20 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		lastHash = oceanCommitmentHash
 
 		// Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
-		unconf, unconfTxid, unconfErr := client.getUnconfirmedTx() // new tx is unconfirmed
-		unconfirmed := models.NewAttestation(unconfTxid, oceanCommitment)
-		assert.Equal(t, nil, unconfErr)
-		assert.Equal(t, true, unconf)
-		assert.Equal(t, txid, unconfirmed.Txid)
-		assert.Equal(t, oceanCommitmentHash, unconfirmed.CommitmentHash())
+		verifyUnconfirmed(t, client, txid, oceanCommitment)
 
 		client.MainClient.Generate(1)
 
 		// Verify no more unconfirmed transactions after new block generation
-		unconfRe, unconfTxidRe, unconfReErr := client.getUnconfirmedTx()
-		assert.Equal(t, nil, unconfReErr)
-		assert.Equal(t, false, unconfRe)
-		assert.Equal(t, chainhash.Hash{}, unconfTxidRe) // new tx no longer unconfirmed
+		verifyNoUnconfirmed(t, client)
 		txs = append(txs, txid.String())
 
 		client.Fees.ResetFee(true) // reset fees again
 
 		// Now check that the new unspent is the vout from the transaction just submitted
-		var errUnspentNew error
-		success, unspent, errUnspentNew = client.findLastUnspent()
-		assert.Equal(t, nil, errUnspentNew)
-		assert.Equal(t, true, success)
-		assert.Equal(t, txid.String(), unspent.TxID) // last unspent txnew is txnew vout
+		unspent = verifyNewUnspent(t, client, txid)
 	}
 
 	assert.Equal(t, len(txs), ITER_NUM+1)
-
-	for _, txid := range txs {
-		// Verify transaction subchain correctness
-		txhash, _ := chainhash.NewHashFromStr(txid)
-		assert.Equal(t, client.verifyTxOnSubchain(*txhash), true)
-
-		txraw, err := client.MainClient.GetRawTransaction(txhash)
-		assert.Equal(t, nil, err)
-
-		// Test attestation transactions have a single vout
-		assert.Equal(t, 1, len(txraw.MsgTx().TxOut))
-	}
+	verifyTxs(t, client, txs)
 }
