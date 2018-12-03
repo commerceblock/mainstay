@@ -24,8 +24,10 @@ const (
 	STAYCHAIN_REGTEST_NAME       = "regtest"
 	STAYCHAIN_INIT_TX_NAME       = "initTx"
 	STAYCHAIN_INIT_SCRIPT_NAME   = "initScript"
+	STAYCHAIN_INIT_PK_NAME       = "initPK"
 	STAYCHAIN_TOPUP_ADDRESS_NAME = "topupAddress"
 	STAYCHAIN_TOPUP_SCRIPT_NAME  = "topupScript"
+	STAYCHAIN_TOPUP_PK_NAME      = "topupPK"
 )
 
 // Config struct
@@ -43,6 +45,7 @@ type Config struct {
 	initScript   string
 	topupAddress string
 	topupScript  string
+	topupPK      string
 
 	// additional parameter categories
 	signerConfig SignerConfig
@@ -146,6 +149,16 @@ func (c *Config) SetTopupScript(script string) {
 	c.topupScript = script
 }
 
+// Get topup PK
+func (c *Config) TopupPK() string {
+	return c.topupPK
+}
+
+// Set topup PK
+func (c *Config) SetTopupPK(pk string) {
+	c.topupPK = pk
+}
+
 // Return Config instance
 func NewConfig(customConf ...[]byte) (*Config, error) {
 	var conf []byte
@@ -190,18 +203,21 @@ func NewConfig(customConf ...[]byte) (*Config, error) {
 	regtestStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_REGTEST_NAME, conf)
 	initTxStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_INIT_TX_NAME, conf)
 	initScriptStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_INIT_SCRIPT_NAME, conf)
+	initPKStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_INIT_PK_NAME, conf)
 	topupAddrStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_TOPUP_ADDRESS_NAME, conf)
 	topupScriptStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_TOPUP_SCRIPT_NAME, conf)
+	topupPKStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_TOPUP_PK_NAME, conf)
 
 	return &Config{
 		mainClient:   mainClient,
 		mainChainCfg: mainClientCfg,
 		regtest:      (regtestStr == "1"),
 		initTX:       initTxStr,
-		initPK:       "",
+		initPK:       initPKStr,
 		initScript:   initScriptStr,
 		topupAddress: topupAddrStr,
 		topupScript:  topupScriptStr,
+		topupPK:      topupPKStr,
 		signerConfig: signerConfig,
 		dbConfig:     dbConnectivity,
 		feesConfig:   feesConfig,

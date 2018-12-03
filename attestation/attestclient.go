@@ -82,24 +82,14 @@ type AttestClient struct {
 	// signing or simply for address tweaking and transaction creation
 	// in signer case the wallet priv key of the signer is imported
 	// in no signer case the wallet priv is a nil pointer
-	WalletPriv *btcutil.WIF
+	WalletPriv      *btcutil.WIF
+	WalletPrivTopup *btcutil.WIF
 }
 
 // NewAttestClient returns a pointer to a new AttestClient instance
 // Initially locates the genesis transaction in the main chain wallet
 // and verifies that the corresponding private key is in the wallet
 func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
-	// import top-up address
-	topupAddrStr := config.TopupAddress()
-	topupScriptStr := config.TopupScript()
-	if topupAddrStr != "" && topupScriptStr != "" {
-		importErr := config.MainClient().ImportAddress(topupAddrStr)
-		if importErr != nil {
-			log.Fatalf("%s %s\n%v\n", ERROR_FAILURE_IMPORTING_TOPUP_ADDRESS, topupAddrStr, importErr)
-		}
-	} else {
-		log.Println(WARNING_TOPUP_INFO_MISSING)
-	}
 
 	// optional flag to set attest client as signer
 	isSigner := false
@@ -107,19 +97,37 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		isSigner = signerFlag[0]
 	}
 
+	// top up config
+	topupAddrStr := config.TopupAddress()
+	topupScriptStr := config.TopupScript()
+	var pkWifTopup *btcutil.WIF
+	if topupAddrStr != "" && topupScriptStr != "" {
+		importErr := config.MainClient().ImportAddress(topupAddrStr)
+		if importErr != nil {
+			log.Fatalf("%s %s\n%v\n", ERROR_FAILURE_IMPORTING_TOPUP_ADDRESS, topupAddrStr, importErr)
+		}
+		if isSigner {
+			pkTopup := config.TopupPK()
+			var errPkWifTopup error
+			pkWifTopup, errPkWifTopup = crypto.GetWalletPrivKey(pkTopup)
+			if errPkWifTopup != nil {
+				log.Fatalf("%s %s\n%v\n", ERROR_INVALID_PK, pkTopup, errPkWifTopup)
+			}
+		}
+	} else {
+		log.Println(WARNING_TOPUP_INFO_MISSING)
+	}
+
+	// main config
 	multisig := config.InitScript()
 	var pkWif *btcutil.WIF
 	if isSigner { // signer case import private key
-		// Get initial private key from initial funding transaction of main client
+		// Get initial private key
 		pk := config.InitPK()
 		var errPkWif error
 		pkWif, errPkWif = crypto.GetWalletPrivKey(pk)
 		if errPkWif != nil {
 			log.Fatalf("%s %s\n%v\n", ERROR_INVALID_PK, pk, errPkWif)
-		}
-		importErr := config.MainClient().ImportPrivKeyRescan(pkWif, "init", false)
-		if importErr != nil {
-			log.Fatalf("%s %s\n%v\n", ERROR_FAILURE_IMPORTING_PK, pk, importErr)
 		}
 	} else if multisig == "" {
 		log.Fatal(ERROR_MISSING_MULTISIG)
@@ -142,28 +150,30 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		}
 
 		return &AttestClient{
-			MainClient:   config.MainClient(),
-			MainChainCfg: config.MainChainCfg(),
-			Fees:         NewAttestFees(config.FeesConfig()),
-			txid0:        config.InitTx(),
-			script0:      multisig,
-			pubkeys:      pubkeys,
-			numOfSigs:    numOfSigs,
-			addrTopup:    topupAddrStr,
-			scriptTopup:  topupScriptStr,
-			WalletPriv:   pkWif}
+			MainClient:      config.MainClient(),
+			MainChainCfg:    config.MainChainCfg(),
+			Fees:            NewAttestFees(config.FeesConfig()),
+			txid0:           config.InitTx(),
+			script0:         multisig,
+			pubkeys:         pubkeys,
+			numOfSigs:       numOfSigs,
+			addrTopup:       topupAddrStr,
+			scriptTopup:     topupScriptStr,
+			WalletPriv:      pkWif,
+			WalletPrivTopup: pkWifTopup}
 	}
 	return &AttestClient{
-		MainClient:   config.MainClient(),
-		MainChainCfg: config.MainChainCfg(),
-		Fees:         NewAttestFees(config.FeesConfig()),
-		txid0:        config.InitTx(),
-		script0:      multisig,
-		pubkeys:      []*btcec.PublicKey{},
-		numOfSigs:    1,
-		addrTopup:    topupAddrStr,
-		scriptTopup:  topupScriptStr,
-		WalletPriv:   pkWif}
+		MainClient:      config.MainClient(),
+		MainChainCfg:    config.MainChainCfg(),
+		Fees:            NewAttestFees(config.FeesConfig()),
+		txid0:           config.InitTx(),
+		script0:         multisig,
+		pubkeys:         []*btcec.PublicKey{},
+		numOfSigs:       1,
+		addrTopup:       topupAddrStr,
+		scriptTopup:     topupScriptStr,
+		WalletPriv:      pkWif,
+		WalletPrivTopup: pkWifTopup}
 }
 
 // Get next attestation key by tweaking with latest commitment hash
@@ -365,7 +375,7 @@ func (w *AttestClient) SignTransaction(hash chainhash.Hash, msgTx wire.MsgTx) (
 		}
 		inputs = append(inputs, btcjson.RawTxInput{prevTxId.String(), 0,
 			hex.EncodeToString(prevTx.MsgTx().TxOut[0].PkScript), w.scriptTopup})
-		keys = append(keys, w.WalletPriv.String())
+		keys = append(keys, w.WalletPrivTopup.String())
 	}
 
 	// attempt to sign transcation with provided inputs - keys
