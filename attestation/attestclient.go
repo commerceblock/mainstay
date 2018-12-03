@@ -25,7 +25,7 @@ import (
 // error - warning consts
 const (
 	WARNING_INSUFFICIENT_FUNDS = `Warning - Last unspent vout value low (less than 100*maxFee target)`
-	WARNING_TOPUP_INFO_MISSING = `Warning - Topup Address and Script not set in config`
+	WARNING_TOPUP_INFO_MISSING = `Warning - Topup Address and/or Topup Script not set in config`
 
 	ERROR_INSUFFICIENT_FUNDS              = `Insufficient unspent vout value (less than the maxFee target)`
 	ERROR_MISSING_MULTISIG                = `No multisig used - Client must be signer and include private key`

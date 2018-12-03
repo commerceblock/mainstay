@@ -43,8 +43,8 @@ const (
 const (
 	ERROR_UNSPENT_NOT_FOUND = "No valid unspent found"
 
-	WARNING_INVALID_ATIME_NEW_ATTESTATION_ARG    = "Warning - Invalid new attestation time argument"
-	WARNING_INVALID_ATIME_HANDLE_UNCONFIRMED_ARG = "Warning - Invalid handle unconfirmed time argument"
+	WARNING_INVALID_ATIME_NEW_ATTESTATION_ARG    = "Warning - Invalid new attestation time config value"
+	WARNING_INVALID_ATIME_HANDLE_UNCONFIRMED_ARG = "Warning - Invalid handle unconfirmed time config value"
 )
 
 // waiting time schedules
@@ -120,14 +120,14 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Se
 	if config.TimingConfig().NewAttestationMinutes > 0 {
 		atimeNewAttestation = time.Duration(config.TimingConfig().NewAttestationMinutes) * time.Minute
 	} else {
-		log.Println(WARNING_INVALID_ATIME_NEW_ATTESTATION_ARG)
+		log.Printf("%s (%v)\n", WARNING_INVALID_ATIME_NEW_ATTESTATION_ARG, config.TimingConfig().NewAttestationMinutes)
 	}
 	log.Printf("Time new attestation set to: %v\n", atimeNewAttestation)
 	atimeHandleUnconfirmed = DEFAULT_ATIME_HANDLE_UNCONFIRMED
 	if config.TimingConfig().HandleUnconfirmedMinutes > 0 {
 		atimeHandleUnconfirmed = time.Duration(config.TimingConfig().HandleUnconfirmedMinutes) * time.Minute
 	} else {
-		log.Println(WARNING_INVALID_ATIME_HANDLE_UNCONFIRMED_ARG)
+		log.Printf("%s (%v)\n", WARNING_INVALID_ATIME_HANDLE_UNCONFIRMED_ARG, config.TimingConfig().HandleUnconfirmedMinutes)
 	}
 	log.Printf("Time handle unconfirmed set to: %v\n", atimeHandleUnconfirmed)
 
