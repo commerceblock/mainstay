@@ -66,10 +66,12 @@ func (f AttestSignerFake) GetSigs() [][]crypto.Sig {
 	if signErr != nil {
 		return sigs
 	}
-	scriptSig := signedMsgTx.TxIn[0].SignatureScript
-	if len(scriptSig) > 0 {
-		sig, _ := crypto.ParseScriptSig(scriptSig)
-		sigs = append(sigs, []crypto.Sig{sig[0]})
+	for _, txin := range signedMsgTx.TxIn {
+		scriptSig := txin.SignatureScript
+		if len(scriptSig) > 0 {
+			sig, _ := crypto.ParseScriptSig(scriptSig)
+			sigs = append(sigs, []crypto.Sig{sig[0]})
+		}
 	}
 	return sigs
 }

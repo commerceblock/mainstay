@@ -376,7 +376,10 @@ func (s *AttestService) doStateSignAttestation() {
 
 	// Read sigs using subscribers
 	sigs := s.signer.GetSigs()
-	log.Printf("********** received %d signatures\n", len(sigs))
+	for sigForInput, _ := range sigs {
+		log.Printf("********** received %d signatures for input %d \n",
+			len(sigs[sigForInput]), sigForInput)
+	}
 
 	// get last confirmed commitment from server
 	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()

@@ -284,6 +284,100 @@ func TestAttestService_Unconfirmed(t *testing.T) {
 	assert.Equal(t, attestService.attester.Fees.minFee, attestService.attester.Fees.GetFee())
 }
 
+// Test Attest Service when dealing with topup Attestation
+func TestAttestService_WithTopup(t *testing.T) {
+
+	// Test INIT
+	test := test.NewTest(false, false)
+	config := test.Config
+
+	// randomly test with invalid config here
+	// timing config no effect on server
+	timingConfig := confpkg.TimingConfig{-1, -1}
+	config.SetTimingConfig(timingConfig)
+
+	dbFake := server.NewDbFake()
+	server := server.NewServer(dbFake)
+	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+
+	// Test initial state of attest service
+	verifyStateInit(t, attestService)
+	// Test ASTATE_INIT -> ASTATE_NEXT_COMMITMENT
+	verifyStateInitToNextCommitment(t, attestService)
+
+	// Test ASTATE_NEXT_COMMITMENT -> ASTATE_NEW_ATTESTATION
+	// set server commitment before creationg new attestation
+	hashX, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	_ = verifyStateNextCommitmentToNewAttestation(t, attestService, dbFake, hashX)
+
+	// Test ASTATE_NEW_ATTESTATION -> ASTATE_SIGN_ATTESTATION
+	verifyStateNewAttestationToSignAttestation(t, attestService)
+	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+	verifyStateSignAttestationToPreSendStore(t, attestService)
+	// Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
+	verifyStatePreSendStoreToSendAttestation(t, attestService)
+	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
+	txid := verifyStateSendAttestationToAwaitConfirmation(t, attestService)
+	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_AWAIT_CONFIRMATION
+	verifyStateAwaitConfirmationToAwaitConfirmation(t, attestService)
+	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_AWAIT_CONFIRMATION
+	verifyStateAwaitConfirmationToAwaitConfirmation(t, attestService)
+	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_NEXT_COMMITMENT
+	config.MainClient().Generate(1)
+	verifyStateAwaitConfirmationToNextCommitment(t, attestService, config, txid, DEFAULT_ATIME_NEW_ATTESTATION)
+
+	// Test ASTATE_NEXT_COMMITMENT -> ASTATE_NEW_ATTESTATION
+	// stuck in next commitment
+	// need to update server latest commitment
+	hashY, _ := chainhash.NewHashFromStr("baaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	_ = verifyStateNextCommitmentToNewAttestation(t, attestService, dbFake, hashY)
+
+	// create top up unspent
+	_ = createTopupUnspent(t, test.Config)
+	attestService.attester.MainClient.Generate(1)
+
+	// Test ASTATE_NEW_ATTESTATION -> ASTATE_SIGN_ATTESTATION
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_SIGN_ATTESTATION, attestService.state)
+	// cant test much more here - we test this in other unit tests
+	assert.Equal(t, 2, len(attestService.attestation.Tx.TxIn))
+	assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
+	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
+	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[1].SignatureScript))
+	assert.Equal(t, ATIME_SIGS, attestDelay)
+
+	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+	verifyStateSignAttestationToPreSendStore(t, attestService)
+	// Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
+	verifyStatePreSendStoreToSendAttestation(t, attestService)
+	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
+	txid = verifyStateSendAttestationToAwaitConfirmation(t, attestService)
+	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_NEXT_COMMITMENT
+	config.MainClient().Generate(1)
+	verifyStateAwaitConfirmationToNextCommitment(t, attestService, config, txid, DEFAULT_ATIME_NEW_ATTESTATION)
+
+	// Test ASTATE_NEXT_COMMITMENT -> ASTATE_NEW_ATTESTATION
+	// set server commitment before creationg new attestation
+	hashZ, _ := chainhash.NewHashFromStr("caaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	_ = verifyStateNextCommitmentToNewAttestation(t, attestService, dbFake, hashZ)
+
+	// Test ASTATE_NEW_ATTESTATION -> ASTATE_SIGN_ATTESTATION
+	verifyStateNewAttestationToSignAttestation(t, attestService)
+	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+	verifyStateSignAttestationToPreSendStore(t, attestService)
+	// Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
+	verifyStatePreSendStoreToSendAttestation(t, attestService)
+	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
+	txid = verifyStateSendAttestationToAwaitConfirmation(t, attestService)
+	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_AWAIT_CONFIRMATION
+	verifyStateAwaitConfirmationToAwaitConfirmation(t, attestService)
+	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_AWAIT_CONFIRMATION
+	verifyStateAwaitConfirmationToAwaitConfirmation(t, attestService)
+	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_NEXT_COMMITMENT
+	config.MainClient().Generate(1)
+	verifyStateAwaitConfirmationToNextCommitment(t, attestService, config, txid, DEFAULT_ATIME_NEW_ATTESTATION)
+}
+
 // Test Attest Service states
 // State cycle test with failures
 // Test behaviour with fail after init state
