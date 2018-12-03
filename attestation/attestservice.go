@@ -18,7 +18,6 @@ import (
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
 )
 
 // Attestation Service is the main processes that handles generating
@@ -313,6 +312,7 @@ func (s *AttestService) doStateNextCommitment() {
 // ASTATE_NEW_ATTESTATION
 // - Generate new pay to address for attestation transaction using client commitment
 // - Create new unsigned transaction using the last unspent
+// - If a topup unspent exists, add this to the new attestation
 // - Publish unsigned transaction to signer clients
 // - add ATIME_SIGS waiting time
 func (s *AttestService) doStateNewAttestation() {
@@ -331,13 +331,23 @@ func (s *AttestService) doStateNewAttestation() {
 	}
 
 	// Generate new unsigned attestation transaction from last unspent
-	success, txunspent, unspentErr := s.attester.findLastUnspent()
+	success, unspent, unspentErr := s.attester.findLastUnspent()
 	if s.setFailure(unspentErr) {
 		return // will rebound to init
 	} else if success {
-		var createErr error
-		var newTx *wire.MsgTx
-		newTx, createErr = s.attester.createAttestation(paytoaddr, []btcjson.ListUnspentResult{txunspent})
+		var unspentList []btcjson.ListUnspentResult
+		unspentList = append(unspentList, unspent)
+
+		// search for topup unspent and add if it exists
+		topupFound, topupUnspent, topupUnspentErr := s.attester.findTopupUnspent()
+		if s.setFailure(topupUnspentErr) {
+			return // will rebound to init
+		} else if topupFound {
+			unspentList = append(unspentList, topupUnspent)
+		}
+
+		// create attestation transaction for the list of unspents paying to addr generated
+		newTx, createErr := s.attester.createAttestation(paytoaddr, unspentList)
 		if s.setFailure(createErr) {
 			return // will rebound to init
 		}
