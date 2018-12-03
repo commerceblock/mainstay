@@ -18,22 +18,13 @@ import (
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/stretchr/testify/assert"
 )
 
 const TOPUP_LEVEL = 3 // level at which to do the topup transaction
 const ITER_NUM = 5    // num of iterations
-
-// Find transaction unspent for a specific address
-func getUnspentForAddress(addr string, unspent []btcjson.ListUnspentResult) btcjson.ListUnspentResult {
-	for _, u := range unspent {
-		if u.Address == addr {
-			return u
-		}
-	}
-	return btcjson.ListUnspentResult{}
-}
 
 // Create topup unspent transaction
 func createTopupUnspent(t *testing.T, config *confpkg.Config) chainhash.Hash {
@@ -46,11 +37,12 @@ func createTopupUnspent(t *testing.T, config *confpkg.Config) chainhash.Hash {
 
 // Verify and get topup unspent transaction
 func getTopUpUnspent(t *testing.T, client *AttestClient, config *confpkg.Config, topupHash chainhash.Hash) btcjson.ListUnspentResult {
-	unspents, _ := client.MainClient.ListUnspent()
-	topupUnspent := getUnspentForAddress(config.TopupAddress(), unspents)
-	assert.Equal(t, config.TopupAddress(), topupUnspent.Address)
-	assert.Equal(t, topupHash.String(), topupUnspent.TxID)
-	return topupUnspent
+	success, unspent, errUnspent := client.findTopupUnspent()
+	assert.Equal(t, true, success)
+	assert.Equal(t, nil, errUnspent)
+	assert.Equal(t, config.TopupAddress(), unspent.Address)
+	assert.Equal(t, topupHash.String(), unspent.TxID)
+	return unspent
 }
 
 // verify commitment and return
@@ -62,9 +54,16 @@ func verifyCommitment(t *testing.T, sideClientFake *clients.SidechainClientFake)
 	return commitment
 }
 
-// verify first unspent and return
+// verify no topup unspent and first unspent and return
 func verifyFirstUnspent(t *testing.T, client *AttestClient) btcjson.ListUnspentResult {
-	success, unspent, errUnspent := client.findLastUnspent()
+	// check no topup-unspent
+	success, unspent, errUnspent := client.findTopupUnspent()
+	assert.Equal(t, false, success)
+	assert.Equal(t, nil, errUnspent)
+	assert.Equal(t, btcjson.ListUnspentResult{}, unspent)
+
+	// check staychain unspent exists
+	success, unspent, errUnspent = client.findLastUnspent()
 	assert.Equal(t, true, success)
 	assert.Equal(t, nil, errUnspent)
 	return unspent
@@ -110,10 +109,19 @@ func verifyNoUnconfirmed(t *testing.T, client *AttestClient) {
 	assert.Equal(t, chainhash.Hash{}, unconfTxidRe) // new tx no longer unconfirmed
 }
 
+// verify if there is a topup unspent or not
+func verifyTopup(t *testing.T, client *AttestClient, i int) {
+	// check topup unspent only when iteration is topup
+	success, _, errUnspent := client.findTopupUnspent()
+	assert.Equal(t, i == TOPUP_LEVEL, success)
+	assert.Equal(t, nil, errUnspent)
+}
+
 // verify new unspent transaction and return
 func verifyNewUnspent(t *testing.T, client *AttestClient, txid chainhash.Hash) btcjson.ListUnspentResult {
-	success, unspent, errUnspentNew := client.findLastUnspent()
-	assert.Equal(t, nil, errUnspentNew)
+	// check regular unspent cycle
+	success, unspent, errUnspent := client.findLastUnspent()
+	assert.Equal(t, nil, errUnspent)
 	assert.Equal(t, true, success)
 	assert.Equal(t, txid.String(), unspent.TxID) // last unspent txnew is txnew vout
 	return unspent
@@ -121,6 +129,14 @@ func verifyNewUnspent(t *testing.T, client *AttestClient, txid chainhash.Hash) b
 
 // verify attestation transactions
 func verifyTxs(t *testing.T, client *AttestClient, txs []string) {
+	// verify random tx hashes
+	fakehash1, _ := chainhash.NewHashFromStr("1a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	fakehash2, _ := chainhash.NewHashFromStr("2a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	fakehash3, _ := chainhash.NewHashFromStr("3a39e34e881d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	assert.Equal(t, client.verifyTxOnSubchain(*fakehash1), false)
+	assert.Equal(t, client.verifyTxOnSubchain(*fakehash2), false)
+	assert.Equal(t, client.verifyTxOnSubchain(*fakehash3), false)
+
 	for _, txid := range txs {
 		// Verify transaction subchain correctness
 		txhash, _ := chainhash.NewHashFromStr(txid)
@@ -172,7 +188,7 @@ func TestAttestClient_Signer(t *testing.T) {
 			unspentList = append(unspentList, topupUnspent)
 			unspentAmount += topupUnspent.Amount
 		}
-		t.Logf("%v\n", unspentList)
+
 		// test creating attestation transaction
 		tx, attestationErr := client.createAttestation(addr, unspentList)
 		assert.Equal(t, nil, attestationErr)
@@ -209,6 +225,8 @@ func TestAttestClient_Signer(t *testing.T) {
 
 		// Now check that the new unspent is the vout from the transaction just submitted
 		unspent = verifyNewUnspent(t, client, txid)
+		// check whether there is a topup unspent or not
+		verifyTopup(t, client, i)
 	}
 
 	assert.Equal(t, len(txs), ITER_NUM+1)
@@ -232,6 +250,10 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 
 	lastHash := chainhash.Hash{}
 	topupHash := chainhash.Hash{}
+
+	// test invalid tx signing
+	_, _, errSign := clientSigner.SignTransaction(chainhash.Hash{}, wire.MsgTx{})
+	assert.Equal(t, errSign, errors.New(ERROR_INPUT_MISSING_FOR_TX))
 
 	client.Fees.ResetFee(true) // reset fee to minimum
 
@@ -343,6 +365,8 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 
 		// Now check that the new unspent is the vout from the transaction just submitted
 		unspent = verifyNewUnspent(t, client, txid)
+		// check whether there is a topup unspent or not
+		verifyTopup(t, client, i)
 	}
 
 	assert.Equal(t, len(txs), ITER_NUM+1)
