@@ -334,7 +334,22 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 			assert.Equal(t, errors.New(ERROR_SIGS_MISSING_FOR_VIN), signErr)
 
 			signedTx, signErr = client.signAttestation(tx,
+				[][]crypto.Sig{[]crypto.Sig{sigs[0]}}, lastHash)
+			assert.Equal(t, errors.New(ERROR_SIGS_MISSING_FOR_TX), signErr)
+
+			signedTx, signErr = client.signAttestation(tx,
+				[][]crypto.Sig{}, lastHash)
+			assert.Equal(t, errors.New(ERROR_SIGS_MISSING_FOR_TX), signErr)
+
+			// actually sign attestation transaction
+			signedTx, signErr = client.signAttestation(tx,
 				[][]crypto.Sig{[]crypto.Sig{sigs[0]}, []crypto.Sig{sigsTopup[0]}}, lastHash)
+			assert.Equal(t, nil, signErr)
+			assert.Equal(t, true, len(signedTx.TxIn[1].SignatureScript) > 0)
+
+			// adding more signatures than required has the same result
+			signedTx, signErr = client.signAttestation(tx,
+				[][]crypto.Sig{[]crypto.Sig{sigs[0], sigs[0]}, []crypto.Sig{sigsTopup[0], sigs[0], sigs[0]}}, lastHash)
 			assert.Equal(t, nil, signErr)
 			assert.Equal(t, true, len(signedTx.TxIn[1].SignatureScript) > 0)
 
