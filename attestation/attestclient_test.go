@@ -403,6 +403,7 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 	assert.Equal(t, txs[0], unspent.TxID)
 
 	lastHash := chainhash.Hash{}
+	topupHash := chainhash.Hash{}
 
 	client.Fees.ResetFee(true) // reset fee to minimum
 
@@ -435,27 +436,40 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		// test fees too high
 		prevMaxFee := client.Fees.maxFee
 		client.Fees.maxFee = 999999999999
-		tx, attestationErr = client.createAttestation(addr, []btcjson.ListUnspentResult{unspent})
-		assert.Equal(t, errors.New(ERROR_INSUFFICIENT_FUNDS), attestationErr)
+		tx2, attestationErr2 := client.createAttestation(addr, []btcjson.ListUnspentResult{unspent})
+		assert.Equal(t, errors.New(ERROR_INSUFFICIENT_FUNDS), attestationErr2)
 		client.Fees.maxFee = prevMaxFee
-		tx, attestationErr = client.createAttestation(addr, []btcjson.ListUnspentResult{unspent})
-		assert.Equal(t, nil, attestationErr)
+
+		var unspentList []btcjson.ListUnspentResult
+		unspentList = append(unspentList, unspent)
+		unspentAmount := unspent.Amount
+		var topupValue int64
+		// add topup unspent to unspent list
+		if i == TOPUP_LEVEL+1 {
+			topupUnspent := getTopUpUnspent(t, client, test.Config, topupHash)
+			unspentList = append(unspentList, topupUnspent)
+			topupValue = int64(topupUnspent.Amount * COIN)
+			unspentAmount += topupUnspent.Amount
+		}
+
+		tx2, attestationErr2 = client.createAttestation(addr, unspentList)
+		assert.Equal(t, nil, attestationErr2)
 
 		// test attestation transaction fee bumping
-		bumpErr := client.bumpAttestationFees(tx)
+		bumpErr := client.bumpAttestationFees(tx2)
 		assert.Equal(t, nil, bumpErr)
-		assert.Equal(t, 1, len(tx.TxIn))
-		assert.Equal(t, 1, len(tx.TxOut))
-		if (unspent.Amount - (float64(tx.TxOut[0].Value) / COIN)) <= 0 {
-			t.Fail()
-		}
+		assert.Equal(t, 1-1*int(math.Min(0, float64((i%(TOPUP_LEVEL+1)-1)))), len(tx2.TxIn))
+		assert.Equal(t, 1, len(tx2.TxOut))
+		assert.Equal(t, false, (unspentAmount-(float64(tx2.TxOut[0].Value)/COIN)) <= 0)
+
 		newFee := client.Fees.GetFee()
-		newValue := tx.TxOut[0].Value
-		assert.Equal(t, int64((newFee-currentFee)*tx.SerializeSize()), (currentValue - newValue))
+		newValue := tx2.TxOut[0].Value
+		assert.Equal(t, int64(newFee*tx2.SerializeSize()-currentFee*tx.SerializeSize()),
+			(currentValue + topupValue - newValue))
 		assert.Equal(t, client.Fees.minFee+client.Fees.feeIncrement, newFee)
 
 		// test signing and sending attestation again
-		signedTx, signErr = client.signAttestation(tx, [][]crypto.Sig{}, lastHash)
+		signedTx, signErr = client.signAttestation(tx2, [][]crypto.Sig{}, lastHash)
 		assert.Equal(t, nil, signErr)
 		txid, sendErr = client.sendAttestation(signedTx)
 		assert.Equal(t, nil, sendErr)
@@ -465,6 +479,11 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 
 		// Verify getUnconfirmedTx gives the unconfirmed transaction just submitted
 		verifyUnconfirmed(t, client, txid, oceanCommitment)
+
+		// create topup unspent
+		if i == TOPUP_LEVEL {
+			topupHash = createTopupUnspent(t, test.Config)
+		}
 
 		client.MainClient.Generate(1)
 

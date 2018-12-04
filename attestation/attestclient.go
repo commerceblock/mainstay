@@ -309,6 +309,7 @@ func (w *AttestClient) bumpAttestationFees(msgTx *wire.MsgTx) error {
 
 	// increase tx fees by fee difference
 	feeIncrement := int64(feePerByteIncrement * msgTx.SerializeSize())
+	log.Printf("fee:%v\n", feeIncrement)
 	msgTx.TxOut[0].Value -= feeIncrement
 
 	return nil

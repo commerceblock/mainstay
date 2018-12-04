@@ -282,6 +282,61 @@ func TestAttestService_Unconfirmed(t *testing.T) {
 	verifyStateAwaitConfirmationToNextCommitment(t, attestService, config, txid,
 		time.Duration(customAtimeNewAttestation)*time.Minute)
 	assert.Equal(t, attestService.attester.Fees.minFee, attestService.attester.Fees.GetFee())
+
+	// Test ASTATE_NEXT_COMMITMENT -> ASTATE_NEW_ATTESTATION
+	// set server commitment before creationg new attestation
+	hashY, _ := chainhash.NewHashFromStr("baaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	_ = verifyStateNextCommitmentToNewAttestation(t, attestService, dbFake, hashY)
+
+	// add also unspent this time
+	_ = createTopupUnspent(t, test.Config)
+	attestService.attester.MainClient.Generate(1)
+
+	// Test ASTATE_NEW_ATTESTATION -> ASTATE_SIGN_ATTESTATION
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_SIGN_ATTESTATION, attestService.state)
+	// cant test much more here - we test this in other unit tests
+	assert.Equal(t, 2, len(attestService.attestation.Tx.TxIn))
+	assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
+	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
+	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[1].SignatureScript))
+	assert.Equal(t, ATIME_SIGS, attestDelay)
+	assert.Equal(t, attestService.attester.Fees.minFee, attestService.attester.Fees.GetFee())
+	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+	verifyStateSignAttestationToPreSendStore(t, attestService)
+	// Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
+	verifyStatePreSendStoreToSendAttestation(t, attestService)
+	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
+	txid = verifyStateSendAttestationToAwaitConfirmation(t, attestService)
+
+	// set confirm time back to test what happens in handle unconfirmed case
+	confirmTime = confirmTime.Add(-time.Duration(customAtimeHandleUnconfirmed) * time.Minute)
+
+	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_HANDLE_UNCONFIRMED
+	verifyStateAwaitConfirmationToHandleUnconfirmed(t, attestService)
+	// Test ASTATE_HANDLE_UNCONFIRMED -> ASTATE_SIGN_ATTESTATION
+	attestService.doAttestation()
+	assert.Equal(t, ASTATE_SIGN_ATTESTATION, attestService.state)
+	// cant test much more here - we test this in other unit tests
+	assert.Equal(t, 2, len(attestService.attestation.Tx.TxIn))
+	assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
+	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
+	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[1].SignatureScript))
+	assert.Equal(t, ATIME_SIGS, attestDelay)
+	assert.Equal(t, attestService.attester.Fees.minFee+attestService.attester.Fees.feeIncrement,
+		attestService.attester.Fees.GetFee())
+
+	// Test ASTATE_SIGN_ATTESTATION -> ASTATE_PRE_SEND_STORE
+	verifyStateSignAttestationToPreSendStore(t, attestService)
+	// Test ASTATE_PRE_SEND_STORE -> ASTATE_SEND_ATTESTATION
+	verifyStatePreSendStoreToSendAttestation(t, attestService)
+	// Test ASTATE_SEND_ATTESTATION -> ASTATE_AWAIT_CONFIRMATION
+	txid = verifyStateSendAttestationToAwaitConfirmation(t, attestService)
+	// Test ASTATE_AWAIT_CONFIRMATION -> ASTATE_NEXT_COMMITMENT
+	config.MainClient().Generate(1)
+	verifyStateAwaitConfirmationToNextCommitment(t, attestService, config, txid,
+		time.Duration(customAtimeNewAttestation)*time.Minute)
+	assert.Equal(t, attestService.attester.Fees.minFee, attestService.attester.Fees.GetFee())
 }
 
 // Test Attest Service when dealing with topup Attestation
