@@ -103,9 +103,9 @@ func init() {
 		}
 		pk0 = test.PRIV_CLIENT
 		script0 = test.SCRIPT
-		pkTopup = test.PRIV_CLIENT
-		scriptTopup = test.SCRIPT
-		addrTopup = test.ADDRESS
+		pkTopup = test.TOPUP_PRIV_CLIENT
+		scriptTopup = test.TOPUP_SCRIPT
+		addrTopup = test.TOPUP_ADDRESS
 	} else {
 		// regular mode
 		// use conf file to setup config

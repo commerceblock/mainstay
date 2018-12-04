@@ -325,7 +325,7 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 			// test error for not enough sigs
 			assert.Equal(t, errors.New(ERROR_SIGS_MISSING_FOR_TX), signErr)
 			sigsTopup, sigScriptTopup := crypto.ParseScriptSig(signedTxSigner.TxIn[1].SignatureScript)
-			assert.Equal(t, client.script0, hex.EncodeToString(sigScriptTopup))
+			assert.Equal(t, client.scriptTopup, hex.EncodeToString(sigScriptTopup))
 			assert.Equal(t, 1, len(sigsTopup))
 
 			// test error for not enough sigs
