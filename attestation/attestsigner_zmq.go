@@ -77,17 +77,75 @@ func (z AttestSignerZmq) SendNewTx(tx []byte) {
 	z.publisher.SendMessage(tx, TOPIC_NEW_TX)
 }
 
+// Split incoming message to a slice of messages by
+// parsing message sizes and reading correct bytes
+func getSplitMsgFromMsg(msg []byte) [][]byte {
+	var msgs [][]byte
+
+	if len(msg) == 0 {
+		return [][]byte{}
+	}
+
+	it := 0
+	for {
+		partMsgSize := msg[it]
+		partMsg := msg[it+1 : it+1+int(partMsgSize)]
+		msgs = append(msgs, partMsg)
+		it += 1 + int(partMsgSize)
+		if len(msg) <= it {
+			break
+		}
+	}
+	return msgs
+}
+
+// Parse all received messages and create a sigs slice
+// input:
+// x dimension: subscriber
+// y dimension: list of signatures of subscriber (one for each tx input)
+// z dimension: slice of bytes (signature)
+// output:
+// x dimension: number of transaction inputs
+// y dimension: number of signatures per input
+func getSigsFromMsgs(msgs [][][]byte, numOfInputs int) [][]crypto.Sig {
+	if numOfInputs == 0 {
+		return [][]crypto.Sig{}
+	}
+
+	sigs := make([][]crypto.Sig, numOfInputs)
+	for i := 0; i < numOfInputs; i++ {
+		for _, msgSplit := range msgs {
+			if len(msgSplit) > i {
+				sigs[i] = append(sigs[i], crypto.Sig(msgSplit[i]))
+			}
+		}
+	}
+	return sigs
+}
+
+// Update num of transaction inputs from latest msg
+func updateNumOfTxInputs(msgSplit [][]byte, numOfInputs int) int {
+	if len(msgSplit) > numOfInputs {
+		numOfInputs = len(msgSplit)
+	}
+	return numOfInputs
+}
+
 // Listen to zmq subscribers to receive tx signatures
 func (z AttestSignerZmq) GetSigs() [][]crypto.Sig {
-	var sigs []crypto.Sig
+	var msgs [][][]byte
+	numOfTxInputs := 0
 	sockets, _ := poller.Poll(-1)
 	for _, socket := range sockets {
 		for _, sub := range z.subscribers {
 			if sub.Socket() == socket.Socket {
 				_, msg := sub.ReadMessage()
-				sigs = append(sigs, crypto.Sig(msg))
+				var msgSplit [][]byte
+				msgSplit = getSplitMsgFromMsg(msg)
+				numOfTxInputs = updateNumOfTxInputs(msgSplit, numOfTxInputs)
+				msgs = append(msgs, msgSplit)
 			}
 		}
 	}
-	return [][]crypto.Sig{sigs}
+	return getSigsFromMsgs(msgs, numOfTxInputs)
 }

@@ -343,6 +343,7 @@ func (s *AttestService) doStateNewAttestation() {
 		if s.setFailure(topupUnspentErr) {
 			return // will rebound to init
 		} else if topupFound {
+			log.Printf("********** found topup unspent: %s\n", topupUnspent.TxID)
 			unspentList = append(unspentList, topupUnspent)
 		}
 
