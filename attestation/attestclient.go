@@ -24,18 +24,18 @@ import (
 
 // error - warning consts
 const (
-	WARNING_INSUFFICIENT_FUNDS = `Warning - Last unspent vout value low (less than 100*maxFee target)`
-	WARNING_TOPUP_INFO_MISSING = `Warning - Topup Address and/or Topup Script not set in config`
+	WARNING_INSUFFICIENT_FUNDS              = `Warning - Last unspent vout value low (less than 100*maxFee target)`
+	WARNING_TOPUP_INFO_MISSING              = `Warning - Topup Address and/or Topup Script not set in config`
+	WARNING_FAILURE_IMPORTING_TOPUP_ADDRESS = `Could not import topup address`
 
-	ERROR_INSUFFICIENT_FUNDS              = `Insufficient unspent vout value (less than the maxFee target)`
-	ERROR_MISSING_MULTISIG                = `No multisig used - Client must be signer and include private key`
-	ERROR_MISSING_ADDRESS                 = `Client address missing from multisig script`
-	ERROR_INVALID_PK                      = `Invalid private key`
-	ERROR_FAILURE_IMPORTING_PK            = `Could not import initial private key`
-	ERROR_FAILURE_IMPORTING_TOPUP_ADDRESS = `Could not import topup address`
-	ERROR_SIGS_MISSING_FOR_TX             = `Missing signatures for transaction`
-	ERROR_SIGS_MISSING_FOR_VIN            = `Missing signatures for transaction input`
-	ERROR_INPUT_MISSING_FOR_TX            = `Missing input for transaction`
+	ERROR_INSUFFICIENT_FUNDS   = `Insufficient unspent vout value (less than the maxFee target)`
+	ERROR_MISSING_MULTISIG     = `No multisig used - Client must be signer and include private key`
+	ERROR_MISSING_ADDRESS      = `Client address missing from multisig script`
+	ERROR_INVALID_PK           = `Invalid private key`
+	ERROR_FAILURE_IMPORTING_PK = `Could not import initial private key`
+	ERROR_SIGS_MISSING_FOR_TX  = `Missing signatures for transaction`
+	ERROR_SIGS_MISSING_FOR_VIN = `Missing signatures for transaction input`
+	ERROR_INPUT_MISSING_FOR_TX = `Missing input for transaction`
 )
 
 // coin in satoshis
@@ -104,9 +104,8 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 	if topupAddrStr != "" && topupScriptStr != "" {
 		importErr := config.MainClient().ImportAddress(topupAddrStr)
 		if importErr != nil {
-			log.Fatalf("%s %s\n%v\n", ERROR_FAILURE_IMPORTING_TOPUP_ADDRESS, topupAddrStr, importErr)
-		}
-		if isSigner {
+			log.Printf("%s (%s)\n%v\n", WARNING_FAILURE_IMPORTING_TOPUP_ADDRESS, topupAddrStr, importErr)
+		} else if isSigner {
 			pkTopup := config.TopupPK()
 			var errPkWifTopup error
 			pkWifTopup, errPkWifTopup = crypto.GetWalletPrivKey(pkTopup)

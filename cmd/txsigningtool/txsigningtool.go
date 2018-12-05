@@ -66,7 +66,7 @@ func parseFlags() {
 	flag.StringVar(&pk0, "pk", "", "Client pk for genesis attestation transaction")
 	flag.StringVar(&script0, "script", "", "Redeem script in case multisig is used")
 	flag.StringVar(&addrTopup, "addrTopup", "", "Address for topup transaction")
-	flag.StringVar(&pk0, "pkTopup", "", "Client pk for topup address")
+	flag.StringVar(&pkTopup, "pkTopup", "", "Client pk for topup address")
 	flag.StringVar(&scriptTopup, "scriptTopup", "", "Redeem script for topup")
 
 	flag.StringVar(&host, "host", "*:5001", "Client host to publish signatures at")
