@@ -31,15 +31,15 @@ The mainstay repository is an application that implements the [Mainstay protocol
 
         - Run the mainstay attestation service by:
 
-         `mainstay -tx TX_HASH -script REDEEM_SCRIPT -addrTopup TOPUP_ADDRESS -scriptTopup TOPUP_SCRIPT`
+         `mainstay`
 
-         Command line parameters can also be set in `.conf` file
+         Command line parameters should be set in `.conf` file
 
         - Run transaction signers of the m-of-n multisig P2SH addresses for `x in [0, n-1]` by:
 
-            `go run $GOPATH/src/mainstay/cmd/txsigningtool/txsigningtool.go -tx TX_HASH -pk PRIVKEY_x -script REDEEMSCRIPT -addrTopup TOPUP_ADDRESS -scriptTopup TOPUP_SCRIPT -scriptPk TOPUP_PRIVKEY_x -host SIGNER_HOST`
+            `go run $GOPATH/src/mainstay/cmd/txsigningtool/txsigningtool.go -pk PRIVKEY_x -pkTopup TOPUP_PRIVKEY_x -host SIGNER_HOST`
 
-            Command line parameters can also be set in the corresponding signer `.conf` file
+            Command line parameters should be set in the corresponding signer `.conf` file
 
 
 - Unit Testing
