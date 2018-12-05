@@ -102,6 +102,7 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 	topupScriptStr := config.TopupScript()
 	var pkWifTopup *btcutil.WIF
 	if topupAddrStr != "" && topupScriptStr != "" {
+		log.Printf("*Client* importing top-up addr: %s ...\n", topupAddrStr)
 		importErr := config.MainClient().ImportAddress(topupAddrStr)
 		if importErr != nil {
 			log.Printf("%s (%s)\n%v\n", WARNING_FAILURE_IMPORTING_TOPUP_ADDRESS, topupAddrStr, importErr)

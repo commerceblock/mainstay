@@ -68,7 +68,7 @@ func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 	} else {
 		log.Printf("%s (%d)\n", WARNING_INVALID_MIN_FEE_ARG, feesConfig.MinFee)
 	}
-	log.Printf("Min fee set to: %d\n", minFee)
+	log.Printf("*Fees* Min fee set to: %d\n", minFee)
 
 	// max fee with lower limit min_fee && 0 and max fee default
 	maxFee := DEFAULT_MAX_FEE
@@ -77,7 +77,7 @@ func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 	} else {
 		log.Printf("%s (%d)\n", WARNING_INVALID_MAX_FEE_ARG, feesConfig.MaxFee)
 	}
-	log.Printf("Max fee set to: %d\n", maxFee)
+	log.Printf("*Fees* Max fee set to: %d\n", maxFee)
 
 	// fee increment with lower limit 0
 	feeIncrement := DEFAULT_FEE_INCREMENT
@@ -86,7 +86,7 @@ func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 	} else {
 		log.Printf("%s (%d)\n", WARNING_INVALID_FEE_INCREMENT_ARG, feesConfig.FeeIncrement)
 	}
-	log.Printf("Fee increment set to: %d\n", feeIncrement)
+	log.Printf("*Fees* Fee increment set to: %d\n", feeIncrement)
 
 	attestFees := AttestFees{
 		minFee:       minFee,
