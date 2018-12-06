@@ -22,11 +22,12 @@ import (
 
 const CLIENT_CHAIN_NAME = "clientchain"
 const CONF_PATH = "/src/mainstay/cmd/confirmationtool/conf.json"
-const API_HOST = "http://localhost:8080" // to replace with actual mainstay url
+const DEFAULT_API_HOST = "http://localhost:8080" // to replace with actual mainstay url
 
 var (
 	tx          string
 	script      string
+	apiHost     string
 	position    int
 	showDetails bool
 	mainConfig  *config.Config
@@ -38,6 +39,7 @@ func init() {
 	flag.BoolVar(&showDetails, "detailed", false, "Detailed information on attestation transaction")
 	flag.StringVar(&tx, "tx", "", "Tx id from which to start searching the staychain")
 	flag.StringVar(&script, "script", "", "Redeem script of multisig used by attestaton service")
+	flag.StringVar(&apiHost, "apiHost", DEFAULT_API_HOST, "Host address for mainstay API")
 	flag.IntVar(&position, "position", -1, "Client merkle commitment position")
 	flag.Parse()
 
@@ -66,7 +68,7 @@ func main() {
 	txraw := getRawTxFromHash(tx)
 	fetcher := staychain.NewChainFetcher(mainConfig.MainClient(), txraw)
 	chain := staychain.NewChain(fetcher)
-	verifier := staychain.NewChainVerifier(mainConfig.MainChainCfg(), client, position, script, API_HOST)
+	verifier := staychain.NewChainVerifier(mainConfig.MainChainCfg(), client, position, script, apiHost)
 
 	// await new attestations and verify
 	for transaction := range chain.Updates() {

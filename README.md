@@ -72,6 +72,6 @@ The `API_HOST` field should be set to the mainstay URL. This can be updated in `
 To run this tool you need to first fetch the `TX_HASH` from the `attestationhash` field in the Ocean genesis block, as well as the publicly available `REDEEM_SCRIPT` of the attestation service multisig. The tool can also be started with any other `TX_HASH` attestation found in the mainstay website. A client should use his designated `CLIENT_POSITION` that was assigned during signup and run the tool using:
 
 `go run cmd/confirmationtool/confirmationtool.go
--tx TX_HASH -script REDEEM_SCRIPT -position CLIENT_POSITION`
+-tx TX_HASH -script REDEEM_SCRIPT -position CLIENT_POSITION -apiHost https://mainstay.xyz/api/v1/`
 
 This will initially take some time to sync up all the attestations that have been committed so far and then will wait for any new attestations. Logging is displayed for each attestation and for full details the `-detailed` flag can be used.
