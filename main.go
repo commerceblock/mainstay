@@ -22,7 +22,7 @@ import (
 var (
 	tx0         string
 	script0     string
-	txTopup     string
+	addrTopup   string
 	scriptTopup string
 	isRegtest   bool
 	mainConfig  *config.Config
@@ -32,7 +32,7 @@ func parseFlags() {
 	flag.BoolVar(&isRegtest, "regtest", false, "Use regtest wallet configuration instead of user wallet")
 	flag.StringVar(&tx0, "tx", "", "Tx id for genesis attestation transaction")
 	flag.StringVar(&script0, "script", "", "Redeem script in case multisig is used")
-	flag.StringVar(&txTopup, "txTopup", "", "Tx id for topup transaction")
+	flag.StringVar(&addrTopup, "addrTopup", "", "Address for topup transaction")
 	flag.StringVar(&scriptTopup, "scriptTopup", "", "Redeem script for topup")
 	flag.Parse()
 }
@@ -62,8 +62,8 @@ func init() {
 			mainConfig.SetInitTx(tx0)
 			mainConfig.SetInitScript(script0)
 		}
-		if txTopup != "" && scriptTopup != "" {
-			mainConfig.SetTopupTx(txTopup)
+		if addrTopup != "" && scriptTopup != "" {
+			mainConfig.SetTopupAddress(addrTopup)
 			mainConfig.SetTopupScript(scriptTopup)
 		}
 		mainConfig.SetRegtest(isRegtest)

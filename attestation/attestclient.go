@@ -24,20 +24,19 @@ import (
 
 // error - warning consts
 const (
-	WARING_INSUFFICIENT_FUNDS = `Warning - Last unspent vout value low
-    (less than 100*maxFee target)`
+	WARNING_INSUFFICIENT_FUNDS              = `Warning - Last unspent vout value low (less than 100*maxFee target)`
+	WARNING_TOPUP_INFO_MISSING              = `Warning - Topup Address and/or Topup Script not set in config`
+	WARNING_TOPUP_PK_MISSING                = `Warning - Topup Private Key not set in config`
+	WARNING_FAILURE_IMPORTING_TOPUP_ADDRESS = `Could not import topup address`
 
-	ERROR_INSUFFICIENT_FUNDS = `Insufficient unspent vout value
-    (less than the maxFee target)`
-
-	ERROR_MISSING_MULTISIG = `No multisig used - Client must be signer
-    and include private key`
-
-	ERROR_MISSING_ADDRESS = `Client address missing from multisig script`
-
-	ERROR_INVALID_PK = `Invalid private key`
-
+	ERROR_INSUFFICIENT_FUNDS   = `Insufficient unspent vout value (less than the maxFee target)`
+	ERROR_MISSING_MULTISIG     = `No multisig used - Client must be signer and include private key`
+	ERROR_MISSING_ADDRESS      = `Client address missing from multisig script`
+	ERROR_INVALID_PK           = `Invalid private key`
 	ERROR_FAILURE_IMPORTING_PK = `Could not import initial private key`
+	ERROR_SIGS_MISSING_FOR_TX  = `Missing signatures for transaction`
+	ERROR_SIGS_MISSING_FOR_VIN = `Missing signatures for transaction input`
+	ERROR_INPUT_MISSING_FOR_TX = `Missing input for transaction`
 )
 
 // coin in satoshis
@@ -73,49 +72,74 @@ type AttestClient struct {
 	// init configuration parameters
 	// store information on initial keys and txid
 	// required to set chain start and do key tweaking
-	txid0     string
-	script0   string
-	pubkeys   []*btcec.PublicKey
-	numOfSigs int
+	txid0       string
+	script0     string
+	pubkeys     []*btcec.PublicKey
+	numOfSigs   int
+	addrTopup   string
+	scriptTopup string
 
 	// states whether Attest Client struct is used for transaction
 	// signing or simply for address tweaking and transaction creation
 	// in signer case the wallet priv key of the signer is imported
 	// in no signer case the wallet priv is a nil pointer
-	WalletPriv *btcutil.WIF
+	WalletPriv      *btcutil.WIF
+	WalletPrivTopup *btcutil.WIF
 }
 
 // NewAttestClient returns a pointer to a new AttestClient instance
 // Initially locates the genesis transaction in the main chain wallet
 // and verifies that the corresponding private key is in the wallet
 func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
+
 	// optional flag to set attest client as signer
 	isSigner := false
 	if len(signerFlag) > 0 {
 		isSigner = signerFlag[0]
 	}
 
+	// top up config
+	topupAddrStr := config.TopupAddress()
+	topupScriptStr := config.TopupScript()
+	var pkWifTopup *btcutil.WIF
+	if topupAddrStr != "" && topupScriptStr != "" {
+		log.Printf("*Client* importing top-up addr: %s ...\n", topupAddrStr)
+		importErr := config.MainClient().ImportAddress(topupAddrStr)
+		if importErr != nil {
+			log.Printf("%s (%s)\n%v\n", WARNING_FAILURE_IMPORTING_TOPUP_ADDRESS, topupAddrStr, importErr)
+		}
+		if isSigner {
+			pkTopup := config.TopupPK()
+			if pkTopup != "" {
+				var errPkWifTopup error
+				pkWifTopup, errPkWifTopup = crypto.GetWalletPrivKey(pkTopup)
+				if errPkWifTopup != nil {
+					log.Fatalf("%s %s\n%v\n", ERROR_INVALID_PK, pkTopup, errPkWifTopup)
+				}
+			} else {
+				log.Println(WARNING_TOPUP_PK_MISSING)
+			}
+		}
+	} else {
+		log.Println(WARNING_TOPUP_INFO_MISSING)
+	}
+
+	// main config
 	multisig := config.InitScript()
 	var pkWif *btcutil.WIF
 	if isSigner { // signer case import private key
-		// Get initial private key from initial funding transaction of main client
+		// Get initial private key
 		pk := config.InitPK()
 		var errPkWif error
 		pkWif, errPkWif = crypto.GetWalletPrivKey(pk)
 		if errPkWif != nil {
-			log.Printf("%s %s\n", ERROR_INVALID_PK, pk)
-			log.Fatal(errPkWif)
-		}
-		importErr := config.MainClient().ImportPrivKeyRescan(pkWif, "init", false)
-		if importErr != nil {
-			log.Printf("%s %s\n", ERROR_FAILURE_IMPORTING_PK, pk)
-			log.Fatal(importErr)
+			log.Fatalf("%s %s\n%v\n", ERROR_INVALID_PK, pk, errPkWif)
 		}
 	} else if multisig == "" {
 		log.Fatal(ERROR_MISSING_MULTISIG)
 	}
 
-	if multisig != "" { // if multisig attestation, parse pubkeys
+	if multisig != "" { // if multisig is set, parse pubkeys
 		pubkeys, numOfSigs := crypto.ParseRedeemScript(config.InitScript())
 
 		// verify our key is one of the multisig keys in signer case
@@ -132,24 +156,30 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		}
 
 		return &AttestClient{
-			MainClient:   config.MainClient(),
-			MainChainCfg: config.MainChainCfg(),
-			Fees:         NewAttestFees(config.FeesConfig()),
-			txid0:        config.InitTx(),
-			script0:      multisig,
-			pubkeys:      pubkeys,
-			numOfSigs:    numOfSigs,
-			WalletPriv:   pkWif}
+			MainClient:      config.MainClient(),
+			MainChainCfg:    config.MainChainCfg(),
+			Fees:            NewAttestFees(config.FeesConfig()),
+			txid0:           config.InitTx(),
+			script0:         multisig,
+			pubkeys:         pubkeys,
+			numOfSigs:       numOfSigs,
+			addrTopup:       topupAddrStr,
+			scriptTopup:     topupScriptStr,
+			WalletPriv:      pkWif,
+			WalletPrivTopup: pkWifTopup}
 	}
 	return &AttestClient{
-		MainClient:   config.MainClient(),
-		MainChainCfg: config.MainChainCfg(),
-		Fees:         NewAttestFees(config.FeesConfig()),
-		txid0:        config.InitTx(),
-		script0:      multisig,
-		pubkeys:      []*btcec.PublicKey{},
-		numOfSigs:    1,
-		WalletPriv:   pkWif}
+		MainClient:      config.MainClient(),
+		MainChainCfg:    config.MainChainCfg(),
+		Fees:            NewAttestFees(config.FeesConfig()),
+		txid0:           config.InitTx(),
+		script0:         multisig,
+		pubkeys:         []*btcec.PublicKey{},
+		numOfSigs:       1,
+		addrTopup:       topupAddrStr,
+		scriptTopup:     topupScriptStr,
+		WalletPriv:      pkWif,
+		WalletPrivTopup: pkWifTopup}
 }
 
 // Get next attestation key by tweaking with latest commitment hash
@@ -218,48 +248,65 @@ func (w *AttestClient) ImportAttestationAddr(addr btcutil.Address) error {
 	return nil
 }
 
-// Generate a new transaction paying to the tweaked address and add fees
-// Transaction inputs are generated using the previous unspent in the wallet
+// Generate a new transaction paying to the tweaked address
+// Transaction inputs are generated using the previous attestation
+// unspent as well as any additional topup inputs paid to wallet
 // Fees are calculated using AttestFees interface and RBF flag is set manually
-func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, txunspent btcjson.ListUnspentResult) (
+func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []btcjson.ListUnspentResult) (
 	*wire.MsgTx, error) {
-	inputs := []btcjson.TransactionInput{{Txid: txunspent.TxID, Vout: txunspent.Vout}}
 
+	// add inputs and amount for each unspent tx
+	var inputs []btcjson.TransactionInput
 	amounts := map[btcutil.Address]btcutil.Amount{
-		paytoaddr: btcutil.Amount(txunspent.Amount * COIN)}
-	msgtx, errCreate := w.MainClient.CreateRawTransaction(inputs, amounts, nil)
+		paytoaddr: btcutil.Amount(0)}
+
+	// pay all funds to single address
+	for i := 0; i < len(unspent); i++ {
+		inputs = append(inputs, btcjson.TransactionInput{
+			Txid: unspent[i].TxID,
+			Vout: unspent[i].Vout,
+		})
+		amounts[paytoaddr] += btcutil.Amount(unspent[i].Amount * COIN)
+	}
+
+	// attempt to create raw transaction
+	msgTx, errCreate := w.MainClient.CreateRawTransaction(inputs, amounts, nil)
 	if errCreate != nil {
 		return nil, errCreate
 	}
 
 	// set replace-by-fee flag
-	msgtx.TxIn[0].Sequence = uint32(math.Pow(2, float64(32))) - 3
+	// TODO: ? - currently only set RBF flag for attestation vin
+	msgTx.TxIn[0].Sequence = uint32(math.Pow(2, float64(32))) - 3
 
 	// return error if txout value is less than maxFee target
-	maxFee := int64(w.Fees.maxFee * msgtx.SerializeSize())
-	if msgtx.TxOut[0].Value < maxFee {
+	maxFee := int64(w.Fees.maxFee * msgTx.SerializeSize())
+	if msgTx.TxOut[0].Value < maxFee {
 		return nil, errors.New(ERROR_INSUFFICIENT_FUNDS)
 	}
 
 	// print warning if txout value less than 100*maxfee target
-	if msgtx.TxOut[0].Value < 100*maxFee {
-		log.Println(WARING_INSUFFICIENT_FUNDS)
+	if msgTx.TxOut[0].Value < 100*maxFee {
+		log.Println(WARNING_INSUFFICIENT_FUNDS)
 	}
 
+	// add fees using best fee-per-byte estimate
 	feePerByte := w.Fees.GetFee()
-	fee := int64(feePerByte * msgtx.SerializeSize())
-	msgtx.TxOut[0].Value -= fee
+	fee := int64(feePerByte * msgTx.SerializeSize())
+	msgTx.TxOut[0].Value -= fee
 
-	return msgtx, nil
+	return msgTx, nil
 }
 
 // Create new attestation transaction by removing sigs and
 // bumping fee of existing transaction with incremented fee
 // The latest fee is fetched from the AttestFees API, which
 // has fixed uppwer/lower fee limit and fee increment
-func (w *AttestClient) bumpAttestationFees(msgtx *wire.MsgTx) error {
+func (w *AttestClient) bumpAttestationFees(msgTx *wire.MsgTx) error {
 	// first remove any sigs
-	msgtx.TxIn[0].SignatureScript = []byte{}
+	for i := 0; i < len(msgTx.TxIn); i++ {
+		msgTx.TxIn[i].SignatureScript = []byte{}
+	}
 
 	// bump fees and calculate fee increment
 	prevFeePerByte := w.Fees.GetFee()
@@ -267,8 +314,9 @@ func (w *AttestClient) bumpAttestationFees(msgtx *wire.MsgTx) error {
 	feePerByteIncrement := w.Fees.GetFee() - prevFeePerByte
 
 	// increase tx fees by fee difference
-	feeIncrement := int64(feePerByteIncrement * msgtx.SerializeSize())
-	msgtx.TxOut[0].Value -= feeIncrement
+	feeIncrement := int64(feePerByteIncrement * msgTx.SerializeSize())
+	log.Printf("fee:%v\n", feeIncrement)
+	msgTx.TxOut[0].Value -= feeIncrement
 
 	return nil
 }
@@ -294,37 +342,62 @@ func (w *AttestClient) GetScriptFromHash(hash chainhash.Hash) string {
 
 // Sign transaction using key/redeemscript pair generated by previous attested hash
 // This method should only be used in the attestation client signer case
+// Any excess transaction inputs are signed using the initial/topup private key
+// and the initial/topup script, assuming they are used to topup the attestation service
 func (w *AttestClient) SignTransaction(hash chainhash.Hash, msgTx wire.MsgTx) (
 	*wire.MsgTx, string, error) {
 
 	// Calculate private key and redeemScript from hash
 	key := w.GetKeyFromHash(hash)
 	redeemScript := w.GetScriptFromHash(hash)
-	// Can't get redeem script from unspent as importaddress P2SH not supported
-	// if txunspent.RedeemScript != "" {
-	//     redeemScript = txunspent.RedeemScript
-	// }
 
-	// sign tx and send signature to main attestation client
-	prevTxId := msgTx.TxIn[0].PreviousOutPoint.Hash
-	prevTx, errRaw := w.MainClient.GetRawTransaction(&prevTxId)
-	if errRaw != nil {
-		return nil, "", errRaw
+	// fetch previous attestation transaction
+	if len(msgTx.TxIn) <= 0 {
+		return nil, "", errors.New(ERROR_INPUT_MISSING_FOR_TX)
 	}
 
-	// Sign transaction
-	rawTxInput := btcjson.RawTxInput{prevTxId.String(), 0,
-		hex.EncodeToString(prevTx.MsgTx().TxOut[0].PkScript), redeemScript}
+	// get prev outpoint hash in order to generate tx inputs for signing
+	prevTxId := msgTx.TxIn[0].PreviousOutPoint.Hash
+	prevTx, prevTxErr := w.MainClient.GetRawTransaction(&prevTxId)
+	if prevTxErr != nil {
+		return nil, "", prevTxErr
+	}
+
+	var inputs []btcjson.RawTxInput // new tx inputs
+	var keys []string               // keys to sign inputs
+
+	// add prev attestation tx input info and priv key
+	inputs = append(inputs, btcjson.RawTxInput{prevTxId.String(), 0,
+		hex.EncodeToString(prevTx.MsgTx().TxOut[0].PkScript), redeemScript})
+	keys = append(keys, key.String())
+
+	// for any remaining vins - sign with initial/topup privkey
+	// this should be a very rare occasion
+	for i := 1; i < len(msgTx.TxIn); i++ {
+		// fetch previous attestation transaction
+		prevTxId = msgTx.TxIn[i].PreviousOutPoint.Hash
+		prevTx, prevTxErr = w.MainClient.GetRawTransaction(&prevTxId)
+		if prevTxErr != nil {
+			return nil, "", prevTxErr
+		}
+		inputs = append(inputs, btcjson.RawTxInput{prevTxId.String(), 0,
+			hex.EncodeToString(prevTx.MsgTx().TxOut[0].PkScript), w.scriptTopup})
+		keys = append(keys, w.WalletPrivTopup.String())
+	}
+
+	// attempt to sign transcation with provided inputs - keys
 	signedMsgTx, _, errSign := w.MainClient.SignRawTransaction3(
-		&msgTx, []btcjson.RawTxInput{rawTxInput}, []string{key.String()})
+		&msgTx, inputs, keys)
 	if errSign != nil {
 		return nil, "", errSign
 	}
 	return signedMsgTx, redeemScript, nil
 }
 
-// Sign the latest attestation transaction with the combined signatures
-func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]byte, hash chainhash.Hash) (
+// Sign the attestation transaction provided with the received signatures
+// In the client signer case, client additionally adds sigs as well to the transaction
+// Sigs are then combined and added to the attestation transaction inputs
+func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]crypto.Sig, hash chainhash.Hash) (
 	*wire.MsgTx, error) {
 	// set tx pointer and redeem script
 	signedMsgTx := msgtx
@@ -338,20 +411,42 @@ func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]byte, hash ch
 		}
 	}
 
-	// MultiSig case - combine sigs and create new scriptSig
+	// Check for multisig case
+	// Almost always multisig is used, but we retain this backward compatible
 	if redeemScript != "" {
-		mySigs, script := crypto.ParseScriptSig(signedMsgTx.TxIn[0].SignatureScript)
-		if len(mySigs) > 0 && len(script) > 0 && hex.EncodeToString(script) == redeemScript {
-			combinedSigs := append(mySigs, sigs...)
-
-			// take only numOfSigs required
-			combinedScriptSig := crypto.CreateScriptSig(combinedSigs[:w.numOfSigs], script)
-			signedMsgTx.TxIn[0].SignatureScript = combinedScriptSig
-		} else { // no mySigs - just used received client sigs and script
-			if len(sigs) >= w.numOfSigs {
-				redeemScriptBytes, _ := hex.DecodeString(redeemScript)
-				combinedScriptSig := crypto.CreateScriptSig(sigs[:w.numOfSigs], redeemScriptBytes)
-				signedMsgTx.TxIn[0].SignatureScript = combinedScriptSig
+		for i := 0; i < len(signedMsgTx.TxIn); i++ {
+			// attempt to get mySigs first
+			mySigs, script := crypto.ParseScriptSig(signedMsgTx.TxIn[i].SignatureScript)
+			if len(mySigs) > 0 && len(script) > 0 {
+				if len(sigs) > i {
+					mySigs = append(mySigs, sigs[i]...)
+				}
+				// check we have the required number of sigs for vin
+				if len(mySigs) < w.numOfSigs {
+					return nil, errors.New(ERROR_SIGS_MISSING_FOR_VIN)
+				}
+				// take up to numOfSigs sigs
+				combinedScriptSig := crypto.CreateScriptSig(mySigs[:w.numOfSigs], script)
+				signedMsgTx.TxIn[i].SignatureScript = combinedScriptSig
+			} else {
+				// check we have all the sigs required
+				if len(sigs) < len(signedMsgTx.TxIn) {
+					return nil, errors.New(ERROR_SIGS_MISSING_FOR_TX)
+				}
+				if len(sigs[i]) < w.numOfSigs {
+					return nil, errors.New(ERROR_SIGS_MISSING_FOR_VIN)
+				}
+				// no mySigs - just use received client sigs and script
+				var redeemScriptBytes []byte
+				if i == 0 {
+					// for vin 0, use last attestation script
+					redeemScriptBytes, _ = hex.DecodeString(redeemScript)
+				} else {
+					// for any other vin, use initial/topup script as we assume topup use only
+					redeemScriptBytes, _ = hex.DecodeString(w.scriptTopup)
+				}
+				combinedScriptSig := crypto.CreateScriptSig(sigs[i][:w.numOfSigs], redeemScriptBytes)
+				signedMsgTx.TxIn[i].SignatureScript = combinedScriptSig
 			}
 		}
 	}
@@ -359,7 +454,7 @@ func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]byte, hash ch
 	return signedMsgTx, nil
 }
 
-// Send the latest attestation transaction
+// Send the latest attestation transaction through rpc bitcoin client connection
 func (w *AttestClient) sendAttestation(msgtx *wire.MsgTx) (chainhash.Hash, error) {
 
 	// send signed attestation
@@ -395,13 +490,27 @@ func (w *AttestClient) findLastUnspent() (bool, btcjson.ListUnspentResult, error
 	if err != nil {
 		return false, btcjson.ListUnspentResult{}, err
 	}
-	if len(unspent) > 0 {
-		for _, vout := range unspent {
-			txhash, _ := chainhash.NewHashFromStr(vout.TxID)
-			if w.verifyTxOnSubchain(*txhash) {
-				//theoretically only one unspent vout, but check anyway
-				return true, vout, nil
-			}
+	for _, vout := range unspent {
+		txhash, _ := chainhash.NewHashFromStr(vout.TxID)
+		if w.verifyTxOnSubchain(*txhash) {
+			//theoretically only one unspent vout, but check anyway
+			return true, vout, nil
+		}
+	}
+	return false, btcjson.ListUnspentResult{}, nil
+}
+
+// Find unspent vout for topup address specified in attestation client init
+func (w *AttestClient) findTopupUnspent() (bool, btcjson.ListUnspentResult, error) {
+	unspent, err := w.MainClient.ListUnspent()
+	if err != nil {
+		return false, btcjson.ListUnspentResult{}, err
+	}
+	for _, u := range unspent {
+		// search for an address matching the topup address provided in config
+		// exclude txid0, as this signals the first staychain transaction
+		if u.Address == w.addrTopup && u.TxID != w.txid0 {
+			return true, u, nil
 		}
 	}
 	return false, btcjson.ListUnspentResult{}, nil

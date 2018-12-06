@@ -77,41 +77,53 @@ func CreateMultisig(pubkeys []*btcec.PublicKey, nSigs int, chainCfg *chaincfg.Pa
 	return multisigAddr, script
 }
 
-// Parse scriptSig and return sigs and redeemScript
-func ParseScriptSig(scriptSig []byte) ([][]byte, []byte) {
+// type def for signature
+type Sig []byte
 
+// Parse scriptSig and return sigs and redeemScript
+func ParseScriptSig(scriptSig []byte) ([]Sig, []byte) {
+
+	// empty case return nothing
+	// maybe TODO: error handling
 	if len(scriptSig) == 0 {
-		return [][]byte{}, []byte{}
+		return []Sig{}, []byte{}
 	}
 
-	var scripts [][]byte
+	var sigs []Sig
+	var redeemScript []byte
 	it := 1
-	for {
+	for { // parse script using script size byte
 		scriptSize := scriptSig[it]
 		script := scriptSig[it+1 : it+1+int(scriptSize)]
-		scripts = append(scripts, script)
 
 		it += 1 + int(scriptSize)
-
 		if len(scriptSig) <= it {
+			redeemScript = script // last script element is redeemScript
 			break
 		}
+
+		// all but last element are sigs
+		sigs = append(sigs, script)
 	}
 
-	return scripts[:len(scripts)-1], scripts[len(scripts)-1]
+	return sigs, redeemScript
 }
 
 // Create scriptSig from sigs and redeemScript
-func CreateScriptSig(sigs [][]byte, script []byte) []byte {
+func CreateScriptSig(sigs []Sig, script []byte) []byte {
 
 	var scriptSig []byte
+
+	// standard start with 0 byte (beautiful bitcoin feature)
 	scriptSig = append(scriptSig, byte(0))
 
+	// append sigs
 	for _, sig := range sigs {
 		scriptSig = append(scriptSig, byte(len(sig)))
 		scriptSig = append(scriptSig, sig...)
 	}
 
+	// append redeemScript
 	scriptSig = append(scriptSig, byte(len(script)))
 	scriptSig = append(scriptSig, script...)
 

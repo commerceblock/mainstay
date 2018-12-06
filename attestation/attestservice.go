@@ -18,7 +18,6 @@ import (
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
 )
 
 // Attestation Service is the main processes that handles generating
@@ -44,8 +43,8 @@ const (
 const (
 	ERROR_UNSPENT_NOT_FOUND = "No valid unspent found"
 
-	WARNING_INVALID_ATIME_NEW_ATTESTATION_ARG    = "Warning - Invalid new attestation time argument"
-	WARNING_INVALID_ATIME_HANDLE_UNCONFIRMED_ARG = "Warning - Invalid handle unconfirmed time argument"
+	WARNING_INVALID_ATIME_NEW_ATTESTATION_ARG    = "Warning - Invalid new attestation time config value"
+	WARNING_INVALID_ATIME_HANDLE_UNCONFIRMED_ARG = "Warning - Invalid handle unconfirmed time config value"
 )
 
 // waiting time schedules
@@ -121,14 +120,14 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Se
 	if config.TimingConfig().NewAttestationMinutes > 0 {
 		atimeNewAttestation = time.Duration(config.TimingConfig().NewAttestationMinutes) * time.Minute
 	} else {
-		log.Println(WARNING_INVALID_ATIME_NEW_ATTESTATION_ARG)
+		log.Printf("%s (%v)\n", WARNING_INVALID_ATIME_NEW_ATTESTATION_ARG, config.TimingConfig().NewAttestationMinutes)
 	}
 	log.Printf("Time new attestation set to: %v\n", atimeNewAttestation)
 	atimeHandleUnconfirmed = DEFAULT_ATIME_HANDLE_UNCONFIRMED
 	if config.TimingConfig().HandleUnconfirmedMinutes > 0 {
 		atimeHandleUnconfirmed = time.Duration(config.TimingConfig().HandleUnconfirmedMinutes) * time.Minute
 	} else {
-		log.Println(WARNING_INVALID_ATIME_HANDLE_UNCONFIRMED_ARG)
+		log.Printf("%s (%v)\n", WARNING_INVALID_ATIME_HANDLE_UNCONFIRMED_ARG, config.TimingConfig().HandleUnconfirmedMinutes)
 	}
 	log.Printf("Time handle unconfirmed set to: %v\n", atimeHandleUnconfirmed)
 
@@ -313,6 +312,7 @@ func (s *AttestService) doStateNextCommitment() {
 // ASTATE_NEW_ATTESTATION
 // - Generate new pay to address for attestation transaction using client commitment
 // - Create new unsigned transaction using the last unspent
+// - If a topup unspent exists, add this to the new attestation
 // - Publish unsigned transaction to signer clients
 // - add ATIME_SIGS waiting time
 func (s *AttestService) doStateNewAttestation() {
@@ -331,13 +331,24 @@ func (s *AttestService) doStateNewAttestation() {
 	}
 
 	// Generate new unsigned attestation transaction from last unspent
-	success, txunspent, unspentErr := s.attester.findLastUnspent()
+	success, unspent, unspentErr := s.attester.findLastUnspent()
 	if s.setFailure(unspentErr) {
 		return // will rebound to init
 	} else if success {
-		var createErr error
-		var newTx *wire.MsgTx
-		newTx, createErr = s.attester.createAttestation(paytoaddr, txunspent)
+		var unspentList []btcjson.ListUnspentResult
+		unspentList = append(unspentList, unspent)
+
+		// search for topup unspent and add if it exists
+		topupFound, topupUnspent, topupUnspentErr := s.attester.findTopupUnspent()
+		if s.setFailure(topupUnspentErr) {
+			return // will rebound to init
+		} else if topupFound {
+			log.Printf("********** found topup unspent: %s\n", topupUnspent.TxID)
+			unspentList = append(unspentList, topupUnspent)
+		}
+
+		// create attestation transaction for the list of unspents paying to addr generated
+		newTx, createErr := s.attester.createAttestation(paytoaddr, unspentList)
 		if s.setFailure(createErr) {
 			return // will rebound to init
 		}
@@ -366,7 +377,10 @@ func (s *AttestService) doStateSignAttestation() {
 
 	// Read sigs using subscribers
 	sigs := s.signer.GetSigs()
-	log.Printf("********** received %d signatures\n", len(sigs))
+	for sigForInput, _ := range sigs {
+		log.Printf("********** received %d signatures for input %d \n",
+			len(sigs[sigForInput]), sigForInput)
+	}
 
 	// get last confirmed commitment from server
 	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()

@@ -51,8 +51,8 @@ func (f AttestSignerFake) SendNewTx(tx []byte) {
 }
 
 // Return signatures for received tx and hashes
-func (f AttestSignerFake) GetSigs() [][]byte {
-	var sigs [][]byte
+func (f AttestSignerFake) GetSigs() [][]crypto.Sig {
+	var sigs [][]crypto.Sig
 
 	var msgTx wire.MsgTx
 	if err := msgTx.Deserialize(bytes.NewReader(signerTxBytes)); err != nil {
@@ -66,10 +66,12 @@ func (f AttestSignerFake) GetSigs() [][]byte {
 	if signErr != nil {
 		return sigs
 	}
-	scriptSig := signedMsgTx.TxIn[0].SignatureScript
-	if len(scriptSig) > 0 {
-		sig, _ := crypto.ParseScriptSig(scriptSig)
-		sigs = append(sigs, sig[0])
+	for _, txin := range signedMsgTx.TxIn {
+		scriptSig := txin.SignatureScript
+		if len(scriptSig) > 0 {
+			sig, _ := crypto.ParseScriptSig(scriptSig)
+			sigs = append(sigs, []crypto.Sig{sig[0]})
+		}
 	}
 	return sigs
 }

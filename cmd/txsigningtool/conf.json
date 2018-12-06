@@ -1,7 +1,9 @@
 {
     "staychain" : {
         "initTx": "MAINSTAY_INIT_TX",
-        "initScript": "MAINSTAY_INIT_SCRIPT"
+        "initScript": "MAINSTAY_INIT_SCRIPT",
+        "topupAddress": "MAINSTAY_TOPUP_ADDRESS",
+        "topupScript": "MAINSTAY_TOPUP_SCRIPT"
     },
     "main": {
         "rpcurl": "MAINSTAY_CLIENT_URL",
