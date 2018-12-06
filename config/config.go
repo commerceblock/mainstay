@@ -18,14 +18,16 @@ import (
 
 // config name consts
 const (
-	CONF_PATH                   = "/src/mainstay/config/conf.json"
-	MAIN_CHAIN_NAME             = "main"
-	STAYCHAIN_NAME              = "staychain"
-	STAYCHAIN_REGTEST_NAME      = "regtest"
-	STAYCHAIN_INIT_TX_NAME      = "initTx"
-	STAYCHAIN_INIT_SCRIPT_NAME  = "initScript"
-	STAYCHAIN_TOPUP_TX_NAME     = "topupTx"
-	STAYCHAIN_TOPUP_SCRIPT_NAME = "topupScript"
+	CONF_PATH                    = "/src/mainstay/config/conf.json"
+	MAIN_CHAIN_NAME              = "main"
+	STAYCHAIN_NAME               = "staychain"
+	STAYCHAIN_REGTEST_NAME       = "regtest"
+	STAYCHAIN_INIT_TX_NAME       = "initTx"
+	STAYCHAIN_INIT_SCRIPT_NAME   = "initScript"
+	STAYCHAIN_INIT_PK_NAME       = "initPK"
+	STAYCHAIN_TOPUP_ADDRESS_NAME = "topupAddress"
+	STAYCHAIN_TOPUP_SCRIPT_NAME  = "topupScript"
+	STAYCHAIN_TOPUP_PK_NAME      = "topupPK"
 )
 
 // Config struct
@@ -37,12 +39,13 @@ type Config struct {
 	mainChainCfg *chaincfg.Params
 
 	// core staychain config parameters
-	regtest     bool
-	initTX      string
-	initPK      string
-	initScript  string
-	topupTx     string
-	topupScript string
+	regtest      bool
+	initTX       string
+	initPK       string
+	initScript   string
+	topupAddress string
+	topupScript  string
+	topupPK      string
 
 	// additional parameter categories
 	signerConfig SignerConfig
@@ -106,14 +109,14 @@ func (c *Config) SetInitTx(tx string) {
 	c.initTX = tx
 }
 
-// Get topup TX
-func (c Config) TopupTx() string {
-	return c.topupTx
+// Get topup Address
+func (c Config) TopupAddress() string {
+	return c.topupAddress
 }
 
-// Set topup TX
-func (c *Config) SetTopupTx(tx string) {
-	c.topupTx = tx
+// Set topup Address
+func (c *Config) SetTopupAddress(addr string) {
+	c.topupAddress = addr
 }
 
 // Get init PK
@@ -126,24 +129,34 @@ func (c *Config) SetInitPK(pk string) {
 	c.initPK = pk
 }
 
-// Get init PK
+// Get Init Script
 func (c *Config) InitScript() string {
 	return c.initScript
 }
 
-// Set init PK
+// Set Init Script
 func (c *Config) SetInitScript(script string) {
 	c.initScript = script
 }
 
-// Get topup PK
+// Get topup Script
 func (c *Config) TopupScript() string {
 	return c.topupScript
 }
 
-// Set init PK
+// Set topup Script
 func (c *Config) SetTopupScript(script string) {
 	c.topupScript = script
+}
+
+// Get topup PK
+func (c *Config) TopupPK() string {
+	return c.topupPK
+}
+
+// Set topup PK
+func (c *Config) SetTopupPK(pk string) {
+	c.topupPK = pk
 }
 
 // Return Config instance
@@ -190,18 +203,21 @@ func NewConfig(customConf ...[]byte) (*Config, error) {
 	regtestStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_REGTEST_NAME, conf)
 	initTxStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_INIT_TX_NAME, conf)
 	initScriptStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_INIT_SCRIPT_NAME, conf)
-	topupTxStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_TOPUP_TX_NAME, conf)
+	initPKStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_INIT_PK_NAME, conf)
+	topupAddrStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_TOPUP_ADDRESS_NAME, conf)
 	topupScriptStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_TOPUP_SCRIPT_NAME, conf)
+	topupPKStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_TOPUP_PK_NAME, conf)
 
 	return &Config{
 		mainClient:   mainClient,
 		mainChainCfg: mainClientCfg,
 		regtest:      (regtestStr == "1"),
 		initTX:       initTxStr,
-		initPK:       "",
+		initPK:       initPKStr,
 		initScript:   initScriptStr,
-		topupTx:      topupTxStr,
+		topupAddress: topupAddrStr,
 		topupScript:  topupScriptStr,
+		topupPK:      topupPKStr,
 		signerConfig: signerConfig,
 		dbConfig:     dbConnectivity,
 		feesConfig:   feesConfig,

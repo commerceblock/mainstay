@@ -46,8 +46,7 @@ var testConf = []byte(`
 `)
 
 // test parameters for a 1-2 multisig redeemScript and P2SH address
-
-// address - "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB"
+const ADDRESS = "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB"
 const SCRIPT = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332102f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e7552ae"
 
 // address - "2N9z6a8BQB1xWmesCJcBWZm1R3f1PZcwrGz"
@@ -57,6 +56,16 @@ const PRIV_MAIN = "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz"
 // address - "2MyC1i1FGy6MZWyMgmZXku4gdWZxWCRa6RL"
 // pubkey -  "02f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e75"
 const PRIV_CLIENT = "cSS9R4XPpajhqy28hcfHEzEzAbyWDqBaGZR4xtV7Jg8TixSWee1x"
+
+// test parameters for a 1-2 multisig redeemScript and P2SH address for TOPUP
+const TOPUP_ADDRESS = "2NG3LCHuausgrYEsJQjYqhmgDVjRPYYrB5w"
+const TOPUP_SCRIPT = "512102253297770861be1e512e00329c91bc85300fa46c39d603320d1f5b5e04eaf3342103a10b8872e1aca43b6c0376a20052efa3789fae2fae82972920b8cbba5bc9f33d52ae"
+
+// address - "2Mvi6msoTtozNPAfuSUtTKCWG8ryMZvheuF"
+const TOPUP_PRIV_MAIN = "cPLAx2s7x8jBc58Ruyp2dUsG42D5jgY6FzKcSNPiMMeNWw1h6JXX"
+
+// address - "2NGWnYUFHaq6f5KB8qGHcjV3sp6vN5Wc2hu"
+const TOPUP_PRIV_CLIENT = "cUPcXWas6iaCWFKZc2rogeY4JK2cHAtFGS2h9CmfEmL3dzehP8K7"
 
 // Test structure
 // Set up testing environment for use by regtest demo or unit tests
@@ -106,6 +115,11 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	config.SetInitTx(tx0.TxID)
 	config.SetInitPK(PRIV_MAIN)
 	config.SetInitScript(SCRIPT)
+
+	// set topupScript-topupAddress same as init script/addr
+	config.SetTopupScript(TOPUP_SCRIPT)
+	config.SetTopupAddress(TOPUP_ADDRESS)
+	config.SetTopupPK(TOPUP_PRIV_MAIN)
 
 	config.SetRegtest(true)
 	return &Test{config, oceanClient}
