@@ -7,6 +7,7 @@ package attestation
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math"
 	"testing"
 
@@ -70,7 +71,7 @@ func verifyFirstUnspent(t *testing.T, client *AttestClient) btcjson.ListUnspentR
 }
 
 // verify key derivation and return address
-func verifyKeysAndAddr(t *testing.T, client *AttestClient, hash chainhash.Hash) btcutil.Address {
+func verifyKeysAndAddr(t *testing.T, client *AttestClient, hash chainhash.Hash) (btcutil.Address, string) {
 	// test getting next attestation key
 	key, errKey := client.GetNextAttestationKey(hash)
 	assert.Equal(t, nil, errKey)
@@ -88,7 +89,33 @@ func verifyKeysAndAddr(t *testing.T, client *AttestClient, hash chainhash.Hash) 
 	importErr := client.ImportAttestationAddr(addr)
 	assert.Equal(t, nil, importErr)
 
-	return addr
+	return addr, script
+}
+
+// verify transaction pre image generation
+func verifyTransactionPreImages(t *testing.T, client *AttestClient, tx *wire.MsgTx, script string, hash chainhash.Hash, i int) {
+
+	// getTransactionPreImages with empty transaction
+	_, emptyPreImageErr := client.getTransactionPreImages(hash, &(wire.MsgTx{}))
+	assert.Equal(t, errors.New(ERROR_INPUT_MISSING_FOR_TX), emptyPreImageErr)
+
+	// getTransactionPreImages with actual transaction
+	txPreImages, preImageErr := client.getTransactionPreImages(hash, tx)
+	assert.Equal(t, nil, preImageErr)
+	assert.Equal(t, 1-1*int(math.Min(0, float64((i%(TOPUP_LEVEL+1)-1)))), len(txPreImages))
+	assert.Equal(t, 1-1*int(math.Min(0, float64((i%(TOPUP_LEVEL+1)-1)))), len(txPreImages[0].TxIn))
+
+	// get tweaked script and topup script serialisation
+	scriptSer, _ := hex.DecodeString(fmt.Sprintf("%d%s", len(script)/2, script))
+	topupScriptSer, _ := hex.DecodeString(fmt.Sprintf("%d%s", len(client.scriptTopup)/2, client.scriptTopup))
+
+	// test signature script set correctly
+	assert.Equal(t, scriptSer, txPreImages[0].TxIn[0].SignatureScript)
+	if i == TOPUP_LEVEL+1 {
+		assert.Equal(t, []byte(nil), txPreImages[0].TxIn[1].SignatureScript)
+		assert.Equal(t, []byte(nil), txPreImages[1].TxIn[0].SignatureScript)
+		assert.Equal(t, topupScriptSer, txPreImages[1].TxIn[1].SignatureScript)
+	}
 }
 
 // verify unconfirmed attestation
@@ -177,7 +204,7 @@ func TestAttestClient_Signer(t *testing.T) {
 		oceanCommitmentHash := oceanCommitment.GetCommitmentHash()
 
 		// get addr
-		addr := verifyKeysAndAddr(t, client, oceanCommitmentHash)
+		addr, script := verifyKeysAndAddr(t, client, oceanCommitmentHash)
 
 		var unspentList []btcjson.ListUnspentResult
 		unspentList = append(unspentList, unspent)
@@ -195,6 +222,9 @@ func TestAttestClient_Signer(t *testing.T) {
 		assert.Equal(t, 1-1*int(math.Min(0, float64((i%(TOPUP_LEVEL+1)-1)))), len(tx.TxIn))
 		assert.Equal(t, 1, len(tx.TxOut))
 		assert.Equal(t, false, (unspentAmount-(float64(tx.TxOut[0].Value)/COIN)) <= 0)
+
+		// verify transaction pre-image generation
+		verifyTransactionPreImages(t, client, tx, script, oceanCommitmentHash, i)
 
 		// check fee value and bump
 		assert.Equal(t, client.Fees.minFee+(i-1)*client.Fees.feeIncrement, client.Fees.GetFee())
@@ -297,6 +327,9 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 		assert.Equal(t, 1-1*int(math.Min(0, float64((i%(TOPUP_LEVEL+1)-1)))), len(tx.TxIn))
 		assert.Equal(t, 1, len(tx.TxOut))
 		assert.Equal(t, false, (unspentAmount-(float64(tx.TxOut[0].Value)/COIN)) <= 0)
+
+		// verify transaction pre-image generation
+		verifyTransactionPreImages(t, client, tx, script, oceanCommitmentHash, i)
 
 		// check fee value and bump
 		assert.Equal(t, client.Fees.minFee+(i-1)*client.Fees.feeIncrement, client.Fees.GetFee())
@@ -414,7 +447,7 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		oceanCommitmentHash := oceanCommitment.GetCommitmentHash()
 
 		// get address
-		addr := verifyKeysAndAddr(t, client, oceanCommitmentHash)
+		addr, script := verifyKeysAndAddr(t, client, oceanCommitmentHash)
 
 		// test creating attestation transaction
 		tx, attestationErr := client.createAttestation(addr, []btcjson.ListUnspentResult{unspent})
@@ -454,6 +487,9 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 
 		tx2, attestationErr2 = client.createAttestation(addr, unspentList)
 		assert.Equal(t, nil, attestationErr2)
+
+		// verify transaction pre-image generation
+		verifyTransactionPreImages(t, client, tx2, script, oceanCommitmentHash, i)
 
 		// test attestation transaction fee bumping
 		bumpErr := client.bumpAttestationFees(tx2)
