@@ -5,12 +5,14 @@
 package attestation
 
 import (
+	"bytes"
 	"fmt"
 
 	confpkg "mainstay/config"
 	"mainstay/crypto"
 	"mainstay/messengers"
 
+	"github.com/btcsuite/btcd/wire"
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -72,9 +74,16 @@ func (z AttestSignerZmq) SendNewHash(hash []byte) {
 	z.publisher.SendMessage(hash, TOPIC_NEW_HASH)
 }
 
+// Get pre-image bytes from transaction object
+func getBytesFromTx(tx wire.MsgTx) []byte {
+	var txBytesBuffer bytes.Buffer
+	tx.Serialize(&txBytesBuffer)
+	return txBytesBuffer.Bytes()
+}
+
 // Use zmq publisher to send new tx
-func (z AttestSignerZmq) SendNewTx(tx []byte) {
-	z.publisher.SendMessage(tx, TOPIC_NEW_TX)
+func (z AttestSignerZmq) SendTxPreImage(tx wire.MsgTx) {
+	z.publisher.SendMessage(getBytesFromTx(tx), TOPIC_NEW_TX)
 }
 
 // Split incoming message to a slice of messages by

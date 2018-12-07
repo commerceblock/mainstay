@@ -46,8 +46,8 @@ func (f AttestSignerFake) SendNewHash(hash []byte) {
 }
 
 // Store received new tx
-func (f AttestSignerFake) SendNewTx(tx []byte) {
-	signerTxBytes = tx
+func (f AttestSignerFake) SendTxPreImage(tx wire.MsgTx) {
+	signerTxBytes = getBytesFromTx(tx)
 }
 
 // Return signatures for received tx and hashes

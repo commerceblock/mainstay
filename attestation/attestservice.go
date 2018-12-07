@@ -5,7 +5,6 @@
 package attestation
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"log"
@@ -357,9 +356,7 @@ func (s *AttestService) doStateNewAttestation() {
 		log.Printf("********** pre-sign txid: %s\n", s.attestation.Tx.TxHash().String())
 
 		// publish pre signed transaction
-		var txbytes bytes.Buffer
-		s.attestation.Tx.Serialize(&txbytes)
-		s.signer.SendNewTx(txbytes.Bytes())
+		s.signer.SendTxPreImage(s.attestation.Tx)
 
 		s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 		attestDelay = ATIME_SIGS          // add sigs waiting time
@@ -493,9 +490,7 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 	log.Printf("********** new pre-sign txid: %s\n", s.attestation.Tx.TxHash().String())
 
 	// re-publish pre signed transaction
-	var txbytes bytes.Buffer
-	s.attestation.Tx.Serialize(&txbytes)
-	s.signer.SendNewTx(txbytes.Bytes())
+	s.signer.SendTxPreImage(s.attestation.Tx)
 
 	s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 	attestDelay = ATIME_SIGS          // add sigs waiting time
