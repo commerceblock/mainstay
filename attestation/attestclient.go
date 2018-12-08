@@ -360,7 +360,7 @@ func (w *AttestClient) getTransactionPreImages(hash chainhash.Hash, msgTx *wire.
 
 	// If init script set, add to transaction pre-image
 	script := w.GetScriptFromHash(hash)
-	scriptSer, decodeErr := hex.DecodeString(fmt.Sprintf("%d%s", len(script)/2, script))
+	scriptSer, decodeErr := hex.DecodeString(script)
 	if decodeErr != nil {
 		return []wire.MsgTx{},
 			errors.New(fmt.Sprintf("%s for init script:%s\n", ERROR_FAILED_DECODING_INIT_MULTISIG, script))
@@ -371,7 +371,7 @@ func (w *AttestClient) getTransactionPreImages(hash chainhash.Hash, msgTx *wire.
 	preImageTxs = append(preImageTxs, *preImageTx0)
 
 	// Add topup script to tx pre-image
-	topupScriptSer, topupDecodeErr := hex.DecodeString(fmt.Sprintf("%d%s", len(w.scriptTopup)/2, w.scriptTopup))
+	topupScriptSer, topupDecodeErr := hex.DecodeString(w.scriptTopup)
 	if topupDecodeErr != nil {
 		log.Printf("%s %s\n", WARNING_FAILED_DECODING_TOPUP_MULTISIG, w.scriptTopup)
 		return preImageTxs, nil

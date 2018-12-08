@@ -7,7 +7,6 @@ package attestation
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math"
 	"testing"
 
@@ -106,8 +105,8 @@ func verifyTransactionPreImages(t *testing.T, client *AttestClient, tx *wire.Msg
 	assert.Equal(t, 1-1*int(math.Min(0, float64((i%(TOPUP_LEVEL+1)-1)))), len(txPreImages[0].TxIn))
 
 	// get tweaked script and topup script serialisation
-	scriptSer, _ := hex.DecodeString(fmt.Sprintf("%d%s", len(script)/2, script))
-	topupScriptSer, _ := hex.DecodeString(fmt.Sprintf("%d%s", len(client.scriptTopup)/2, client.scriptTopup))
+	scriptSer, _ := hex.DecodeString(script)
+	topupScriptSer, _ := hex.DecodeString(client.scriptTopup)
 
 	// test signature script set correctly
 	assert.Equal(t, scriptSer, txPreImages[0].TxIn[0].SignatureScript)
