@@ -17,6 +17,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	_ "github.com/btcsuite/btcd/wire"
 )
 
 // Attestation Service is the main processes that handles generating
@@ -355,8 +356,18 @@ func (s *AttestService) doStateNewAttestation() {
 		s.attestation.Tx = *newTx
 		log.Printf("********** pre-sign txid: %s\n", s.attestation.Tx.TxHash().String())
 
+		// get last confirmed commitment from server
+		lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()
+		if s.setFailure(latestErr) {
+			return // will rebound to init
+		}
+
 		// publish pre signed transaction
-		s.signer.SendTxPreImage(s.attestation.Tx)
+		txPreImages, getPreImagesErr := s.attester.getTransactionPreImages(lastCommitmentHash, newTx)
+		if s.setFailure(getPreImagesErr) {
+			return // will rebound to init
+		}
+		s.signer.SendTxPreImages(txPreImages)
 
 		s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 		attestDelay = ATIME_SIGS          // add sigs waiting time
@@ -489,8 +500,18 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 	s.attestation.Tx = *currentTx
 	log.Printf("********** new pre-sign txid: %s\n", s.attestation.Tx.TxHash().String())
 
+	// get last confirmed commitment from server
+	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()
+	if s.setFailure(latestErr) {
+		return // will rebound to init
+	}
+
 	// re-publish pre signed transaction
-	s.signer.SendTxPreImage(s.attestation.Tx)
+	txPreImages, getPreImagesErr := s.attester.getTransactionPreImages(lastCommitmentHash, currentTx)
+	if s.setFailure(getPreImagesErr) {
+		return // will rebound to init
+	}
+	s.signer.SendTxPreImages(txPreImages)
 
 	s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 	attestDelay = ATIME_SIGS          // add sigs waiting time
