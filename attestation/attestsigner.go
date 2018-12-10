@@ -6,8 +6,6 @@ package attestation
 
 import (
 	"mainstay/crypto"
-
-	"github.com/btcsuite/btcd/wire"
 )
 
 // AttestSigner interface
@@ -25,6 +23,6 @@ import (
 type AttestSigner interface {
 	SendConfirmedHash([]byte)
 	SendNewHash([]byte)
-	SendTxPreImages([]wire.MsgTx)
+	SendTxPreImages([][]byte)
 	GetSigs() [][]crypto.Sig
 }

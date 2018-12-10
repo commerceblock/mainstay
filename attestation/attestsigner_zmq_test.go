@@ -5,14 +5,13 @@
 package attestation
 
 import (
-	"bytes"
-	"encoding/hex"
+	_ "bytes"
+	_ "encoding/hex"
 	"testing"
 
 	_ "mainstay/config"
 	"mainstay/crypto"
 
-	"github.com/btcsuite/btcd/wire"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,7 +33,7 @@ func TestAttestSigner_SigUtils(t *testing.T) {
 	numOfTxInputs := 0
 
 	// test 1 message 0 signature
-	splitMsgA = getSplitMsgFromMsg(msgA)
+	splitMsgA = UnserializeBytes(msgA)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgA, numOfTxInputs)
 	assert.Equal(t, 0, numOfTxInputs)
 	assert.Equal(t, [][]byte{}, splitMsgA)
@@ -45,10 +44,10 @@ func TestAttestSigner_SigUtils(t *testing.T) {
 	assert.Equal(t, [][]crypto.Sig{}, sigs)
 
 	// test 2 messages 0 signature
-	splitMsgA = getSplitMsgFromMsg(msgA)
+	splitMsgA = UnserializeBytes(msgA)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgA, numOfTxInputs)
 	assert.Equal(t, 0, numOfTxInputs)
-	splitMsgB = getSplitMsgFromMsg(msgB)
+	splitMsgB = UnserializeBytes(msgB)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgB, numOfTxInputs)
 	assert.Equal(t, 0, numOfTxInputs)
 	assert.Equal(t, [][]byte{}, splitMsgA)
@@ -64,7 +63,7 @@ func TestAttestSigner_SigUtils(t *testing.T) {
 	numOfTxInputs = 0
 	msgA = sig1
 
-	splitMsgA = getSplitMsgFromMsg(msgA)
+	splitMsgA = UnserializeBytes(msgA)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgA, numOfTxInputs)
 	assert.Equal(t, 1, numOfTxInputs)
 	assert.Equal(t, [][]byte{sig1[1:]}, splitMsgA)
@@ -80,7 +79,7 @@ func TestAttestSigner_SigUtils(t *testing.T) {
 	msgA = sig1
 	msgA = append(msgA, sig2...)
 
-	splitMsgA = getSplitMsgFromMsg(msgA)
+	splitMsgA = UnserializeBytes(msgA)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgA, numOfTxInputs)
 	assert.Equal(t, 2, numOfTxInputs)
 	assert.Equal(t, [][]byte{sig1[1:], sig2[1:]}, splitMsgA)
@@ -97,10 +96,10 @@ func TestAttestSigner_SigUtils(t *testing.T) {
 	msgA = sig1
 	msgB = sig3
 
-	splitMsgA = getSplitMsgFromMsg(msgA)
+	splitMsgA = UnserializeBytes(msgA)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgA, numOfTxInputs)
 	assert.Equal(t, 1, numOfTxInputs)
-	splitMsgB = getSplitMsgFromMsg(msgB)
+	splitMsgB = UnserializeBytes(msgB)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgB, numOfTxInputs)
 	assert.Equal(t, 1, numOfTxInputs)
 	assert.Equal(t, [][]byte{sig1[1:]}, splitMsgA)
@@ -120,10 +119,10 @@ func TestAttestSigner_SigUtils(t *testing.T) {
 	msgB = sig3
 	msgB = append(msgB, sig3...)
 
-	splitMsgA = getSplitMsgFromMsg(msgA)
+	splitMsgA = UnserializeBytes(msgA)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgA, numOfTxInputs)
 	assert.Equal(t, 2, numOfTxInputs)
-	splitMsgB = getSplitMsgFromMsg(msgB)
+	splitMsgB = UnserializeBytes(msgB)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgB, numOfTxInputs)
 	assert.Equal(t, 2, numOfTxInputs)
 	assert.Equal(t, [][]byte{sig1[1:], sig2[1:]}, splitMsgA)
@@ -143,10 +142,10 @@ func TestAttestSigner_SigUtils(t *testing.T) {
 	msgB = sig3
 	msgB = append(msgB, sig3...)
 
-	splitMsgA = getSplitMsgFromMsg(msgA)
+	splitMsgA = UnserializeBytes(msgA)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgA, numOfTxInputs)
 	assert.Equal(t, 0, numOfTxInputs)
-	splitMsgB = getSplitMsgFromMsg(msgB)
+	splitMsgB = UnserializeBytes(msgB)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgB, numOfTxInputs)
 	assert.Equal(t, 2, numOfTxInputs)
 	assert.Equal(t, [][]byte{}, splitMsgA)
@@ -166,10 +165,10 @@ func TestAttestSigner_SigUtils(t *testing.T) {
 	msgA = append(msgA, sig2...)
 	msgB = []byte{}
 
-	splitMsgA = getSplitMsgFromMsg(msgA)
+	splitMsgA = UnserializeBytes(msgA)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgA, numOfTxInputs)
 	assert.Equal(t, 2, numOfTxInputs)
-	splitMsgB = getSplitMsgFromMsg(msgB)
+	splitMsgB = UnserializeBytes(msgB)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgB, numOfTxInputs)
 	assert.Equal(t, 2, numOfTxInputs)
 	assert.Equal(t, [][]byte{sig1[1:], sig2[1:]}, splitMsgA)
@@ -189,10 +188,10 @@ func TestAttestSigner_SigUtils(t *testing.T) {
 	msgB = sig3
 	msgB = append(msgB, sig3...)
 
-	splitMsgA = getSplitMsgFromMsg(msgA)
+	splitMsgA = UnserializeBytes(msgA)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgA, numOfTxInputs)
 	assert.Equal(t, 1, numOfTxInputs)
-	splitMsgB = getSplitMsgFromMsg(msgB)
+	splitMsgB = UnserializeBytes(msgB)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgB, numOfTxInputs)
 	assert.Equal(t, 2, numOfTxInputs)
 	assert.Equal(t, [][]byte{sig1[1:]}, splitMsgA)
@@ -212,10 +211,10 @@ func TestAttestSigner_SigUtils(t *testing.T) {
 	msgA = append(msgA, sig2...)
 	msgB = sig3
 
-	splitMsgA = getSplitMsgFromMsg(msgA)
+	splitMsgA = UnserializeBytes(msgA)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgA, numOfTxInputs)
 	assert.Equal(t, 2, numOfTxInputs)
-	splitMsgB = getSplitMsgFromMsg(msgB)
+	splitMsgB = UnserializeBytes(msgB)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgB, numOfTxInputs)
 	assert.Equal(t, 2, numOfTxInputs)
 	assert.Equal(t, [][]byte{sig1[1:], sig2[1:]}, splitMsgA)
@@ -234,10 +233,10 @@ func TestAttestSigner_SigUtils(t *testing.T) {
 	msgA = sig1
 	msgB = []byte{}
 
-	splitMsgA = getSplitMsgFromMsg(msgA)
+	splitMsgA = UnserializeBytes(msgA)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgA, numOfTxInputs)
 	assert.Equal(t, 1, numOfTxInputs)
-	splitMsgB = getSplitMsgFromMsg(msgB)
+	splitMsgB = UnserializeBytes(msgB)
 	numOfTxInputs = updateNumOfTxInputs(splitMsgB, numOfTxInputs)
 	assert.Equal(t, 1, numOfTxInputs)
 	assert.Equal(t, [][]byte{sig1[1:]}, splitMsgA)
@@ -255,30 +254,57 @@ func TestAttestSigner_SigUtils(t *testing.T) {
 // attestsigner struct for
 // processing incoming tx messages
 func TestAttestSigner_TxUtils(t *testing.T) {
+	// empty input to Serialize
+	assert.Equal(t, []byte{}, SerializeBytes([][]byte{}))
+	assert.Equal(t, 0, len(SerializeBytes([][]byte{})))
+	assert.Equal(t, []byte{}, SerializeBytes([][]byte(nil)))
+	assert.Equal(t, 0, len(SerializeBytes([][]byte(nil))))
+
 	// single vin unsigned tx
 	tx1Bytes := []byte{2, 0, 0, 0, 1, 48, 38, 85, 184, 133, 101, 229, 118, 225, 243, 224, 5, 134, 231, 53, 91, 21, 77, 145, 198, 183, 163, 103, 103, 248, 234, 201, 83, 214, 206, 37, 195, 0, 0, 0, 0, 0, 253, 255, 255, 255, 1, 66, 158, 23, 168, 4, 0, 0, 0, 23, 169, 20, 160, 161, 96, 85, 138, 149, 193, 14, 237, 218, 58, 112, 171, 104, 24, 157, 212, 132, 203, 58, 135, 0, 0, 0, 0}
 
-	var msgTx1 wire.MsgTx
-	errDe1 := msgTx1.Deserialize(bytes.NewReader(tx1Bytes))
-	assert.Equal(t, nil, errDe1)
-
-	assert.Equal(t, 1, len(msgTx1.TxIn))
-	assert.Equal(t, "", hex.EncodeToString(msgTx1.TxIn[0].SignatureScript))
-
 	tx1BytesWithLen := append([]byte{byte(len(tx1Bytes))}, tx1Bytes...)
-	assert.Equal(t, tx1BytesWithLen, getBytesFromTx([]wire.MsgTx{msgTx1}))
+	assert.Equal(t, tx1BytesWithLen, SerializeBytes([][]byte{tx1Bytes}))
+	assert.Equal(t, len(tx1Bytes)+1, len(SerializeBytes([][]byte{tx1Bytes})))
 
 	// two vin unsigned tx
 	tx2Bytes := []byte{2, 0, 0, 0, 2, 108, 82, 16, 166, 228, 190, 231, 4, 131, 28, 47, 248, 172, 49, 84, 236, 95, 173, 60, 159, 155, 183, 19, 112, 116, 38, 150, 147, 8, 132, 97, 195, 0, 0, 0, 0, 0, 253, 255, 255, 255, 192, 186, 138, 193, 135, 96, 171, 236, 192, 227, 70, 94, 185, 205, 124, 215, 86, 75, 66, 176, 237, 171, 231, 118, 79, 135, 129, 194, 111, 101, 74, 159, 0, 0, 0, 0, 0, 255, 255, 255, 255, 1, 128, 161, 23, 168, 4, 0, 0, 0, 23, 169, 20, 255, 87, 124, 157, 17, 223, 243, 128, 122, 150, 92, 1, 101, 239, 50, 250, 202, 230, 56, 75, 135, 0, 0, 0, 0}
 
-	var msgTx2 wire.MsgTx
-	errDe2 := msgTx2.Deserialize(bytes.NewReader(tx2Bytes))
-	assert.Equal(t, nil, errDe2)
-
-	assert.Equal(t, 2, len(msgTx2.TxIn))
-	assert.Equal(t, "", hex.EncodeToString(msgTx2.TxIn[0].SignatureScript))
-	assert.Equal(t, "", hex.EncodeToString(msgTx2.TxIn[1].SignatureScript))
-
 	tx2BytesWithLen := append([]byte{byte(len(tx2Bytes))}, tx2Bytes...)
-	assert.Equal(t, tx2BytesWithLen, getBytesFromTx([]wire.MsgTx{msgTx2}))
+
+	tx1and2BytesWithLen := append(tx1BytesWithLen, tx2BytesWithLen...)
+
+	assert.Equal(t, tx1and2BytesWithLen, SerializeBytes([][]byte{tx1Bytes, tx2Bytes}))
+	assert.Equal(t, len(tx1Bytes)+len(tx2Bytes)+2, len(SerializeBytes([][]byte{tx1Bytes, tx2Bytes})))
+
+	// empty input to Unserialize
+	assert.Equal(t, [][]byte{}, UnserializeBytes([]byte{}))
+	assert.Equal(t, 0, len(UnserializeBytes([]byte{})))
+	assert.Equal(t, [][]byte{}, UnserializeBytes([]byte(nil)))
+	assert.Equal(t, 0, len(UnserializeBytes([]byte(nil))))
+
+	// unserialize single vin
+	serializedTxs := SerializeBytes([][]byte{tx1Bytes})
+	assert.Equal(t, [][]byte{tx1Bytes}, UnserializeBytes(serializedTxs))
+
+	// unserialize two vins
+	serializedTxs = SerializeBytes([][]byte{tx1Bytes, tx2Bytes})
+	assert.Equal(t, [][]byte{tx1Bytes, tx2Bytes}, UnserializeBytes(serializedTxs))
+
+	// unserialize single vin with additional noise
+	serializedTxs = SerializeBytes([][]byte{tx1Bytes})
+	serializedTxs = append(serializedTxs, []byte{50, 1, 1}...) // add noise
+	assert.Equal(t, [][]byte{tx1Bytes}, UnserializeBytes(serializedTxs))
+
+	serializedTxs = SerializeBytes([][]byte{tx1Bytes})
+	serializedTxs = append(serializedTxs, []byte{3, 1, 1}...) // add noise
+	assert.Equal(t, [][]byte{tx1Bytes}, UnserializeBytes(serializedTxs))
+
+	serializedTxs = SerializeBytes([][]byte{tx1Bytes})
+	serializedTxs = append(serializedTxs, []byte{0, 1, 1}...) // add non noise edge case
+	assert.Equal(t, [][]byte{tx1Bytes, []byte{}, []byte{1}}, UnserializeBytes(serializedTxs))
+
+	serializedTxs = SerializeBytes([][]byte{tx1Bytes})
+	serializedTxs = append(serializedTxs, []byte{2, 1, 1}...) // add non noise edge case
+	assert.Equal(t, [][]byte{tx1Bytes, []byte{1, 1}}, UnserializeBytes(serializedTxs))
 }

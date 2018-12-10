@@ -12,7 +12,6 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
 )
 
 // AttestSignerFake struct
@@ -47,8 +46,8 @@ func (f AttestSignerFake) SendNewHash(hash []byte) {
 }
 
 // Store received new tx
-func (f AttestSignerFake) SendTxPreImages(tx []wire.MsgTx) {
-	signerTxPreImageBytes = getBytesFromTx(tx)
+func (f AttestSignerFake) SendTxPreImages(txs [][]byte) {
+	signerTxPreImageBytes = SerializeBytes(txs)
 }
 
 // Return signatures for received tx and hashes
@@ -62,13 +61,11 @@ func (f AttestSignerFake) GetSigs() [][]crypto.Sig {
 		return sigs
 	}
 
-	// process each pre image transaction and sign
-	txIt := 0
-	for {
-		// get next tx by reading byte size
-		txSize := signerTxPreImageBytes[txIt]
-		txPreImage := append([]byte{}, signerTxPreImageBytes[txIt+1:txIt+1+int(txSize)]...)
+	// get unserialized tx pre images
+	txPreImages := UnserializeBytes(signerTxPreImageBytes)
 
+	// process each pre image transaction and sign
+	for txIt, txPreImage := range txPreImages {
 		// add hash type to tx serialization
 		txPreImage = append(txPreImage, []byte{1, 0, 0, 0}...)
 		txPreImageHash := chainhash.DoubleHashH(txPreImage)
@@ -91,12 +88,6 @@ func (f AttestSignerFake) GetSigs() [][]crypto.Sig {
 		// add hash type to signature as well
 		sigBytes := append(sig.Serialize(), []byte{byte(1)}...)
 		sigs = append(sigs, []crypto.Sig{sigBytes})
-
-		txIt += 1 + int(txSize)
-
-		if len(signerTxPreImageBytes) <= txIt {
-			break
-		}
 	}
 
 	return sigs

@@ -5,6 +5,7 @@
 package attestation
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"log"
@@ -367,7 +368,14 @@ func (s *AttestService) doStateNewAttestation() {
 		if s.setFailure(getPreImagesErr) {
 			return // will rebound to init
 		}
-		s.signer.SendTxPreImages(txPreImages)
+		// get pre image bytes
+		var txPreImageBytes [][]byte
+		for _, txPreImage := range txPreImages {
+			var txBytesBuffer bytes.Buffer
+			txPreImage.Serialize(&txBytesBuffer)
+			txPreImageBytes = append(txPreImageBytes, txBytesBuffer.Bytes())
+		}
+		s.signer.SendTxPreImages(txPreImageBytes)
 
 		s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 		attestDelay = ATIME_SIGS          // add sigs waiting time
@@ -511,7 +519,14 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 	if s.setFailure(getPreImagesErr) {
 		return // will rebound to init
 	}
-	s.signer.SendTxPreImages(txPreImages)
+	// get pre image bytes
+	var txPreImageBytes [][]byte
+	for _, txPreImage := range txPreImages {
+		var txBytesBuffer bytes.Buffer
+		txPreImage.Serialize(&txBytesBuffer)
+		txPreImageBytes = append(txPreImageBytes, txBytesBuffer.Bytes())
+	}
+	s.signer.SendTxPreImages(txPreImageBytes)
 
 	s.state = ASTATE_SIGN_ATTESTATION // update attestation state
 	attestDelay = ATIME_SIGS          // add sigs waiting time
