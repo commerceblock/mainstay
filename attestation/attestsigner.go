@@ -25,6 +25,6 @@ import (
 type AttestSigner interface {
 	SendConfirmedHash([]byte)
 	SendNewHash([]byte)
-	SendTxPreImage(wire.MsgTx)
+	SendTxPreImages([]wire.MsgTx)
 	GetSigs() [][]crypto.Sig
 }

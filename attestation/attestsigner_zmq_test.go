@@ -265,7 +265,8 @@ func TestAttestSigner_TxUtils(t *testing.T) {
 	assert.Equal(t, 1, len(msgTx1.TxIn))
 	assert.Equal(t, "", hex.EncodeToString(msgTx1.TxIn[0].SignatureScript))
 
-	assert.Equal(t, tx1Bytes, getBytesFromTx(msgTx1))
+	tx1BytesWithLen := append([]byte{byte(len(tx1Bytes))}, tx1Bytes...)
+	assert.Equal(t, tx1BytesWithLen, getBytesFromTx([]wire.MsgTx{msgTx1}))
 
 	// two vin unsigned tx
 	tx2Bytes := []byte{2, 0, 0, 0, 2, 108, 82, 16, 166, 228, 190, 231, 4, 131, 28, 47, 248, 172, 49, 84, 236, 95, 173, 60, 159, 155, 183, 19, 112, 116, 38, 150, 147, 8, 132, 97, 195, 0, 0, 0, 0, 0, 253, 255, 255, 255, 192, 186, 138, 193, 135, 96, 171, 236, 192, 227, 70, 94, 185, 205, 124, 215, 86, 75, 66, 176, 237, 171, 231, 118, 79, 135, 129, 194, 111, 101, 74, 159, 0, 0, 0, 0, 0, 255, 255, 255, 255, 1, 128, 161, 23, 168, 4, 0, 0, 0, 23, 169, 20, 255, 87, 124, 157, 17, 223, 243, 128, 122, 150, 92, 1, 101, 239, 50, 250, 202, 230, 56, 75, 135, 0, 0, 0, 0}
@@ -278,5 +279,6 @@ func TestAttestSigner_TxUtils(t *testing.T) {
 	assert.Equal(t, "", hex.EncodeToString(msgTx2.TxIn[0].SignatureScript))
 	assert.Equal(t, "", hex.EncodeToString(msgTx2.TxIn[1].SignatureScript))
 
-	assert.Equal(t, tx2Bytes, getBytesFromTx(msgTx2))
+	tx2BytesWithLen := append([]byte{byte(len(tx2Bytes))}, tx2Bytes...)
+	assert.Equal(t, tx2BytesWithLen, getBytesFromTx([]wire.MsgTx{msgTx2}))
 }

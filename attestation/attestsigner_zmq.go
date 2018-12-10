@@ -74,15 +74,26 @@ func (z AttestSignerZmq) SendNewHash(hash []byte) {
 	z.publisher.SendMessage(hash, TOPIC_NEW_HASH)
 }
 
-// Get pre-image bytes from transaction object
-func getBytesFromTx(tx wire.MsgTx) []byte {
-	var txBytesBuffer bytes.Buffer
-	tx.Serialize(&txBytesBuffer)
-	return txBytesBuffer.Bytes()
+// Transform received tx pre images into a single byte
+// slice with format: [len tx0] [tx0] [len tx1] [tx1]
+func getBytesFromTx(txs []wire.MsgTx) []byte {
+
+	var preImageBytes []byte
+
+	// iterate through each transaction adding length
+	// and tx bytes to bytes slice
+	for _, tx := range txs {
+		var txBytesBuffer bytes.Buffer
+		tx.Serialize(&txBytesBuffer)
+		preImageBytes = append(preImageBytes, byte(len(txBytesBuffer.Bytes())))
+		preImageBytes = append(preImageBytes, txBytesBuffer.Bytes()...)
+	}
+
+	return preImageBytes
 }
 
 // Use zmq publisher to send new tx
-func (z AttestSignerZmq) SendTxPreImage(tx wire.MsgTx) {
+func (z AttestSignerZmq) SendTxPreImages(tx []wire.MsgTx) {
 	z.publisher.SendMessage(getBytesFromTx(tx), TOPIC_NEW_TX)
 }
 

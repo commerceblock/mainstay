@@ -5,11 +5,12 @@
 package attestation
 
 import (
-	"bytes"
+	"log"
 
 	confpkg "mainstay/config"
 	"mainstay/crypto"
 
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 )
@@ -23,7 +24,7 @@ type AttestSignerFake struct {
 }
 
 // store latest hash and transaction
-var signerTxBytes []byte
+var signerTxPreImageBytes []byte
 var signerConfirmedHashBytes []byte
 var signerNewHashBytes []byte
 
@@ -46,32 +47,57 @@ func (f AttestSignerFake) SendNewHash(hash []byte) {
 }
 
 // Store received new tx
-func (f AttestSignerFake) SendTxPreImage(tx wire.MsgTx) {
-	signerTxBytes = getBytesFromTx(tx)
+func (f AttestSignerFake) SendTxPreImages(tx []wire.MsgTx) {
+	signerTxPreImageBytes = getBytesFromTx(tx)
 }
 
 // Return signatures for received tx and hashes
 func (f AttestSignerFake) GetSigs() [][]crypto.Sig {
 	var sigs [][]crypto.Sig
 
-	var msgTx wire.MsgTx
-	if err := msgTx.Deserialize(bytes.NewReader(signerTxBytes)); err != nil {
-		return sigs
-	}
+	// get confirmed hash from received confirmed hash bytes
 	hash, hashErr := chainhash.NewHash(signerConfirmedHashBytes)
 	if hashErr != nil {
+		log.Printf("%v\n", hashErr)
 		return sigs
 	}
-	signedMsgTx, _, signErr := f.client.SignTransaction(*hash, msgTx)
-	if signErr != nil {
-		return sigs
-	}
-	for _, txin := range signedMsgTx.TxIn {
-		scriptSig := txin.SignatureScript
-		if len(scriptSig) > 0 {
-			sig, _ := crypto.ParseScriptSig(scriptSig)
-			sigs = append(sigs, []crypto.Sig{sig[0]})
+
+	// process each pre image transaction and sign
+	txIt := 0
+	for {
+		// get next tx by reading byte size
+		txSize := signerTxPreImageBytes[txIt]
+		txPreImage := append([]byte{}, signerTxPreImageBytes[txIt+1:txIt+1+int(txSize)]...)
+
+		// add hash type to tx serialization
+		txPreImage = append(txPreImage, []byte{1, 0, 0, 0}...)
+		txPreImageHash := chainhash.DoubleHashH(txPreImage)
+
+		// sign first tx with tweaked priv key and
+		// any remaining txs with topup key
+		var sig *btcec.Signature
+		var signErr error
+		if txIt == 0 {
+			priv := f.client.GetKeyFromHash(*hash).PrivKey
+			sig, signErr = priv.Sign(txPreImageHash.CloneBytes())
+		} else {
+			sig, signErr = f.client.WalletPrivTopup.PrivKey.Sign(txPreImageHash.CloneBytes())
+		}
+		if signErr != nil {
+			log.Printf("%v\n", signErr)
+			return sigs
+		}
+
+		// add hash type to signature as well
+		sigBytes := append(sig.Serialize(), []byte{byte(1)}...)
+		sigs = append(sigs, []crypto.Sig{sigBytes})
+
+		txIt += 1 + int(txSize)
+
+		if len(signerTxPreImageBytes) <= txIt {
+			break
 		}
 	}
+
 	return sigs
 }
