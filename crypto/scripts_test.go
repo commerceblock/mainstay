@@ -64,6 +64,11 @@ func TestScript(t *testing.T) {
 	assert.Equal(t, 0, len(noSigsTest))
 	assert.Equal(t, "", hex.EncodeToString(noRedeemTest))
 
+	// Test invalid ParseScriptSig
+	invalidSigsTest, invalidRedeemTest := ParseScriptSig([]byte{0, 5, 1, 1})
+	assert.Equal(t, 0, len(invalidSigsTest))
+	assert.Equal(t, "", hex.EncodeToString(invalidRedeemTest))
+
 	// Test ParseScriptSig
 	scriptSigBytes, _ := hex.DecodeString(scriptSig)
 	sigsTest, redeemTest := ParseScriptSig(scriptSigBytes)

@@ -72,31 +72,62 @@ func (z AttestSignerZmq) SendNewHash(hash []byte) {
 	z.publisher.SendMessage(hash, TOPIC_NEW_HASH)
 }
 
-// Use zmq publisher to send new tx
-func (z AttestSignerZmq) SendNewTx(tx []byte) {
-	z.publisher.SendMessage(tx, TOPIC_NEW_TX)
+// Transform received list of bytes into a single byte
+// slice with format: [len bytes0] [bytes0] [len bytes1] [bytes1]
+func SerializeBytes(data [][]byte) []byte {
+
+	// empty case return nothing
+	if len(data) == 0 {
+		return []byte{}
+	}
+
+	var serializedBytes []byte
+
+	// iterate through each byte slice adding
+	// length and data bytes to bytes slice
+	for _, dataX := range data {
+		serializedBytes = append(serializedBytes, byte(len(dataX)))
+		serializedBytes = append(serializedBytes, dataX...)
+	}
+
+	return serializedBytes
 }
 
-// Split incoming message to a slice of messages by
-// parsing message sizes and reading correct bytes
-func getSplitMsgFromMsg(msg []byte) [][]byte {
-	var msgs [][]byte
+// Transform single byte slice (result of SerializeBytes)
+// into a list of byte slices excluding lengths
+func UnserializeBytes(data []byte) [][]byte {
 
-	if len(msg) == 0 {
+	// empty case return nothing
+	if len(data) == 0 {
 		return [][]byte{}
 	}
 
+	var dataList [][]byte
+
+	// process data slice
 	it := 0
-	for {
-		partMsgSize := msg[it]
-		partMsg := msg[it+1 : it+1+int(partMsgSize)]
-		msgs = append(msgs, partMsg)
-		it += 1 + int(partMsgSize)
-		if len(msg) <= it {
+	for it < len(data) {
+		// get next data by reading byte size
+		txSize := data[it]
+
+		// check if next size excees the bounds and break
+		// maybe TODO: error handling
+		if (int(txSize) + 1 + it) > len(data) {
 			break
 		}
+
+		dataX := append([]byte{}, data[it+1:it+1+int(txSize)]...)
+		dataList = append(dataList, dataX)
+
+		it += 1 + int(txSize)
 	}
-	return msgs
+
+	return dataList
+}
+
+// Use zmq publisher to send new tx
+func (z AttestSignerZmq) SendTxPreImages(txs [][]byte) {
+	z.publisher.SendMessage(SerializeBytes(txs), TOPIC_NEW_TX)
 }
 
 // Parse all received messages and create a sigs slice
@@ -141,7 +172,7 @@ func (z AttestSignerZmq) GetSigs() [][]crypto.Sig {
 			if sub.Socket() == socket.Socket {
 				_, msg := sub.ReadMessage()
 				var msgSplit [][]byte
-				msgSplit = getSplitMsgFromMsg(msg)
+				msgSplit = UnserializeBytes(msg)
 				numOfTxInputs = updateNumOfTxInputs(msgSplit, numOfTxInputs)
 				msgs = append(msgs, msgSplit)
 			}

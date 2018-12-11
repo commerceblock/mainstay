@@ -94,6 +94,13 @@ func ParseScriptSig(scriptSig []byte) ([]Sig, []byte) {
 	it := 1
 	for { // parse script using script size byte
 		scriptSize := scriptSig[it]
+
+		// check if next size excees the bounds and break
+		// maybe TODO: error handling
+		if (int(scriptSize) + 1 + it) > len(scriptSig) {
+			break
+		}
+
 		script := scriptSig[it+1 : it+1+int(scriptSize)]
 
 		it += 1 + int(scriptSize)
