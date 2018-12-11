@@ -5,24 +5,22 @@
 package main
 
 import (
-	"bytes"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"time"
+    "encoding/hex"
 
 	"mainstay/attestation"
 	confpkg "mainstay/config"
-	"mainstay/crypto"
+	_ "mainstay/crypto"
 	"mainstay/messengers"
 	"mainstay/test"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
+    "github.com/btcsuite/btcd/btcec"
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -191,56 +189,42 @@ func processHash(msg []byte) chainhash.Hash {
 	return *hash
 }
 
-// Check received tx and verify tx address and client generated address match
-func verifyTx(tx wire.MsgTx) bool {
-	nextKey, keyErr := client.GetNextAttestationKey(nextHash)
-	if keyErr != nil {
-		log.Fatal(keyErr)
-	}
-
-	nextAddr, _ := client.GetNextAttestationAddr(nextKey, nextHash)
-
-	// exactr addr from unsigned tx and verify addresses match
-	_, txScriptAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.TxOut[0].PkScript, client.MainChainCfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-	txAddr := txScriptAddrs[0]
-	if txAddr.String() == nextAddr.String() {
-		fmt.Printf("tx address %s verified\n", txAddr.String())
-		return true
-	}
-	fmt.Printf("tx address %s not verified\n", txAddr.String())
-	return false
-}
-
 // Process received tx, verify and reply with signature
 func processTx(msg []byte) {
-	// parse received tx into useful format
-	var msgTx wire.MsgTx
-	if err := msgTx.Deserialize(bytes.NewReader(msg)); err != nil {
-		log.Fatal(err)
-	}
 
-	// verify transaction first
-	if !verifyTx(msgTx) {
-		return
-	}
+    var sigs [][]byte
 
-	signedMsgTx, _, signErr := client.SignTransaction(attestedHash, msgTx)
-	if signErr != nil {
-		log.Fatal(signErr)
-	}
+    // get tx pre images from message
+    txPreImages := attestation.UnserializeBytes(msg)
 
-	var mySigs []byte
-	for i, txin := range signedMsgTx.TxIn {
-		scriptSig := txin.SignatureScript
-		if len(scriptSig) > 0 {
-			sigs, _ := crypto.ParseScriptSig(scriptSig)
-			fmt.Printf("sending sig(%d) %s\n", i, hex.EncodeToString(sigs[0]))
-			mySigs = append(mySigs, byte(len(sigs[0])))
-			mySigs = append(mySigs, sigs[0]...)
-		}
-	}
-	pub.SendMessage(mySigs, attestation.TOPIC_SIGS)
+    // process each pre image transaction and sign
+    for txIt, txPreImage := range txPreImages {
+        // add hash type to tx serialization
+        txPreImage = append(txPreImage, []byte{1, 0, 0, 0}...)
+        txPreImageHash := chainhash.DoubleHashH(txPreImage)
+
+        // sign first tx with tweaked priv key and
+        // any remaining txs with topup key
+        var sig *btcec.Signature
+        var signErr error
+        if txIt == 0 {
+            priv := client.GetKeyFromHash(attestedHash).PrivKey
+            sig, signErr = priv.Sign(txPreImageHash.CloneBytes())
+        } else {
+            sig, signErr = client.WalletPrivTopup.PrivKey.Sign(txPreImageHash.CloneBytes())
+        }
+        if signErr != nil {
+            log.Fatalf("%v\n", signErr)
+        }
+
+        // add hash type to signature as well
+        sigBytes := append(sig.Serialize(), []byte{byte(1)}...)
+
+        fmt.Printf("sending sig(%d) %s\n", txIt, hex.EncodeToString(sigBytes))
+
+        sigs = append(sigs, sigBytes)
+    }
+
+    serializedSigs := attestation.SerializeBytes(sigs)
+	pub.SendMessage(serializedSigs, attestation.TOPIC_SIGS)
 }
