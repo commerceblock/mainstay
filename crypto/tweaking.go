@@ -24,19 +24,72 @@ func GetWalletPrivKey(privKey string) (*btcutil.WIF, error) {
 	return key, nil
 }
 
-// Tweak a private key by adding the tweak to it's integer representation
-func TweakPrivKey(walletPrivKey *btcutil.WIF, tweak []byte, chainCfg *chaincfg.Params) (*btcutil.WIF, error) {
-	// Convert private key and tweak to big Int
-	keyVal := new(big.Int).SetBytes(walletPrivKey.PrivKey.Serialize())
-	twkVal := new(big.Int).SetBytes(tweak)
+// define consts for derivation path -- all unexported
+const derivationPathSize = 8                                        // derivation path size set to 8
+const derivationPathChildSize = 4                                   // derivation path child size set to 4 bytes
+const derivationSize = derivationPathSize * derivationPathChildSize // derivation size 32 bytes
+
+// type for derivation path child
+type derivationPathChild [derivationPathChildSize]byte
+
+// type for derivation path
+type derivationPath [derivationPathSize]derivationPathChild
+
+// Get key derivation path from tweak hash
+func getDerivationPathFromTweak(tweak []byte) derivationPath {
+
+	// check tweak is of correct size
+	// assume always correct so no error handling
+	if len(tweak) != derivationSize {
+		return derivationPath{}
+	}
+
+	var path derivationPath
+
+	// iterate through tweak and pick 4-byte sizes
+	// appending them to the derivation path
+	for it := 0; it < derivationPathSize; it++ {
+		child := new(derivationPathChild)
+		copy(child[:], tweak[it*derivationPathChildSize:it*derivationPathChildSize+derivationPathChildSize])
+		path[it] = derivationPathChild(*child)
+	}
+
+	return path
+}
+
+// Tweak big int value with path child
+func tweakValWithPathChild(child derivationPathChild, val *big.Int) *big.Int {
+	// get bytes from child path
+	childBytes := make([]byte, derivationPathChildSize)
+	copy(childBytes, child[:])
+
+	// Convert child path bytes to big Int
+	twkVal := new(big.Int).SetBytes(childBytes)
 
 	// Add the two Ints (tweaking by scalar addition of private keys)
-	resVal := new(big.Int)
-	resVal.Add(keyVal, twkVal)
+	return val.Add(val, twkVal)
+}
 
-	// In case of addition overflow, apply modulo of the max allowed Int by the curve params, to the result
+// Tweak a private key by adding the tweak to it's integer representation
+func TweakPrivKey(walletPrivKey *btcutil.WIF, tweak []byte, chainCfg *chaincfg.Params) (*btcutil.WIF, error) {
+
+	// set initial value to big int of priv key bytes
+	resVal := new(big.Int).SetBytes(walletPrivKey.PrivKey.Serialize())
+
+	// big int S256 limit for modulo
 	n := new(big.Int).Set(btcec.S256().Params().N)
-	resVal.Mod(resVal, n)
+
+	path := getDerivationPathFromTweak(tweak) // get derivation path for tweak
+
+	// tweak initial for each path child
+	for _, pathChild := range path {
+
+		// get tweaked value
+		resVal = tweakValWithPathChild(pathChild, resVal)
+
+		// In case of addition overflow, apply modulo of the max allowed Int by the curve params, to the result
+		resVal.Mod(resVal, n)
+	}
 
 	// Conver the result back to bytes - new private key
 	resPrivKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), resVal.Bytes())
@@ -54,13 +107,33 @@ func GetAddressFromPrivKey(walletPrivKey *btcutil.WIF, chainCfg *chaincfg.Params
 	return GetAddressFromPubKey(walletPrivKey.PrivKey.PubKey(), chainCfg)
 }
 
-// Tweak a pub key by adding the elliptic curve representation of the tweak to the pub key
-func TweakPubKey(pubKey *btcec.PublicKey, tweak []byte) *btcec.PublicKey {
-	// Get elliptic curve point for the tweak
-	_, twkPubKey := btcec.PrivKeyFromBytes(btcec.S256(), tweak)
+// Tweak pubkey with path child
+func tweakPubWithPathChild(child derivationPathChild, x *big.Int, y *big.Int) (*big.Int, *big.Int) {
+	// get bytes from child path
+	childBytes := make([]byte, derivationPathChildSize)
+	copy(childBytes, child[:])
+
+	// Get elliptic curve point for child path bytes
+	_, twkPubKey := btcec.PrivKeyFromBytes(btcec.S256(), childBytes)
 
 	// Add the two pub keys using addition on the elliptic curve
-	resX, resY := btcec.S256().Add(pubKey.ToECDSA().X, pubKey.ToECDSA().Y, twkPubKey.ToECDSA().X, twkPubKey.ToECDSA().Y)
+	return btcec.S256().Add(x, y, twkPubKey.ToECDSA().X, twkPubKey.ToECDSA().Y)
+}
+
+// Tweak a pub key by adding the elliptic curve representation of the tweak to the pub key
+func TweakPubKey(pubKey *btcec.PublicKey, tweak []byte) *btcec.PublicKey {
+
+	path := getDerivationPathFromTweak(tweak) // get derivation path for tweak
+
+	// set initial pubkey X/Y to current pubkey
+	resX := pubKey.ToECDSA().X
+	resY := pubKey.ToECDSA().Y
+
+	// tweak pubkey for each path child
+	for _, pathChild := range path {
+		// get tweaked pubkey
+		resX, resY = tweakPubWithPathChild(pathChild, resX, resY)
+	}
 
 	return (*btcec.PublicKey)(&ecdsa.PublicKey{btcec.S256(), resX, resY})
 }
