@@ -13,7 +13,7 @@ import (
 
 // error consts
 const (
-	ERROR_COMMITMENT_LIST_EMPTY = "List of commitments is empty"
+	ErrorCommitmentListEmpty = "List of commitments is empty"
 )
 
 // Commitment structure
@@ -25,7 +25,7 @@ type Commitment struct {
 func NewCommitment(commitments []chainhash.Hash) (*Commitment, error) {
 	// check length
 	if len(commitments) == 0 {
-		return nil, errors.New(ERROR_COMMITMENT_LIST_EMPTY)
+		return nil, errors.New(ErrorCommitmentListEmpty)
 	}
 	commitmentTree := NewCommitmentMerkleTree(commitments)
 	return &Commitment{commitmentTree}, nil
@@ -87,9 +87,9 @@ func (c *CommitmentMerkleCommitment) UnmarshalBSON(b []byte) error {
 
 // Commitment field names
 const (
-	COMMITMENT_MERKLE_ROOT_NAME     = "merkle_root"
-	COMMITMENT_CLIENT_POSITION_NAME = "client_position"
-	COMMITMENT_COMMITMENT_NAME      = "commitment"
+	CommitmentMerkleRootName     = "merkle_root"
+	CommitmentClientPositionName = "client_position"
+	CommitmentCommitmentName     = "commitment"
 )
 
 //CommitmentMerkleCommitmentBSON structure for mongoDB

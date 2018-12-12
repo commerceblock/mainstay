@@ -53,11 +53,11 @@ var (
 )
 
 // main conf path for main use in attestation
-const CONF_PATH = "/src/mainstay/cmd/txsigningtool/conf.json"
+const ConfPath = "/src/mainstay/cmd/txsigningtool/conf.json"
 
 // demo parameters for use with regtest demo
-const DEMO_CONF_PATH = "/src/mainstay/cmd/txsigningtool/demo-conf.json"
-const DEMO_INIT_PATH = "/src/mainstay/cmd/txsigningtool/demo-init-signingtool.sh"
+const DemoConfPath = "/src/mainstay/cmd/txsigningtool/demo-conf.json"
+const DemoInitPath = "/src/mainstay/cmd/txsigningtool/demo-init-signingtool.sh"
 
 func parseFlags() {
 	flag.BoolVar(&isRegtest, "regtest", false, "Use regtest wallet configuration")
@@ -84,13 +84,13 @@ func init() {
 	// run demo init script to setup bitcoin node and initial transaction
 	// generate test config using demo config file
 	if isRegtest {
-		cmd := exec.Command("/bin/sh", os.Getenv("GOPATH")+DEMO_INIT_PATH)
+		cmd := exec.Command("/bin/sh", os.Getenv("GOPATH")+DemoInitPath)
 		_, err := cmd.Output()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		confFile, confErr := confpkg.GetConfFile(os.Getenv("GOPATH") + DEMO_CONF_PATH)
+		confFile, confErr := confpkg.GetConfFile(os.Getenv("GOPATH") + DemoConfPath)
 		if confErr != nil {
 			log.Fatal(confErr)
 		}
@@ -99,15 +99,15 @@ func init() {
 		if configErr != nil {
 			log.Fatal(configErr)
 		}
-		pk0 = test.PRIV_CLIENT
-		script0 = test.SCRIPT
-		pkTopup = test.TOPUP_PRIV_CLIENT
-		scriptTopup = test.TOPUP_SCRIPT
-		addrTopup = test.TOPUP_ADDRESS
+		pk0 = test.PrivClient
+		script0 = test.Script
+		pkTopup = test.TopupPrivClient
+		scriptTopup = test.TopupScript
+		addrTopup = test.TopupAddress
 	} else {
 		// regular mode
 		// use conf file to setup config
-		confFile, confErr := confpkg.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+		confFile, confErr := confpkg.GetConfFile(os.Getenv("GOPATH") + ConfPath)
 		if confErr != nil {
 			log.Fatal(confErr)
 		}
@@ -146,14 +146,14 @@ func init() {
 	client = attestation.NewAttestClient(config, true)
 
 	// get publisher addr from config, if set
-	publisherAddr := fmt.Sprintf("127.0.0.1:%d", attestation.DEFAULT_MAIN_PUBLISHER_PORT)
+	publisherAddr := fmt.Sprintf("127.0.0.1:%d", attestation.DefaultMainPublisherPort)
 	if config.SignerConfig().Publisher != "" {
 		publisherAddr = config.SignerConfig().Publisher
 	}
 
 	// comms setup
 	poller = zmq.NewPoller()
-	topics := []string{attestation.TOPIC_NEW_HASH, attestation.TOPIC_NEW_TX, attestation.TOPIC_CONFIRMED_HASH}
+	topics := []string{attestation.TopicNewHash, attestation.TopicNewTx, attestation.TopicConfirmedHash}
 	sub = messengers.NewSubscriberZmq(publisherAddr, topics, poller)
 	pub = messengers.NewPublisherZmq(host, poller)
 }
@@ -165,12 +165,12 @@ func main() {
 			if sub.Socket() == socket.Socket {
 				topic, msg := sub.ReadMessage()
 				switch topic {
-				case attestation.TOPIC_NEW_TX:
+				case attestation.TopicNewTx:
 					processTx(msg)
-				case attestation.TOPIC_NEW_HASH:
+				case attestation.TopicNewHash:
 					nextHash = processHash(msg)
 					fmt.Printf("nexthash %s\n", nextHash.String())
-				case attestation.TOPIC_CONFIRMED_HASH:
+				case attestation.TopicConfirmedHash:
 					attestedHash = processHash(msg)
 					fmt.Printf("attestedhash %s\n", attestedHash.String())
 				}
@@ -226,5 +226,5 @@ func processTx(msg []byte) {
 	}
 
 	serializedSigs := attestation.SerializeBytes(sigs)
-	pub.SendMessage(serializedSigs, attestation.TOPIC_SIGS)
+	pub.SendMessage(serializedSigs, attestation.TopicSigs)
 }

@@ -46,17 +46,17 @@ func TestAttestFeesWithConfig(t *testing.T) {
 
 	// test attest fees with new config
 	attestFees := NewAttestFees(config.FeesConfig{0, 10, 20})
-	assert.Equal(t, DEFAULT_MIN_FEE, attestFees.minFee)
-	assert.Equal(t, DEFAULT_MAX_FEE, attestFees.maxFee)
+	assert.Equal(t, DefaultMinFee, attestFees.minFee)
+	assert.Equal(t, DefaultMaxFee, attestFees.maxFee)
 	assert.Equal(t, 20, attestFees.feeIncrement)
 
 	attestFees.ResetFee(true)
-	assert.Equal(t, DEFAULT_MIN_FEE, attestFees.GetFee())
+	assert.Equal(t, DefaultMinFee, attestFees.GetFee())
 
 	// test attest fees with new config
 	attestFees = NewAttestFees(config.FeesConfig{10, 5, 20})
 	assert.Equal(t, 10, attestFees.minFee)
-	assert.Equal(t, DEFAULT_MAX_FEE, attestFees.maxFee)
+	assert.Equal(t, DefaultMaxFee, attestFees.maxFee)
 	assert.Equal(t, 20, attestFees.feeIncrement)
 
 	attestFees.ResetFee(true)
@@ -66,7 +66,7 @@ func TestAttestFeesWithConfig(t *testing.T) {
 	attestFees = NewAttestFees(config.FeesConfig{10, 30, 0})
 	assert.Equal(t, 10, attestFees.minFee)
 	assert.Equal(t, 30, attestFees.maxFee)
-	assert.Equal(t, DEFAULT_FEE_INCREMENT, attestFees.feeIncrement)
+	assert.Equal(t, DefaultFeeIncrement, attestFees.feeIncrement)
 
 	attestFees.ResetFee(true)
 	assert.Equal(t, 10, attestFees.GetFee())
@@ -74,7 +74,7 @@ func TestAttestFeesWithConfig(t *testing.T) {
 	// test attest fees with new config
 	attestFees = NewAttestFees(config.FeesConfig{10, 0, 40})
 	assert.Equal(t, 10, attestFees.minFee)
-	assert.Equal(t, DEFAULT_MAX_FEE, attestFees.maxFee)
+	assert.Equal(t, DefaultMaxFee, attestFees.maxFee)
 	assert.Equal(t, 40, attestFees.feeIncrement)
 
 	attestFees.ResetFee(true)
@@ -82,10 +82,10 @@ func TestAttestFeesWithConfig(t *testing.T) {
 
 	// test attest fees with new config
 	attestFees = NewAttestFees(config.FeesConfig{110, 110, -30})
-	assert.Equal(t, DEFAULT_MIN_FEE, attestFees.minFee)
-	assert.Equal(t, DEFAULT_MAX_FEE, attestFees.maxFee)
-	assert.Equal(t, DEFAULT_FEE_INCREMENT, attestFees.feeIncrement)
+	assert.Equal(t, DefaultMinFee, attestFees.minFee)
+	assert.Equal(t, DefaultMaxFee, attestFees.maxFee)
+	assert.Equal(t, DefaultFeeIncrement, attestFees.feeIncrement)
 
 	attestFees.ResetFee(true)
-	assert.Equal(t, DEFAULT_MIN_FEE, attestFees.GetFee())
+	assert.Equal(t, DefaultMinFee, attestFees.GetFee())
 }

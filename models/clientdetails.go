@@ -17,7 +17,7 @@ type ClientDetails struct {
 
 // ClientDetails field names
 const (
-	CLIENT_DETAILS_CLIENT_POSITION_NAME = "client_position"
-	CLIENT_DETAILS_AUTH_TOKEN_NAME      = "auth_token"
-	CLIENT_DETAILS_PUBKEY_NAME          = "pubkey"
+	ClientDetailsClientPositionName = "client_position"
+	ClientDetailsAuthTokenName      = "auth_token"
+	ClientDetailsPubkeyName         = "pubkey"
 )

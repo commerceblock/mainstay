@@ -16,7 +16,7 @@ import (
 
 // error consts
 const (
-	ERROR_COMMITMENT_NOT_DEFINED = "Commitment not defined"
+	ErrorCommitmentNotDefined = "Commitment not defined"
 )
 
 // Attestation structure
@@ -63,7 +63,7 @@ func (a *Attestation) SetCommitment(commitment *Commitment) {
 // Get commitment
 func (a Attestation) Commitment() (*Commitment, error) {
 	if a.commitment == (*Commitment)(nil) {
-		return (*Commitment)(nil), errors.New(ERROR_COMMITMENT_NOT_DEFINED)
+		return (*Commitment)(nil), errors.New(ErrorCommitmentNotDefined)
 	}
 	return a.commitment, nil
 }
@@ -103,10 +103,10 @@ func (a *Attestation) UnmarshalBSON(b []byte) error {
 
 // Attestation field names
 const (
-	ATTESTATION_TXID_NAME        = "txid"
-	ATTESTATION_MERKLE_ROOT_NAME = "merkle_root"
-	ATTESTATION_CONFIRMED_NAME   = "confirmed"
-	ATTESTATION_INSERTED_AT_NAME = "inserted_at"
+	AttestationTxidName       = "txid"
+	AttestationMerkleRootName = "merkle_root"
+	AttestationConfirmedName  = "confirmed"
+	AttestationInsertedAtName = "inserted_at"
 )
 
 // AttestationBSON structure for mongoDb

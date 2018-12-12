@@ -20,7 +20,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-const CONF_PATH = "/src/mainstay/cmd/clientsignuptool/conf.json"
+const ConfPath = "/src/mainstay/cmd/clientsignuptool/conf.json"
 
 var (
 	mainConfig *config.Config
@@ -29,7 +29,7 @@ var (
 
 // init
 func init() {
-	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + ConfPath)
 	if confErr != nil {
 		log.Fatal(confErr)
 	}

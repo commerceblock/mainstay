@@ -21,7 +21,7 @@ func TestConfigErrors(t *testing.T) {
     }
     `)
 	_, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_NAME_NOT_FOUND, MAIN_CHAIN_NAME)), configErr)
+	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErroConfigNameNotFound, MainChainName)), configErr)
 
 	testConf = []byte(`
     {
@@ -30,7 +30,7 @@ func TestConfigErrors(t *testing.T) {
     }
     `)
 	_, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_VALUE_NOT_FOUND, RPC_CLIENT_URL_NAME)), configErr)
+	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, RpcClientUrlName)), configErr)
 
 	testConf = []byte(`
     {
@@ -40,7 +40,7 @@ func TestConfigErrors(t *testing.T) {
     }
     `)
 	_, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_VALUE_NOT_FOUND, RPC_CLIENT_USER_NAME)), configErr)
+	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, RpcClientUserName)), configErr)
 
 	testConf = []byte(`
     {
@@ -51,7 +51,7 @@ func TestConfigErrors(t *testing.T) {
     }
     `)
 	_, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_VALUE_NOT_FOUND, RPC_CLIENT_PASS_NAME)), configErr)
+	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, RpcClientPassName)), configErr)
 
 	testConf = []byte(`
     {
@@ -63,7 +63,7 @@ func TestConfigErrors(t *testing.T) {
     }
     `)
 	_, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_VALUE_NOT_FOUND, RPC_CLIENT_CHAIN_NAME)), configErr)
+	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, RpcClientChainName)), configErr)
 
 	testConf = []byte(`
     {
@@ -105,7 +105,7 @@ func TestConfigErrors(t *testing.T) {
     }
     `)
 	_, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_VALUE_NOT_FOUND, DB_PASSWORD_NAME)), configErr)
+	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, DbPasswordName)), configErr)
 
 	testConf = []byte(`
     {
@@ -122,7 +122,7 @@ func TestConfigErrors(t *testing.T) {
     }
     `)
 	_, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_VALUE_NOT_FOUND, DB_HOST_NAME)), configErr)
+	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, DbHostName)), configErr)
 
 	testConf = []byte(`
     {
@@ -140,7 +140,7 @@ func TestConfigErrors(t *testing.T) {
     }
     `)
 	_, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_VALUE_NOT_FOUND, DB_PORT_NAME)), configErr)
+	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, DbPortName)), configErr)
 
 	testConf = []byte(`
     {
@@ -159,7 +159,7 @@ func TestConfigErrors(t *testing.T) {
     }
     `)
 	_, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_VALUE_NOT_FOUND, DB_NAME_NAME)), configErr)
+	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, DbNameName)), configErr)
 
 	testConf = []byte(`
     {
@@ -463,7 +463,7 @@ func TestConfigSigner(t *testing.T) {
     }
     `)
 	config, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ERROR_CONFIG_VALUE_NOT_FOUND, SIGNER_SIGNERS_NAME)), configErr)
+	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, SignerSignersName)), configErr)
 
 	testConf = []byte(`
     {

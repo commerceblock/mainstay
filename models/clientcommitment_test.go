@@ -38,8 +38,8 @@ func TestClientCommitmentBSON(t *testing.T) {
 	// test latestCommitment model to document
 	doc, docErr := GetDocumentFromModel(testClientCommitment)
 	assert.Equal(t, nil, docErr)
-	assert.Equal(t, latestCommitment.Commitment.String(), doc.Lookup(CLIENT_COMMITMENT_COMMITMENT_NAME).StringValue())
-	assert.Equal(t, latestCommitment.ClientPosition, doc.Lookup(CLIENT_COMMITMENT_CLIENT_POSITION_NAME).Int32())
+	assert.Equal(t, latestCommitment.Commitment.String(), doc.Lookup(ClientCommitmentCommitmentName).StringValue())
+	assert.Equal(t, latestCommitment.ClientPosition, doc.Lookup(ClientCommitmentClientPositionName).Int32())
 
 	// test reverse document to latestCommitment model
 	testtestClientCommitment := &ClientCommitment{}

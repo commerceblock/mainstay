@@ -18,16 +18,16 @@ import (
 
 // config name consts
 const (
-	CONF_PATH                    = "/src/mainstay/config/conf.json"
-	MAIN_CHAIN_NAME              = "main"
-	STAYCHAIN_NAME               = "staychain"
-	STAYCHAIN_REGTEST_NAME       = "regtest"
-	STAYCHAIN_INIT_TX_NAME       = "initTx"
-	STAYCHAIN_INIT_SCRIPT_NAME   = "initScript"
-	STAYCHAIN_INIT_PK_NAME       = "initPK"
-	STAYCHAIN_TOPUP_ADDRESS_NAME = "topupAddress"
-	STAYCHAIN_TOPUP_SCRIPT_NAME  = "topupScript"
-	STAYCHAIN_TOPUP_PK_NAME      = "topupPK"
+	ConfPath                  = "/src/mainstay/config/conf.json"
+	MainChainName             = "main"
+	StaychainName             = "staychain"
+	StaychainRegtestName      = "regtest"
+	StaychainInitTxName       = "initTx"
+	StaychainInitScriptName   = "initScript"
+	StaychainInitPkName       = "initPK"
+	StaychainTopupAddressName = "topupAddress"
+	StaychainTopupScriptName  = "topupScript"
+	StaychainTopupPkName      = "topupPK"
 )
 
 // Config struct
@@ -166,20 +166,20 @@ func NewConfig(customConf ...[]byte) (*Config, error) {
 		conf = customConf[0]
 	} else {
 		var confErr error
-		conf, confErr = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+		conf, confErr = GetConfFile(os.Getenv("GOPATH") + ConfPath)
 		if confErr != nil {
 			return nil, confErr
 		}
 	}
 
 	// get main rpc client
-	mainClient, rpcErr := GetRPC(MAIN_CHAIN_NAME, conf)
+	mainClient, rpcErr := GetRPC(MainChainName, conf)
 	if rpcErr != nil {
 		return nil, rpcErr
 	}
 
 	// get main rpc client chain parameters
-	mainClientCfg, paramsErr := GetChainCfgParams(MAIN_CHAIN_NAME, conf)
+	mainClientCfg, paramsErr := GetChainCfgParams(MainChainName, conf)
 	if paramsErr != nil {
 		return nil, paramsErr
 	}
@@ -200,13 +200,13 @@ func NewConfig(customConf ...[]byte) (*Config, error) {
 
 	// get staychain config parameters
 	// most of these can be overriden from command line
-	regtestStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_REGTEST_NAME, conf)
-	initTxStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_INIT_TX_NAME, conf)
-	initScriptStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_INIT_SCRIPT_NAME, conf)
-	initPKStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_INIT_PK_NAME, conf)
-	topupAddrStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_TOPUP_ADDRESS_NAME, conf)
-	topupScriptStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_TOPUP_SCRIPT_NAME, conf)
-	topupPKStr := TryGetParamFromConf(STAYCHAIN_NAME, STAYCHAIN_TOPUP_PK_NAME, conf)
+	regtestStr := TryGetParamFromConf(StaychainName, StaychainRegtestName, conf)
+	initTxStr := TryGetParamFromConf(StaychainName, StaychainInitTxName, conf)
+	initScriptStr := TryGetParamFromConf(StaychainName, StaychainInitScriptName, conf)
+	initPKStr := TryGetParamFromConf(StaychainName, StaychainInitPkName, conf)
+	topupAddrStr := TryGetParamFromConf(StaychainName, StaychainTopupAddressName, conf)
+	topupScriptStr := TryGetParamFromConf(StaychainName, StaychainTopupScriptName, conf)
+	topupPKStr := TryGetParamFromConf(StaychainName, StaychainTopupPkName, conf)
 
 	return &Config{
 		mainClient:   mainClient,
@@ -237,7 +237,7 @@ func NewClientFromConfig(chainName string, isTest bool, customConf ...[]byte) cl
 		conf = customConf[0]
 	} else {
 		var confErr error
-		conf, confErr = GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+		conf, confErr = GetConfFile(os.Getenv("GOPATH") + ConfPath)
 		if confErr != nil {
 			log.Fatal(confErr)
 		}
@@ -253,12 +253,12 @@ func NewClientFromConfig(chainName string, isTest bool, customConf ...[]byte) cl
 
 // db config parameter names
 const (
-	DB_USER_NAME     = "user"
-	DB_PASSWORD_NAME = "password"
-	DB_HOST_NAME     = "host"
-	DB_PORT_NAME     = "port"
-	DB_NAME_NAME     = "name"
-	DB_NAME          = "db"
+	DbUserName     = "user"
+	DbPasswordName = "password"
+	DbHostName     = "host"
+	DbPortName     = "port"
+	DbNameName     = "name"
+	DbName         = "db"
 )
 
 // DbConfig struct
@@ -272,33 +272,33 @@ type DbConfig struct {
 }
 
 // Return DbConfig from conf options
-// If DB_NAME exists in the config, then all fields are compulsory
-// IF DB_NAME does not exist, then all config fields are empty
+// If DbName exists in the config, then all fields are compulsory
+// IF DbName does not exist, then all config fields are empty
 func GetDbConfig(conf []byte) (DbConfig, error) {
 
 	// db connectivity parameters
 
-	user, userErr := GetParamFromConf(DB_NAME, DB_USER_NAME, conf)
+	user, userErr := GetParamFromConf(DbName, DbUserName, conf)
 	if userErr != nil {
 		return DbConfig{}, userErr
 	}
 
-	password, passwordErr := GetParamFromConf(DB_NAME, DB_PASSWORD_NAME, conf)
+	password, passwordErr := GetParamFromConf(DbName, DbPasswordName, conf)
 	if passwordErr != nil {
 		return DbConfig{}, passwordErr
 	}
 
-	host, hostErr := GetParamFromConf(DB_NAME, DB_HOST_NAME, conf)
+	host, hostErr := GetParamFromConf(DbName, DbHostName, conf)
 	if hostErr != nil {
 		return DbConfig{}, hostErr
 	}
 
-	port, portErr := GetParamFromConf(DB_NAME, DB_PORT_NAME, conf)
+	port, portErr := GetParamFromConf(DbName, DbPortName, conf)
 	if portErr != nil {
 		return DbConfig{}, portErr
 	}
 
-	name, nameErr := GetParamFromConf(DB_NAME, DB_NAME_NAME, conf)
+	name, nameErr := GetParamFromConf(DbName, DbNameName, conf)
 	if nameErr != nil {
 		return DbConfig{}, nameErr
 	}
@@ -314,10 +314,10 @@ func GetDbConfig(conf []byte) (DbConfig, error) {
 
 // fee config parameter names
 const (
-	FEES_NAME               = "fees"
-	FEES_MIN_FEE_NAME       = "minFee"
-	FEES_MAX_FEE_NAME       = "maxFee"
-	FEES_FEE_INCREMENT_NAME = "feeIncrement"
+	FeesName             = "fees"
+	FeesMinFeeName       = "minFee"
+	FeesMaxFeeName       = "maxFee"
+	FeesFeeIncrementName = "feeIncrement"
 )
 
 // FeeConfig struct
@@ -335,7 +335,7 @@ func GetFeesConfig(conf []byte) FeesConfig {
 	// all are optional so if no value is found
 	// we set to invalid value
 
-	minFeeStr := TryGetParamFromConf(FEES_NAME, FEES_MIN_FEE_NAME, conf)
+	minFeeStr := TryGetParamFromConf(FeesName, FeesMinFeeName, conf)
 	var minFee int
 	minFeeInt, minFeeErr := strconv.Atoi(minFeeStr)
 	if minFeeErr != nil {
@@ -344,7 +344,7 @@ func GetFeesConfig(conf []byte) FeesConfig {
 		minFee = minFeeInt
 	}
 
-	maxFeeStr := TryGetParamFromConf(FEES_NAME, FEES_MAX_FEE_NAME, conf)
+	maxFeeStr := TryGetParamFromConf(FeesName, FeesMaxFeeName, conf)
 	var maxFee int
 	maxFeeInt, maxFeeErr := strconv.Atoi(maxFeeStr)
 	if maxFeeErr != nil {
@@ -353,7 +353,7 @@ func GetFeesConfig(conf []byte) FeesConfig {
 		maxFee = maxFeeInt
 	}
 
-	feeIncrementStr := TryGetParamFromConf(FEES_NAME, FEES_FEE_INCREMENT_NAME, conf)
+	feeIncrementStr := TryGetParamFromConf(FeesName, FeesFeeIncrementName, conf)
 	var feeIncrement int
 	feeIncrementInt, feeIncrementErr := strconv.Atoi(feeIncrementStr)
 	if feeIncrementErr != nil {
@@ -371,9 +371,9 @@ func GetFeesConfig(conf []byte) FeesConfig {
 
 // timing config parameter names
 const (
-	TIMING_NAME                            = "timing"
-	TIMING_NEW_ATTESTATION_MINUTES_NAME    = "newAttestationMinutes"
-	TIMING_HANDLE_UNCONFIRMED_MINUTES_NAME = "handleUnconfirmedMinutes"
+	TimingName                         = "timing"
+	TimingNewAttestationMinutesName    = "newAttestationMinutes"
+	TimingHandleUnconfirmedMinutesName = "handleUnconfirmedMinutes"
 )
 
 // Timing config struct
@@ -386,7 +386,7 @@ type TimingConfig struct {
 // Return TimingConfig from conf options
 // All Timing Config fields are optional
 func GetTimingConfig(conf []byte) TimingConfig {
-	attMinStr := TryGetParamFromConf(TIMING_NAME, TIMING_NEW_ATTESTATION_MINUTES_NAME, conf)
+	attMinStr := TryGetParamFromConf(TimingName, TimingNewAttestationMinutesName, conf)
 	var attMin int
 	attMinInt, attMinIntErr := strconv.Atoi(attMinStr)
 	if attMinIntErr != nil {
@@ -395,7 +395,7 @@ func GetTimingConfig(conf []byte) TimingConfig {
 		attMin = attMinInt
 	}
 
-	uncMinStr := TryGetParamFromConf(TIMING_NAME, TIMING_HANDLE_UNCONFIRMED_MINUTES_NAME, conf)
+	uncMinStr := TryGetParamFromConf(TimingName, TimingHandleUnconfirmedMinutesName, conf)
 	var uncMin int
 	uncMinInt, uncMinIntErr := strconv.Atoi(uncMinStr)
 	if uncMinIntErr != nil {
@@ -412,9 +412,9 @@ func GetTimingConfig(conf []byte) TimingConfig {
 
 // signer config parameter names
 const (
-	SIGNER_NAME           = "signer"
-	SIGNER_PUBLISHER_NAME = "publisher"
-	SIGNER_SIGNERS_NAME   = "signers"
+	SignerName          = "signer"
+	SignerPublisherName = "publisher"
+	SignerSignersName   = "signers"
 )
 
 // Signer config struct
@@ -429,17 +429,17 @@ type SignerConfig struct {
 }
 
 // Return SignerConfig from conf options
-// If SIGNER_NAME exists in conf, SIGNER_SIGNERS_NAME is compsulsory
+// If SignerName exists in conf, SignerSignersName is compsulsory
 // Every other Signer Config field is optional
 func GetSignerConfig(conf []byte) (SignerConfig, error) {
 	// get signer node addresses
-	signersStr, signersErr := GetParamFromConf(SIGNER_NAME, SIGNER_SIGNERS_NAME, conf)
+	signersStr, signersErr := GetParamFromConf(SignerName, SignerSignersName, conf)
 	if signersErr != nil {
 		return SignerConfig{}, signersErr
 	}
 	signers := strings.Split(signersStr, ",")
 
-	publisher := TryGetParamFromConf(SIGNER_NAME, SIGNER_PUBLISHER_NAME, conf)
+	publisher := TryGetParamFromConf(SignerName, SignerPublisherName, conf)
 
 	return SignerConfig{
 		Publisher: publisher,

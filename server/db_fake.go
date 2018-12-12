@@ -126,7 +126,7 @@ func (d *DbFake) getLatestAttestationMerkleRoot(confirmed bool) (string, error) 
 			return d.attestations[i].CommitmentHash().String(), nil
 		}
 	}
-	return "", errors.New(ERROR_ATTESTATION_GET)
+	return "", errors.New(ErrorAttestationGet)
 }
 
 // Return Commitment from MerkleCommitment commitments for attestation with given txid hash
