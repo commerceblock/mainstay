@@ -78,7 +78,11 @@ func (a Attestation) CommitmentHash() chainhash.Hash {
 
 // Implement bson.Marshaler MarshalBSON() method for use with db_mongo interface
 func (a Attestation) MarshalBSON() ([]byte, error) {
-	attestationBSON := AttestationBSON{a.Txid.String(), a.CommitmentHash().String(), a.Confirmed, time.Now()}
+	attestationTime := time.Now()
+	if a.Info.Time != 0 { // check if tx time set
+		attestationTime = time.Unix(a.Info.Time, 0)
+	}
+	attestationBSON := AttestationBSON{a.Txid.String(), a.CommitmentHash().String(), a.Confirmed, attestationTime}
 	return bson.Marshal(attestationBSON)
 }
 
