@@ -104,7 +104,7 @@ func printAttestation(tx staychain.Tx, info staychain.ChainVerifierInfo) {
 	if showDetails {
 		log.Printf("%+v\n", tx)
 	} else {
-		log.Printf("BITCoin blockhash: %s\n", tx.BlockHash)
+		log.Printf("Bitcoin blockhash: %s\n", tx.BlockHash)
 	}
 	if info != (staychain.ChainVerifierInfo{}) {
 		log.Printf("CLIENT blockhash: %s\n", info.Hash().String())

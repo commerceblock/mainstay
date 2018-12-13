@@ -144,8 +144,8 @@ func (v *ChainVerifier) verifyTxAddr(tx Tx, root string) error {
 // Proof this using an SPV merkle proof via an API call to mainstay service
 func (v *ChainVerifier) verifyCommitmentProof(commitment string, root string) error {
 	// get client commitment proof via api call
-	respProof, respProofErr := getApiResponse(fmt.Sprintf("%s%s?position=%d&commitment=%s",
-		v.apiHost, ApiCommitmentProofUrl, v.position, commitment))
+	respProof, respProofErr := getApiResponse(fmt.Sprintf("%s%s?position=%d&merkle_root=%s",
+		v.apiHost, ApiCommitmentProofUrl, v.position, root))
 	if respProofErr != nil {
 		return respProofErr
 	}
