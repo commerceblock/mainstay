@@ -8,34 +8,34 @@ Alternatively HSM interfaces can be used instead of the transaction signing tool
 
 ### Generate 2 addresses
 $ bitcoin-cli -datadir=testnetbtc-datadir/ getnewaddress
-2NFBB5okotyGFLmceXK7q18ufuv11NmefUJ
+2MwvCUjtecBAFcc7SWhEu8NyT1bLsCRtN6J
 
 $ bitcoin-cli -datadir=testnetbtc-datadir/ getnewaddress
-2NE8WKRRuj53udVsuyj5GbVfyUNN6ZSE4ia
+2N4FJ6xpbGdUvC8RjfMmQ6bzWXwEfWCFcYF
 
 ### Generate multisig 1 of 2 address
 $ bitcoin-cli -datadir=testnetbtc-datadir/ addmultisigaddress 1 "[\"2NFBB5okotyGFLmceXK7q18ufuv11NmefUJ\",\"2NE8WKRRuj53udVsuyj5GbVfyUNN6ZSE4ia\"]" "" legacy
 
 {
-  "address": "2N3CJAMXMmBaT1bAHc1LHwXWVRVKHHxdYyj",
-  "redeemScript": "51210381324c14a482646e9ad7cf82372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae"
+  "address": "2N5ckx6eXY5vx3DLwBwSZsNVShiZ6k6mSGd",
+  "redeemScript": "512103d11753d31309988c323142a0171e5b2319a8651479835afa4ab8ecb6442141b921034f0538871c910019b8e15a3b400b63971703822c9b2ab8b4183200e548fefbf952ae"
 }
 
 ### Dump priv keys
 $ bitcoin-cli -datadir=testnetbtc-datadir/ dumpprivkey 2NFBB5okotyGFLmceXK7q18ufuv11NmefUJ
-cVYM5QbqdvXn4NEUCM5jgC4tTw7BieTNmty4fJgqGtPLWX14KXuA
+cTgsB8DjF2vjhFrtCPopvknmNWP6CTQeb1Sd9zvXxRF5qHp9V4ct
 
 $ bitcoin-cli -datadir=testnetbtc-datadir/ dumpprivkey 2NE8WKRRuj53udVsuyj5GbVfyUNN6ZSE4ia
-cVZ6pShjpV37tzXr7GJ5s2oqdgB3DMrV9xNgTrwhhMyQ2n79YJFL
+cNGEfurnx9oL6z8XUuigPXxoxs5cmMxfwwnDbAa258StQ4AQTH8P
 
 ### Import generated multisig address
-$ bitcoin-cli -datadir=testnetbtc-datadir/ importaddress 2N3CJAMXMmBaT1bAHc1LHwXWVRVKHHxdYyj "" false
+$ bitcoin-cli -datadir=testnetbtc-datadir/ importaddress 2N5ckx6eXY5vx3DLwBwSZsNVShiZ6k6mSGd "" false
 
 ### Send funds to generated multisig address
 $ bitcoin-cli -datadir=testnetbtc-datadir/ getbalance
 0.07926900
 
-bitcoin-cli -datadir=testnetbtc-datadir/ sendtoaddress 2N3CJAMXMmBaT1bAHc1LHwXWVRVKHHxdYyj 0.07926900 "" "" true
+bitcoin-cli -datadir=testnetbtc-datadir/ sendtoaddress 2N5ckx6eXY5vx3DLwBwSZsNVShiZ6k6mSGd 0.07926900 "" "" true
 
 87e56bda501ba6a022f12e178e9f1ac03fb2c07f04e1dfa62ac9e1d83cd840e1
 
@@ -73,8 +73,8 @@ cTgsB8DjF2vjhFrtCPopvknmNWP6CTQeb1Sd9zvXxRF5qHp9V4ct
 
 - signer 1
 
-`go run $GOPATH/src/mainstay/cmd/txsigningtool/txsigningtool.go -pk cVZ6pShjpV37tzXr7GJ5s2oqdgB3DMrV9xNgTrwhhMyQ2n79YJFL -pkTopup cPLfW9BRRJjZNwNHwrz6B5XEmsTHRFsHYYFRTAQChULT5nUn8FkW -host *:5001`
+`go run $GOPATH/src/mainstay/cmd/txsigningtool/txsigningtool.go -pk cTgsB8DjF2vjhFrtCPopvknmNWP6CTQeb1Sd9zvXxRF5qHp9V4ct -pkTopup cPLfW9BRRJjZNwNHwrz6B5XEmsTHRFsHYYFRTAQChULT5nUn8FkW -host *:5001`
 
 - signer 2
 
-`go run $GOPATH/src/mainstay/cmd/txsigningtool/txsigningtool.go -pk cVYM5QbqdvXn4NEUCM5jgC4tTw7BieTNmty4fJgqGtPLWX14KXuA -pkTopup cTgsB8DjF2vjhFrtCPopvknmNWP6CTQeb1Sd9zvXxRF5qHp9V4ct -host *:5002`
+`go run $GOPATH/src/mainstay/cmd/txsigningtool/txsigningtool.go -pk cNGEfurnx9oL6z8XUuigPXxoxs5cmMxfwwnDbAa258StQ4AQTH8P -pkTopup cTgsB8DjF2vjhFrtCPopvknmNWP6CTQeb1Sd9zvXxRF5qHp9V4ct -host *:5002`

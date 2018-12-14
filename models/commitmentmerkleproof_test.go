@@ -323,15 +323,15 @@ func TestMerkleProof_BSON(t *testing.T) {
 	// test proof model to document
 	doc, docErr := GetDocumentFromModel(proof0)
 	assert.Equal(t, nil, docErr)
-	assert.Equal(t, proof0.MerkleRoot.String(), doc.Lookup(PROOF_MERKLE_ROOT_NAME).StringValue())
-	assert.Equal(t, proof0.ClientPosition, doc.Lookup(PROOF_CLIENT_POSITION_NAME).Int32())
-	assert.Equal(t, proof0.Commitment.String(), doc.Lookup(PROOF_COMMITMENT_NAME).StringValue())
+	assert.Equal(t, proof0.MerkleRoot.String(), doc.Lookup(ProofMerkleRootName).StringValue())
+	assert.Equal(t, proof0.ClientPosition, doc.Lookup(ProofClientPositionName).Int32())
+	assert.Equal(t, proof0.Commitment.String(), doc.Lookup(ProofCommitmentName).StringValue())
 
 	for pos := range proof0.Ops {
-		arrVal := doc.Lookup(PROOF_OPS_NAME).Array()[uint(pos)]
+		arrVal := doc.Lookup(ProofOpsName).Array()[uint(pos)]
 		docOp, docOpErr := GetDocumentFromModel(arrVal)
 		assert.Equal(t, nil, docOpErr)
-		assert.Equal(t, proof0.Ops[pos].Append, docOp.Lookup(PROOF_OP_APPEND_NAME).Boolean())
-		assert.Equal(t, proof0.Ops[pos].Commitment.String(), docOp.Lookup(PROOF_OP_COMMITMENT_NAME).StringValue())
+		assert.Equal(t, proof0.Ops[pos].Append, docOp.Lookup(ProofOpAppendName).Boolean())
+		assert.Equal(t, proof0.Ops[pos].Commitment.String(), docOp.Lookup(ProofOpCommitmentName).StringValue())
 	}
 }

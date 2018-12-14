@@ -14,8 +14,8 @@ import (
 )
 
 // Sleep time till next attestation
-const SLEEP_TIME = 5 * time.Minute
-const UPDATES_BUFFER_SIZE = 10
+const SleepTime = 5 * time.Minute
+const UpdatesBufferSize = 10
 
 type Tx btcjson.TxRawResult
 
@@ -32,7 +32,7 @@ type Chain struct {
 // Return a new Chain instance that continuously fetches attestations
 func NewChain(fetcher ChainFetcher) *Chain {
 	c := &Chain{
-		updates: make(chan Tx, UPDATES_BUFFER_SIZE),
+		updates: make(chan Tx, UpdatesBufferSize),
 		fetcher: fetcher,
 	}
 	go c.fetch()
@@ -77,8 +77,8 @@ func (c *Chain) fetch() {
 			var fetched []Tx
 			fetched = c.fetcher.Fetch()
 			if len(fetched) == 0 {
-				log.Printf("All attestations fetched. Sleeping for %s...\n", SLEEP_TIME.String())
-				next = time.Now().Add(SLEEP_TIME)
+				log.Printf("All attestations fetched. Sleeping for %s...\n", SleepTime.String())
+				next = time.Now().Add(SleepTime)
 				break
 			}
 			pending = append(pending, fetched...)

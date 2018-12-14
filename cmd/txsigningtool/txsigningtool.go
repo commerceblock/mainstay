@@ -5,13 +5,13 @@
 package main
 
 import (
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"time"
-    "encoding/hex"
 
 	"mainstay/attestation"
 	confpkg "mainstay/config"
@@ -19,8 +19,8 @@ import (
 	"mainstay/messengers"
 	"mainstay/test"
 
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-    "github.com/btcsuite/btcd/btcec"
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -53,11 +53,11 @@ var (
 )
 
 // main conf path for main use in attestation
-const CONF_PATH = "/src/mainstay/cmd/txsigningtool/conf.json"
+const ConfPath = "/src/mainstay/cmd/txsigningtool/conf.json"
 
 // demo parameters for use with regtest demo
-const DEMO_CONF_PATH = "/src/mainstay/cmd/txsigningtool/demo-conf.json"
-const DEMO_INIT_PATH = "/src/mainstay/cmd/txsigningtool/demo-init-signingtool.sh"
+const DemoConfPath = "/src/mainstay/cmd/txsigningtool/demo-conf.json"
+const DemoInitPath = "/src/mainstay/cmd/txsigningtool/demo-init-signingtool.sh"
 
 func parseFlags() {
 	flag.BoolVar(&isRegtest, "regtest", false, "Use regtest wallet configuration")
@@ -84,13 +84,13 @@ func init() {
 	// run demo init script to setup bitcoin node and initial transaction
 	// generate test config using demo config file
 	if isRegtest {
-		cmd := exec.Command("/bin/sh", os.Getenv("GOPATH")+DEMO_INIT_PATH)
+		cmd := exec.Command("/bin/sh", os.Getenv("GOPATH")+DemoInitPath)
 		_, err := cmd.Output()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		confFile, confErr := confpkg.GetConfFile(os.Getenv("GOPATH") + DEMO_CONF_PATH)
+		confFile, confErr := confpkg.GetConfFile(os.Getenv("GOPATH") + DemoConfPath)
 		if confErr != nil {
 			log.Fatal(confErr)
 		}
@@ -99,15 +99,15 @@ func init() {
 		if configErr != nil {
 			log.Fatal(configErr)
 		}
-		pk0 = test.PRIV_CLIENT
-		script0 = test.SCRIPT
-		pkTopup = test.TOPUP_PRIV_CLIENT
-		scriptTopup = test.TOPUP_SCRIPT
-		addrTopup = test.TOPUP_ADDRESS
+		pk0 = test.PrivClient
+		script0 = test.Script
+		pkTopup = test.TopupPrivClient
+		scriptTopup = test.TopupScript
+		addrTopup = test.TopupAddress
 	} else {
 		// regular mode
 		// use conf file to setup config
-		confFile, confErr := confpkg.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+		confFile, confErr := confpkg.GetConfFile(os.Getenv("GOPATH") + ConfPath)
 		if confErr != nil {
 			log.Fatal(confErr)
 		}
@@ -146,14 +146,14 @@ func init() {
 	client = attestation.NewAttestClient(config, true)
 
 	// get publisher addr from config, if set
-	publisherAddr := fmt.Sprintf("127.0.0.1:%d", attestation.DEFAULT_MAIN_PUBLISHER_PORT)
+	publisherAddr := fmt.Sprintf("127.0.0.1:%d", attestation.DefaultMainPublisherPort)
 	if config.SignerConfig().Publisher != "" {
 		publisherAddr = config.SignerConfig().Publisher
 	}
 
 	// comms setup
 	poller = zmq.NewPoller()
-	topics := []string{attestation.TOPIC_NEW_HASH, attestation.TOPIC_NEW_TX, attestation.TOPIC_CONFIRMED_HASH}
+	topics := []string{attestation.TopicNewHash, attestation.TopicNewTx, attestation.TopicConfirmedHash}
 	sub = messengers.NewSubscriberZmq(publisherAddr, topics, poller)
 	pub = messengers.NewPublisherZmq(host, poller)
 }
@@ -165,12 +165,12 @@ func main() {
 			if sub.Socket() == socket.Socket {
 				topic, msg := sub.ReadMessage()
 				switch topic {
-				case attestation.TOPIC_NEW_TX:
+				case attestation.TopicNewTx:
 					processTx(msg)
-				case attestation.TOPIC_NEW_HASH:
+				case attestation.TopicNewHash:
 					nextHash = processHash(msg)
 					fmt.Printf("nexthash %s\n", nextHash.String())
-				case attestation.TOPIC_CONFIRMED_HASH:
+				case attestation.TopicConfirmedHash:
 					attestedHash = processHash(msg)
 					fmt.Printf("attestedhash %s\n", attestedHash.String())
 				}
@@ -192,39 +192,39 @@ func processHash(msg []byte) chainhash.Hash {
 // Process received tx, verify and reply with signature
 func processTx(msg []byte) {
 
-    var sigs [][]byte
+	var sigs [][]byte
 
-    // get tx pre images from message
-    txPreImages := attestation.UnserializeBytes(msg)
+	// get tx pre images from message
+	txPreImages := attestation.UnserializeBytes(msg)
 
-    // process each pre image transaction and sign
-    for txIt, txPreImage := range txPreImages {
-        // add hash type to tx serialization
-        txPreImage = append(txPreImage, []byte{1, 0, 0, 0}...)
-        txPreImageHash := chainhash.DoubleHashH(txPreImage)
+	// process each pre image transaction and sign
+	for txIt, txPreImage := range txPreImages {
+		// add hash type to tx serialization
+		txPreImage = append(txPreImage, []byte{1, 0, 0, 0}...)
+		txPreImageHash := chainhash.DoubleHashH(txPreImage)
 
-        // sign first tx with tweaked priv key and
-        // any remaining txs with topup key
-        var sig *btcec.Signature
-        var signErr error
-        if txIt == 0 {
-            priv := client.GetKeyFromHash(attestedHash).PrivKey
-            sig, signErr = priv.Sign(txPreImageHash.CloneBytes())
-        } else {
-            sig, signErr = client.WalletPrivTopup.PrivKey.Sign(txPreImageHash.CloneBytes())
-        }
-        if signErr != nil {
-            log.Fatalf("%v\n", signErr)
-        }
+		// sign first tx with tweaked priv key and
+		// any remaining txs with topup key
+		var sig *btcec.Signature
+		var signErr error
+		if txIt == 0 {
+			priv := client.GetKeyFromHash(attestedHash).PrivKey
+			sig, signErr = priv.Sign(txPreImageHash.CloneBytes())
+		} else {
+			sig, signErr = client.WalletPrivTopup.PrivKey.Sign(txPreImageHash.CloneBytes())
+		}
+		if signErr != nil {
+			log.Fatalf("%v\n", signErr)
+		}
 
-        // add hash type to signature as well
-        sigBytes := append(sig.Serialize(), []byte{byte(1)}...)
+		// add hash type to signature as well
+		sigBytes := append(sig.Serialize(), []byte{byte(1)}...)
 
-        fmt.Printf("sending sig(%d) %s\n", txIt, hex.EncodeToString(sigBytes))
+		fmt.Printf("sending sig(%d) %s\n", txIt, hex.EncodeToString(sigBytes))
 
-        sigs = append(sigs, sigBytes)
-    }
+		sigs = append(sigs, sigBytes)
+	}
 
-    serializedSigs := attestation.SerializeBytes(sigs)
-	pub.SendMessage(serializedSigs, attestation.TOPIC_SIGS)
+	serializedSigs := attestation.SerializeBytes(sigs)
+	pub.SendMessage(serializedSigs, attestation.TopicSigs)
 }

@@ -16,7 +16,7 @@ import (
 
 // error consts
 const (
-	ERROR_COMMITMENT_NOT_DEFINED = "Commitment not defined"
+	ErrorCommitmentNotDefined = "Commitment not defined"
 )
 
 // Attestation structure
@@ -63,7 +63,7 @@ func (a *Attestation) SetCommitment(commitment *Commitment) {
 // Get commitment
 func (a Attestation) Commitment() (*Commitment, error) {
 	if a.commitment == (*Commitment)(nil) {
-		return (*Commitment)(nil), errors.New(ERROR_COMMITMENT_NOT_DEFINED)
+		return (*Commitment)(nil), errors.New(ErrorCommitmentNotDefined)
 	}
 	return a.commitment, nil
 }
@@ -78,7 +78,11 @@ func (a Attestation) CommitmentHash() chainhash.Hash {
 
 // Implement bson.Marshaler MarshalBSON() method for use with db_mongo interface
 func (a Attestation) MarshalBSON() ([]byte, error) {
-	attestationBSON := AttestationBSON{a.Txid.String(), a.CommitmentHash().String(), a.Confirmed, time.Now()}
+	attestationTime := time.Now()
+	if a.Info.Time != 0 { // check if tx time set
+		attestationTime = time.Unix(a.Info.Time, 0)
+	}
+	attestationBSON := AttestationBSON{a.Txid.String(), a.CommitmentHash().String(), a.Confirmed, attestationTime}
 	return bson.Marshal(attestationBSON)
 }
 
@@ -103,10 +107,10 @@ func (a *Attestation) UnmarshalBSON(b []byte) error {
 
 // Attestation field names
 const (
-	ATTESTATION_TXID_NAME        = "txid"
-	ATTESTATION_MERKLE_ROOT_NAME = "merkle_root"
-	ATTESTATION_CONFIRMED_NAME   = "confirmed"
-	ATTESTATION_INSERTED_AT_NAME = "inserted_at"
+	AttestationTxidName       = "txid"
+	AttestationMerkleRootName = "merkle_root"
+	AttestationConfirmedName  = "confirmed"
+	AttestationInsertedAtName = "inserted_at"
 )
 
 // AttestationBSON structure for mongoDb

@@ -18,27 +18,27 @@ import (
 
 // default fee per byte values in satoshis
 const (
-	DEFAULT_MIN_FEE       = 10
-	DEFAULT_MAX_FEE       = 100
-	DEFAULT_FEE_INCREMENT = 5
+	DefaultMinFee       = 10
+	DefaultMaxFee       = 100
+	DefaultFeeIncrement = 5
 )
 
 // warnings for arguments
 const (
-	WARNING_INVALID_MIN_FEE_ARG       = "Warning - Invalid min fee config value"
-	WARNING_INVALID_MAX_FEE_ARG       = "Warning - Invalid max fee config value"
-	WARNING_INVALID_FEE_INCREMENT_ARG = "Warning - Invalid fee increment config value"
+	WarningInvalidMinFeeArg       = "Warning - Invalid min fee config value"
+	WarningInvalidMaxFeeArg       = "Warning - Invalid max fee config value"
+	WarningInvalidFeeIncrementArg = "Warning - Invalid fee increment config value"
 )
 
 // fee api config
 const (
 	// response format:
 	// { "fastestFee": 40, "halfHourFee": 20, "hourFee": 10 }
-	FEE_API_URL = "https://bitcoinfees.earn.com/api/v1/fees/recommended"
+	FeeApiUrl = "https://bitcoinfees.earn.com/api/v1/fees/recommended"
 
 	// default fee type to use from response
 	// options: fastestFee, halfHourFee, hourFee
-	DEFAULT_BEST_FEE_TYPE = "hourFee"
+	DefaultBestFeeType = "hourFee"
 )
 
 // AttestFees struct
@@ -62,29 +62,29 @@ type AttestFees struct {
 func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 
 	// min fee with upper limit max_fee default
-	minFee := DEFAULT_MIN_FEE
-	if feesConfig.MinFee > 0 && feesConfig.MinFee < DEFAULT_MAX_FEE {
+	minFee := DefaultMinFee
+	if feesConfig.MinFee > 0 && feesConfig.MinFee < DefaultMaxFee {
 		minFee = feesConfig.MinFee
 	} else {
-		log.Printf("%s (%d)\n", WARNING_INVALID_MIN_FEE_ARG, feesConfig.MinFee)
+		log.Printf("%s (%d)\n", WarningInvalidMinFeeArg, feesConfig.MinFee)
 	}
 	log.Printf("*Fees* Min fee set to: %d\n", minFee)
 
 	// max fee with lower limit min_fee && 0 and max fee default
-	maxFee := DEFAULT_MAX_FEE
-	if feesConfig.MaxFee > 0 && feesConfig.MaxFee > minFee && feesConfig.MaxFee < DEFAULT_MAX_FEE {
+	maxFee := DefaultMaxFee
+	if feesConfig.MaxFee > 0 && feesConfig.MaxFee > minFee && feesConfig.MaxFee < DefaultMaxFee {
 		maxFee = feesConfig.MaxFee
 	} else {
-		log.Printf("%s (%d)\n", WARNING_INVALID_MAX_FEE_ARG, feesConfig.MaxFee)
+		log.Printf("%s (%d)\n", WarningInvalidMaxFeeArg, feesConfig.MaxFee)
 	}
 	log.Printf("*Fees* Max fee set to: %d\n", maxFee)
 
 	// fee increment with lower limit 0
-	feeIncrement := DEFAULT_FEE_INCREMENT
+	feeIncrement := DefaultFeeIncrement
 	if feesConfig.FeeIncrement > 0 {
 		feeIncrement = feesConfig.FeeIncrement
 	} else {
-		log.Printf("%s (%d)\n", WARNING_INVALID_FEE_INCREMENT_ARG, feesConfig.FeeIncrement)
+		log.Printf("%s (%d)\n", WarningInvalidFeeIncrementArg, feesConfig.FeeIncrement)
 	}
 	log.Printf("*Fees* Fee increment set to: %d\n", feeIncrement)
 
@@ -133,7 +133,7 @@ func (a *AttestFees) BumpFee() {
 
 // getBestFee returns the best fee for the type requested from the API
 func getBestFee(customFeeType ...string) int {
-	var feeType = DEFAULT_BEST_FEE_TYPE
+	var feeType = DefaultBestFeeType
 	if len(customFeeType) > 0 {
 		feeType = customFeeType[0]
 	}
@@ -144,7 +144,7 @@ func getBestFee(customFeeType ...string) int {
 
 // GetFeeFromAPI attempts to get the best bitcoinfee from the fee API specified
 func getFeeFromAPI(feeType string) int {
-	resp, getErr := http.Get(FEE_API_URL)
+	resp, getErr := http.Get(FeeApiUrl)
 	if getErr != nil {
 		log.Println("*Fees* API request failed")
 		return -1

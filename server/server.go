@@ -15,7 +15,7 @@ import (
 
 // error consts
 const (
-	ERROR_LATEST_COMMITMENT_MISSING = "Client commitment missing for position"
+	ErrorLatestCommitmentMissing = "Client commitment missing for position"
 )
 
 // Server structure
@@ -112,7 +112,7 @@ func (s *Server) GetClientCommitment() (models.Commitment, error) {
 		if int32(pos) == c.ClientPosition {
 			commitmentHashes = append(commitmentHashes, c.Commitment)
 		} else {
-			return models.Commitment{}, errors.New(fmt.Sprintf("%s %d", ERROR_LATEST_COMMITMENT_MISSING, pos))
+			return models.Commitment{}, errors.New(fmt.Sprintf("%s %d", ErrorLatestCommitmentMissing, pos))
 		}
 	}
 	// construct Commitment from MerkleCommitment commitments

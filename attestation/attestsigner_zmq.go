@@ -16,13 +16,13 @@ import (
 
 // zmq communication consts
 const (
-	DEFAULT_MAIN_PUBLISHER_PORT = 5000 // port used by main signer publisher
+	DefaultMainPublisherPort = 5000 // port used by main signer publisher
 
 	// predefined topics for publishing/subscribing via zmq
-	TOPIC_NEW_HASH       = "H"
-	TOPIC_NEW_TX         = "T"
-	TOPIC_CONFIRMED_HASH = "C"
-	TOPIC_SIGS           = "S"
+	TopicNewHash       = "H"
+	TopicNewTx         = "T"
+	TopicConfirmedHash = "C"
+	TopicSigs          = "S"
 )
 
 // AttestSignerZmq struct
@@ -44,7 +44,7 @@ var poller *zmq.Poller
 // Return new AttestSignerZmq instance
 func NewAttestSignerZmq(config confpkg.SignerConfig) AttestSignerZmq {
 	// get publisher addr from config, if set
-	publisherAddr := fmt.Sprintf("*:%d", DEFAULT_MAIN_PUBLISHER_PORT)
+	publisherAddr := fmt.Sprintf("*:%d", DefaultMainPublisherPort)
 	if config.Publisher != "" {
 		publisherAddr = config.Publisher
 	}
@@ -54,7 +54,7 @@ func NewAttestSignerZmq(config confpkg.SignerConfig) AttestSignerZmq {
 	poller = zmq.NewPoller()
 	publisher := messengers.NewPublisherZmq(publisherAddr, poller)
 	var subscribers []*messengers.SubscriberZmq
-	subtopics := []string{TOPIC_SIGS}
+	subtopics := []string{TopicSigs}
 	for _, nodeaddr := range config.Signers {
 		subscribers = append(subscribers, messengers.NewSubscriberZmq(nodeaddr, subtopics, poller))
 	}
@@ -64,12 +64,12 @@ func NewAttestSignerZmq(config confpkg.SignerConfig) AttestSignerZmq {
 
 // Use zmq publisher to send confirmed hash
 func (z AttestSignerZmq) SendConfirmedHash(hash []byte) {
-	z.publisher.SendMessage(hash, TOPIC_CONFIRMED_HASH)
+	z.publisher.SendMessage(hash, TopicConfirmedHash)
 }
 
 // Use zmq publisher to send new hash
 func (z AttestSignerZmq) SendNewHash(hash []byte) {
-	z.publisher.SendMessage(hash, TOPIC_NEW_HASH)
+	z.publisher.SendMessage(hash, TopicNewHash)
 }
 
 // Transform received list of bytes into a single byte
@@ -127,7 +127,7 @@ func UnserializeBytes(data []byte) [][]byte {
 
 // Use zmq publisher to send new tx
 func (z AttestSignerZmq) SendTxPreImages(txs [][]byte) {
-	z.publisher.SendMessage(SerializeBytes(txs), TOPIC_NEW_TX)
+	z.publisher.SendMessage(SerializeBytes(txs), TopicNewTx)
 }
 
 // Parse all received messages and create a sigs slice
