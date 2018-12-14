@@ -21,9 +21,9 @@ import (
 
 // mainstay API url consts
 const (
-	API_ATTESTATION_URL      = "/api/v1/attestation"
-	API_COMMITMENT_URL       = "/api/v1/commitment"
-	API_COMMITMENT_PROOF_URL = "/api/v1/commitment/proof"
+	ApiAttestationUrl     = "/api/v1/attestation"
+	ApiCommitmentUrl      = "/api/v1/commitment"
+	ApiCommitmentProofUrl = "/api/v1/commitment/proof"
 )
 
 // Helper function to get response from mainstay api for url provided
@@ -144,8 +144,8 @@ func (v *ChainVerifier) verifyTxAddr(tx Tx, root string) error {
 // Proof this using an SPV merkle proof via an API call to mainstay service
 func (v *ChainVerifier) verifyCommitmentProof(commitment string, root string) error {
 	// get client commitment proof via api call
-	respProof, respProofErr := getApiResponse(fmt.Sprintf("%s%s?position=%d&commitment=%s",
-		v.apiHost, API_COMMITMENT_PROOF_URL, v.position, commitment))
+	respProof, respProofErr := getApiResponse(fmt.Sprintf("%s%s?position=%d&merkle_root=%s",
+		v.apiHost, ApiCommitmentProofUrl, v.position, root))
 	if respProofErr != nil {
 		return respProofErr
 	}
@@ -192,7 +192,7 @@ func (v *ChainVerifier) Verify(tx Tx) (ChainVerifierInfo, error) {
 
 	// get attestation root commitment via api call
 	respAttestation, respAttestationErr := getApiResponse(fmt.Sprintf("%s%s?txid=%s",
-		v.apiHost, API_ATTESTATION_URL, tx.Txid))
+		v.apiHost, ApiAttestationUrl, tx.Txid))
 	if respAttestationErr != nil {
 		return ChainVerifierInfo{}, respAttestationErr
 	}
@@ -206,7 +206,7 @@ func (v *ChainVerifier) Verify(tx Tx) (ChainVerifierInfo, error) {
 
 	// get client commitment via api call
 	respCommitment, respCommitmentErr := getApiResponse(fmt.Sprintf("%s%s?merkle_root=%s&position=%d",
-		v.apiHost, API_COMMITMENT_URL, root, v.position))
+		v.apiHost, ApiCommitmentUrl, root, v.position))
 	if respCommitmentErr != nil { // assume no client commitment for current attestation
 		return ChainVerifierInfo{}, nil
 	}

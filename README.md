@@ -18,22 +18,23 @@ The mainstay repository is an application that implements the [Mainstay protocol
 
 - Run service
     - Regtest
-        - Start the ocean-demo `python ocean-demo/PROTOCOLS/demo.py`
-        - Run `mainstay -regtest`
+        - Run service: `mainstay -regtest`
+        - Run signer: `go run $GOPATH/src/mainstay/cmd/txsigningtool/txsigningtool.go -regtest`
+        - Insert commitments to "ClientCommitment" database collection in order to generate new attestations
     - Testnet
-        - Download and run a full Bitcoin Node on testnet mode, fully indexed and in blocksonly mode. `signrawtransaction` should also be included as a `deprecatedrpc` option. Add the connection details (actual value or ENV variable) to this node in `conf/conf.json`
+        - Download and run a full Bitcoin Node on testnet mode, fully indexed and in blocksonly mode.
 
         - Fund this wallet node, send all the funds to a single (m of n sig) P2SH address and store the `TX_HASH`, `PRIVKEY_x` and `REDEEM_SCRIPT` of this transaction, where `x in [0, n-1]`.
 
         - Follow the same procedure to generate a single (m of n sig) P2SH address used to topup the service and store the `TOPUP_ADDRESS`, `TOPUP_PRIVKEY_x` and `TOPUP_SCRIPT`.
 
-        - The `TX_HASH` should be included in the genesis block of the Ocean network using the conf option `attestationhash`. Initiate the Ocean testnet network and add connection details (actual value or ENV variable) to one of it's nodes in `conf/conf.json`.
+        - The `TX_HASH` should be included in the genesis block of the client Ocean-type network using the config option `attestationhash`.
 
         - Run the mainstay attestation service by:
 
-         `mainstay`
+            `mainstay`
 
-         Command line parameters should be set in `.conf` file
+            Command line parameters should be set in `.conf` file
 
         - Run transaction signers of the m-of-n multisig P2SH addresses for `x in [0, n-1]` by:
 
@@ -49,9 +50,9 @@ The mainstay repository is an application that implements the [Mainstay protocol
 
 ### Transaction Signing Tool
 
-The transaction signing tool `cmd/txsigningtool` is a tool used by each signer of the attestation multisig to sign attestation transactions. The tool subscribes to the main attestation service in order to receive confirmed attestation hashes for tweaking priv key before signing, new commitment hashes to verify new destination address and new bitcoin attestation transactions to sign and publish signature for attestation service to receive.
+The transaction signing tool `cmd/txsigningtool` is a tool used by each signer of the attestation multisig to sign attestation transactions. The tool subscribes to the main attestation service in order to receive confirmed attestation hashes for tweaking priv key before signing, new commitment hashes to verify new destination address and new bitcoin attestation transaction pre-images to sign and publish signature for attestation service to receive.
 
-The tool maintains a connection to a Bitcoin Node for transaction validation and signing.
+The tool uses ECDSA libraries to do the signing and does not require connection to a Bitcoin node.
 
 ### Client Signup Tool
 
@@ -71,7 +72,6 @@ The `API_HOST` field should be set to the mainstay URL. This can be updated in `
 
 To run this tool you need to first fetch the `TX_HASH` from the `attestationhash` field in the Ocean genesis block, as well as the publicly available `REDEEM_SCRIPT` of the attestation service multisig. The tool can also be started with any other `TX_HASH` attestation found in the mainstay website. A client should use his designated `CLIENT_POSITION` that was assigned during signup and run the tool using:
 
-`go run cmd/confirmationtool/confirmationtool.go
--tx TX_HASH -script REDEEM_SCRIPT -position CLIENT_POSITION -apiHost https://mainstay.xyz/api/v1/`
+`go run cmd/confirmationtool/confirmationtool.go -tx TX_HASH -script REDEEM_SCRIPT -position CLIENT_POSITION -apiHost https://mainstay.xyz`
 
 This will initially take some time to sync up all the attestations that have been committed so far and then will wait for any new attestations. Logging is displayed for each attestation and for full details the `-detailed` flag can be used.

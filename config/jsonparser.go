@@ -13,8 +13,8 @@ import (
 // Handle reading conf files and parsing configuration options
 
 const (
-	ERROR_CONFIG_NAME_NOT_FOUND  = "config name not found"
-	ERROR_CONFIG_VALUE_NOT_FOUND = "config value not found"
+	ErroConfigNameNotFound   = "config name not found"
+	ErrorConfigValueNotFound = "config value not found"
 )
 
 type ClientCfg map[string]interface{}
@@ -26,11 +26,11 @@ func getCfg(name string, conf []byte) (ClientCfg, error) {
 	var j map[string]map[string]interface{}
 	err := dec.Decode(&j)
 	if err != nil {
-		return ClientCfg{}, errors.New(ERROR_CONFIG_NAME_NOT_FOUND)
+		return ClientCfg{}, errors.New(ErroConfigNameNotFound)
 	}
 	val, ok := j[name]
 	if !ok {
-		return ClientCfg{}, errors.New(ERROR_CONFIG_NAME_NOT_FOUND)
+		return ClientCfg{}, errors.New(ErroConfigNameNotFound)
 	}
 	return val, nil
 }
@@ -39,11 +39,11 @@ func getCfg(name string, conf []byte) (ClientCfg, error) {
 func (conf ClientCfg) getValue(key string) (string, error) {
 	val, ok := conf[key]
 	if !ok {
-		return "", errors.New(ERROR_CONFIG_VALUE_NOT_FOUND)
+		return "", errors.New(ErrorConfigValueNotFound)
 	}
 	str, ok := val.(string)
 	if !ok {
-		return "", errors.New(ERROR_CONFIG_VALUE_NOT_FOUND)
+		return "", errors.New(ErrorConfigValueNotFound)
 	}
 	return str, nil
 }

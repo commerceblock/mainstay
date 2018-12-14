@@ -20,7 +20,7 @@ package doc
 
 // const MAIN_NAME = "bitcoin"
 // const SIDE_NAME = "clientchain"
-// const CONF_PATH = "/src/mainstay/cmd/confirmationtool/conf.json"
+// const ConfPath = "/src/mainstay/cmd/confirmationtool/conf.json"
 // const FUNDING_TX = "bf41c0da8047b1416d5ca680e2643967b27537cdf9a41527034698c336b55313"
 // const FIRST_TX = "902fd11c3166eb07864a7b8ed0a3a0fbda0f4c26423b8eee4dd94420cfbae40e"
 
@@ -50,7 +50,7 @@ package doc
 // 		}
 // 	}
 
-// 	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + CONF_PATH)
+// 	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + ConfPath)
 // 	if confErr != nil {
 // 		log.Fatal(confErr)
 // 	}

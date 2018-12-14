@@ -27,7 +27,7 @@ func TestCommitment(t *testing.T) {
 	proofs := []CommitmentMerkleProof{proof0, proof1, proof2}
 
 	_, errCommitmentEmpty := NewCommitment([]chainhash.Hash{})
-	assert.Equal(t, errors.New(ERROR_COMMITMENT_LIST_EMPTY), errCommitmentEmpty)
+	assert.Equal(t, errors.New(ErrorCommitmentListEmpty), errCommitmentEmpty)
 
 	commitment, errCommitment := NewCommitment(commitments)
 	assert.Equal(t, nil, errCommitment)
@@ -75,9 +75,9 @@ func TestCommitmentBSON(t *testing.T) {
 	// test commitment model to document
 	doc, docErr := GetDocumentFromModel(commitment0)
 	assert.Equal(t, nil, docErr)
-	assert.Equal(t, commitment0.MerkleRoot.String(), doc.Lookup(COMMITMENT_MERKLE_ROOT_NAME).StringValue())
-	assert.Equal(t, commitment0.ClientPosition, doc.Lookup(COMMITMENT_CLIENT_POSITION_NAME).Int32())
-	assert.Equal(t, commitment0.Commitment.String(), doc.Lookup(COMMITMENT_COMMITMENT_NAME).StringValue())
+	assert.Equal(t, commitment0.MerkleRoot.String(), doc.Lookup(CommitmentMerkleRootName).StringValue())
+	assert.Equal(t, commitment0.ClientPosition, doc.Lookup(CommitmentClientPositionName).Int32())
+	assert.Equal(t, commitment0.Commitment.String(), doc.Lookup(CommitmentCommitmentName).StringValue())
 
 	// test reverse document to commitment model
 	testtestCommitment0 := &CommitmentMerkleCommitment{}

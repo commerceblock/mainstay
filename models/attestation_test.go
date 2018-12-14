@@ -19,7 +19,7 @@ func TestAttestation(t *testing.T) {
 	attestationDefault := NewAttestationDefault()
 
 	_, errCommitment := attestationDefault.Commitment()
-	assert.Equal(t, errors.New(ERROR_COMMITMENT_NOT_DEFINED), errCommitment)
+	assert.Equal(t, errors.New(ErrorCommitmentNotDefined), errCommitment)
 
 	commitmentHash := attestationDefault.CommitmentHash()
 	assert.Equal(t, chainhash.Hash{}, commitmentHash)
@@ -97,8 +97,8 @@ func TestAttestationBSON(t *testing.T) {
 	// test attestation model to document
 	doc, docErr := GetDocumentFromModel(testAttestation)
 	assert.Equal(t, nil, docErr)
-	assert.Equal(t, attestation.Txid.String(), doc.Lookup(ATTESTATION_TXID_NAME).StringValue())
-	assert.Equal(t, attestation.Confirmed, doc.Lookup(ATTESTATION_CONFIRMED_NAME).Boolean())
+	assert.Equal(t, attestation.Txid.String(), doc.Lookup(AttestationTxidName).StringValue())
+	assert.Equal(t, attestation.Confirmed, doc.Lookup(AttestationConfirmedName).Boolean())
 
 	// test reverse document to attestation model
 	testtestCommitment := &Attestation{}

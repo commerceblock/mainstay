@@ -48,10 +48,10 @@ func AttestationInfoBSON(t *testing.T) {
 	// test AttestationInfo model to document
 	doc, docErr := GetDocumentFromModel(testInfo)
 	assert.Equal(t, nil, docErr)
-	assert.Equal(t, testInfo.Txid, doc.Lookup(ATTESTATION_INFO_TXID_NAME).StringValue())
-	assert.Equal(t, testInfo.Blockhash, doc.Lookup(ATTESTATION_INFO_BLOCKHASH_NAME).StringValue())
-	assert.Equal(t, testInfo.Amount, doc.Lookup(ATTESTATION_INFO_AMOUNT_NAME).Int64())
-	assert.Equal(t, testInfo.Time, doc.Lookup(ATTESTATION_INFO_TIME_NAME).Int64())
+	assert.Equal(t, testInfo.Txid, doc.Lookup(AttestationInfoTxidName).StringValue())
+	assert.Equal(t, testInfo.Blockhash, doc.Lookup(AttestationInfoBlockhashName).StringValue())
+	assert.Equal(t, testInfo.Amount, doc.Lookup(AttestationInfoAmountName).Int64())
+	assert.Equal(t, testInfo.Time, doc.Lookup(AttestationInfoTimeName).Int64())
 
 	// test reverse document to AttestationInfo model
 	testtestInfo := &AttestationInfo{}

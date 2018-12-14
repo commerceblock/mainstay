@@ -25,25 +25,25 @@ import (
 
 // error - warning consts
 const (
-	WARNING_INSUFFICIENT_FUNDS              = `Warning - Last unspent vout value low (less than 100*maxFee target)`
-	WARNING_TOPUP_INFO_MISSING              = `Warning - Topup Address and/or Topup Script not set in config`
-	WARNING_TOPUP_PK_MISSING                = `Warning - Topup Private Key not set in config`
-	WARNING_FAILURE_IMPORTING_TOPUP_ADDRESS = `Could not import topup address`
-	WARNING_FAILED_DECODING_TOPUP_MULTISIG  = `Could not decode multisig topup script`
+	WarningInsufficientFunds            = `Warning - Last unspent vout value low (less than 100*maxFee target)`
+	WarningTopupInfoMissing             = `Warning - Topup Address and/or Topup Script not set in config`
+	WarningTopupPkMissing               = `Warning - Topup Private Key not set in config`
+	WarningFailureImportingTopupAddress = `Could not import topup address`
+	WarningFailedDecodingTopupMultisig  = `Could not decode multisig topup script`
 
-	ERROR_INSUFFICIENT_FUNDS            = `Insufficient unspent vout value (less than the maxFee target)`
-	ERROR_MISSING_MULTISIG              = `No multisig used - Client must be signer and include private key`
-	ERROR_FAILED_DECODING_INIT_MULTISIG = `Could not decode multisig init script`
-	ERROR_MISSING_ADDRESS               = `Client address missing from multisig script`
-	ERROR_INVALID_PK                    = `Invalid private key`
-	ERROR_FAILURE_IMPORTING_PK          = `Could not import initial private key`
-	ERROR_SIGS_MISSING_FOR_TX           = `Missing signatures for transaction`
-	ERROR_SIGS_MISSING_FOR_VIN          = `Missing signatures for transaction input`
-	ERROR_INPUT_MISSING_FOR_TX          = `Missing input for transaction`
+	ErrorInsufficientFunds          = `Insufficient unspent vout value (less than the maxFee target)`
+	ErrorMissingMultisig            = `No multisig used - Client must be signer and include private key`
+	ErrorFailedDecodingInitMultisig = `Could not decode multisig init script`
+	ErrorMissingAddress             = `Client address missing from multisig script`
+	ErrorInvalidPk                  = `Invalid private key`
+	ErrorFailureImportingPk         = `Could not import initial private key`
+	ErrorSigsMissingForTx           = `Missing signatures for transaction`
+	ErrorSigsMissingForVin          = `Missing signatures for transaction input`
+	ErrorInputMissingForTx          = `Missing input for transaction`
 )
 
 // coin in satoshis
-const COIN = 100000000
+const Coin = 100000000
 
 // AttestClient structure
 //
@@ -109,7 +109,7 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		log.Printf("*Client* importing top-up addr: %s ...\n", topupAddrStr)
 		importErr := config.MainClient().ImportAddress(topupAddrStr)
 		if importErr != nil {
-			log.Printf("%s (%s)\n%v\n", WARNING_FAILURE_IMPORTING_TOPUP_ADDRESS, topupAddrStr, importErr)
+			log.Printf("%s (%s)\n%v\n", WarningFailureImportingTopupAddress, topupAddrStr, importErr)
 		}
 		if isSigner {
 			pkTopup := config.TopupPK()
@@ -117,14 +117,14 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 				var errPkWifTopup error
 				pkWifTopup, errPkWifTopup = crypto.GetWalletPrivKey(pkTopup)
 				if errPkWifTopup != nil {
-					log.Fatalf("%s %s\n%v\n", ERROR_INVALID_PK, pkTopup, errPkWifTopup)
+					log.Fatalf("%s %s\n%v\n", ErrorInvalidPk, pkTopup, errPkWifTopup)
 				}
 			} else {
-				log.Println(WARNING_TOPUP_PK_MISSING)
+				log.Println(WarningTopupPkMissing)
 			}
 		}
 	} else {
-		log.Println(WARNING_TOPUP_INFO_MISSING)
+		log.Println(WarningTopupInfoMissing)
 	}
 
 	// main config
@@ -136,10 +136,10 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		var errPkWif error
 		pkWif, errPkWif = crypto.GetWalletPrivKey(pk)
 		if errPkWif != nil {
-			log.Fatalf("%s %s\n%v\n", ERROR_INVALID_PK, pk, errPkWif)
+			log.Fatalf("%s %s\n%v\n", ErrorInvalidPk, pk, errPkWif)
 		}
 	} else if multisig == "" {
-		log.Fatal(ERROR_MISSING_MULTISIG)
+		log.Fatal(ErrorMissingMultisig)
 	}
 
 	if multisig != "" { // if multisig is set, parse pubkeys
@@ -154,7 +154,7 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 				}
 			}
 			if !myFound {
-				log.Fatal(ERROR_MISSING_ADDRESS)
+				log.Fatal(ErrorMissingAddress)
 			}
 		}
 
@@ -269,7 +269,7 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []bt
 			Txid: unspent[i].TxID,
 			Vout: unspent[i].Vout,
 		})
-		amounts[paytoaddr] += btcutil.Amount(unspent[i].Amount * COIN)
+		amounts[paytoaddr] += btcutil.Amount(unspent[i].Amount * Coin)
 	}
 
 	// attempt to create raw transaction
@@ -285,12 +285,12 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []bt
 	// return error if txout value is less than maxFee target
 	maxFee := int64(w.Fees.maxFee * msgTx.SerializeSize())
 	if msgTx.TxOut[0].Value < maxFee {
-		return nil, errors.New(ERROR_INSUFFICIENT_FUNDS)
+		return nil, errors.New(ErrorInsufficientFunds)
 	}
 
 	// print warning if txout value less than 100*maxfee target
 	if msgTx.TxOut[0].Value < 100*maxFee {
-		log.Println(WARNING_INSUFFICIENT_FUNDS)
+		log.Println(WarningInsufficientFunds)
 	}
 
 	// add fees using best fee-per-byte estimate
@@ -352,7 +352,7 @@ func (w *AttestClient) getTransactionPreImages(hash chainhash.Hash, msgTx *wire.
 
 	// check tx in size first
 	if len(msgTx.TxIn) <= 0 {
-		return []wire.MsgTx{}, errors.New(ERROR_INPUT_MISSING_FOR_TX)
+		return []wire.MsgTx{}, errors.New(ErrorInputMissingForTx)
 	}
 
 	// pre-image txs
@@ -363,7 +363,7 @@ func (w *AttestClient) getTransactionPreImages(hash chainhash.Hash, msgTx *wire.
 	scriptSer, decodeErr := hex.DecodeString(script)
 	if decodeErr != nil {
 		return []wire.MsgTx{},
-			errors.New(fmt.Sprintf("%s for init script:%s\n", ERROR_FAILED_DECODING_INIT_MULTISIG, script))
+			errors.New(fmt.Sprintf("%s for init script:%s\n", ErrorFailedDecodingInitMultisig, script))
 	}
 	// add init script bytes to txin script
 	preImageTx0 := msgTx.Copy()
@@ -373,7 +373,7 @@ func (w *AttestClient) getTransactionPreImages(hash chainhash.Hash, msgTx *wire.
 	// Add topup script to tx pre-image
 	topupScriptSer, topupDecodeErr := hex.DecodeString(w.scriptTopup)
 	if topupDecodeErr != nil {
-		log.Printf("%s %s\n", WARNING_FAILED_DECODING_TOPUP_MULTISIG, w.scriptTopup)
+		log.Printf("%s %s\n", WarningFailedDecodingTopupMultisig, w.scriptTopup)
 		return preImageTxs, nil
 	}
 	for i := 1; i < len(msgTx.TxIn); i++ {
@@ -399,7 +399,7 @@ func (w *AttestClient) SignTransaction(hash chainhash.Hash, msgTx wire.MsgTx) (
 
 	// check tx in size first
 	if len(msgTx.TxIn) <= 0 {
-		return nil, "", errors.New(ERROR_INPUT_MISSING_FOR_TX)
+		return nil, "", errors.New(ErrorInputMissingForTx)
 	}
 
 	// get prev outpoint hash in order to generate tx inputs for signing
@@ -469,7 +469,7 @@ func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]crypto.Sig, h
 				}
 				// check we have the required number of sigs for vin
 				if len(mySigs) < w.numOfSigs {
-					return nil, errors.New(ERROR_SIGS_MISSING_FOR_VIN)
+					return nil, errors.New(ErrorSigsMissingForVin)
 				}
 				// take up to numOfSigs sigs
 				combinedScriptSig := crypto.CreateScriptSig(mySigs[:w.numOfSigs], script)
@@ -477,10 +477,10 @@ func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]crypto.Sig, h
 			} else {
 				// check we have all the sigs required
 				if len(sigs) < len(signedMsgTx.TxIn) {
-					return nil, errors.New(ERROR_SIGS_MISSING_FOR_TX)
+					return nil, errors.New(ErrorSigsMissingForTx)
 				}
 				if len(sigs[i]) < w.numOfSigs {
-					return nil, errors.New(ERROR_SIGS_MISSING_FOR_VIN)
+					return nil, errors.New(ErrorSigsMissingForVin)
 				}
 				// no mySigs - just use received client sigs and script
 				var redeemScriptBytes []byte

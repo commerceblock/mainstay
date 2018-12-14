@@ -14,8 +14,8 @@ type AttestationInfo struct {
 
 // AttestationInfo field names
 const (
-	ATTESTATION_INFO_TXID_NAME      = "txid"
-	ATTESTATION_INFO_BLOCKHASH_NAME = "blockhash"
-	ATTESTATION_INFO_AMOUNT_NAME    = "amount"
-	ATTESTATION_INFO_TIME_NAME      = "time"
+	AttestationInfoTxidName      = "txid"
+	AttestationInfoBlockhashName = "blockhash"
+	AttestationInfoAmountName    = "amount"
+	AttestationInfoTimeName      = "time"
 )

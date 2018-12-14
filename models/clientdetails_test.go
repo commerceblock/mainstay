@@ -38,9 +38,9 @@ func TestClientDetailsBSON(t *testing.T) {
 	// test clientDetails model to document
 	doc, docErr := GetDocumentFromModel(testClientDetails)
 	assert.Equal(t, nil, docErr)
-	assert.Equal(t, clientDetails.AuthToken, doc.Lookup(CLIENT_DETAILS_AUTH_TOKEN_NAME).StringValue())
-	assert.Equal(t, clientDetails.Pubkey, doc.Lookup(CLIENT_DETAILS_PUBKEY_NAME).StringValue())
-	assert.Equal(t, clientDetails.ClientPosition, doc.Lookup(CLIENT_COMMITMENT_CLIENT_POSITION_NAME).Int32())
+	assert.Equal(t, clientDetails.AuthToken, doc.Lookup(ClientDetailsAuthTokenName).StringValue())
+	assert.Equal(t, clientDetails.Pubkey, doc.Lookup(ClientDetailsPubkeyName).StringValue())
+	assert.Equal(t, clientDetails.ClientPosition, doc.Lookup(ClientCommitmentClientPositionName).Int32())
 
 	// test reverse document to clientDetails model
 	testtestClientDetails := &ClientDetails{}

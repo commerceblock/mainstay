@@ -22,39 +22,39 @@ import (
 
 const (
 	// collection names
-	COL_NAME_ATTESTATION       = "Attestation"
-	COL_NAME_ATTESTATION_INFO  = "AttestationInfo"
-	COL_NAME_MERKLE_COMMITMENT = "MerkleCommitment"
-	COL_NAME_MERKLE_PROOF      = "MerkleProof"
-	COL_NAME_CLIENT_COMMITMENT = "ClientCommitment"
-	COL_NAME_CLIENT_DETAILS    = "ClientDetails"
+	ColNameAttestation      = "Attestation"
+	ColNameAttestationInfo  = "AttestationInfo"
+	ColNameMerkleCommitment = "MerkleCommitment"
+	ColNameMerkleProof      = "MerkleProof"
+	ColNameClientCommitment = "ClientCommitment"
+	ColNameClientDetails    = "ClientDetails"
 
 	// error messages
-	ERROR_MONGO_CLIENT  = "could not create mongoDB client"
-	ERROR_MONGO_CONNECT = "could not connect to mongoDB client"
-	ERROR_MONGO_PING    = "could not ping mongoDB database"
+	ErrorMongoClient  = "could not create mongoDB client"
+	ErrorMongoConnect = "could not connect to mongoDB client"
+	ErrorMongoPing    = "could not ping mongoDB database"
 
-	ERROR_ATTESTATION_SAVE       = "could not save attestation"
-	ERROR_ATTESTATION_INFO_SAVE  = "could not save attestation info"
-	ERROR_MERKLE_COMMITMENT_SAVE = "could not save merkle commitment"
-	ERROR_MERKLE_PROOF_SAVE      = "could not save merkle proof"
-	ERROR_CLIENT_DETAILS_SAVE    = "could not save client details"
+	ErrorAttestationSave      = "could not save attestation"
+	ErrorAttestationInfoSave  = "could not save attestation info"
+	ErrorMerkleCommitmentSave = "could not save merkle commitment"
+	ErrorMerkleProofSave      = "could not save merkle proof"
+	ErrorClientDetailsSave    = "could not save client details"
 
-	ERROR_ATTESTATION_GET       = "could not get attestation"
-	ERROR_MERKLE_COMMITMENT_GET = "could not get merkle commitment"
-	ERROR_MERKLE_PROOF_GET      = "could not get merkle proof"
-	ERROR_CLIENT_COMMITMENT_GET = "could not get client commitment"
-	ERROR_CLIENT_DETAILS_GET    = "could not get client details"
+	ErrorAttestationGet      = "could not get attestation"
+	ErrorMerkleCommitmentGet = "could not get merkle commitment"
+	ErrorMerkleProofGet      = "could not get merkle proof"
+	ErrorClientCommitmentGet = "could not get client commitment"
+	ErrorClientDetailsGet    = "could not get client details"
 
-	BAD_DATA_CLIENT_COMMITMENT_COL = "bad data in client commitment collection"
-	BAD_DATA_MERKLE_COMMITMENT_COL = "bad data in merkle commitment collection"
-	BAD_DATA_CLIENT_DETAILS_COL    = "bad data in client details collection"
+	BadDataClientCommitmentCol = "bad data in client commitment collection"
+	BadDataMerkleCommitmentCol = "bad data in merkle commitment collection"
+	BadDataClientDetailsCol    = "bad data in client details collection"
 
-	BAD_DATA_ATTESTATION_MODEL       = "bad data in attestation model"
-	BAD_DATA_ATTESTATION_INFO_MODEL  = "bad data in attestation info model"
-	BAD_DATA_MERKLE_COMMITMENT_MODEL = "bad data in merkle commitment model"
-	BAD_DATA_MERKLE_PROOF_MODEL      = "bad data in merkle proof model"
-	BAD_DATA_CLIENT_DETAILS_MODEL    = "bad data in client details model"
+	BadDataAttestationModel      = "bad data in attestation model"
+	BadDataAttestationInfoModel  = "bad data in attestation info model"
+	BadDataMerkleCommitmentModel = "bad data in merkle commitment model"
+	BadDataMerkleProofModel      = "bad data in merkle proof model"
+	BadDataClientDetailsModel    = "bad data in client details model"
 )
 
 // Method to connect to mongo database through config
@@ -70,17 +70,17 @@ func dbConnect(ctx context.Context, dbConnectivity config.DbConfig) (*mongo.Data
 
 	client, err := mongo.NewClient(uri)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("%s %v", ERROR_MONGO_CLIENT, err))
+		return nil, errors.New(fmt.Sprintf("%s %v", ErrorMongoClient, err))
 	}
 
 	err = client.Connect(ctx) // start background client routine
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("%s %v", ERROR_MONGO_CONNECT, err))
+		return nil, errors.New(fmt.Sprintf("%s %v", ErrorMongoConnect, err))
 	}
 
 	err = client.Ping(ctx, nil) // use Ping to check if mongod is running
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("%s %v", ERROR_MONGO_PING, err))
+		return nil, errors.New(fmt.Sprintf("%s %v", ErrorMongoPing, err))
 	}
 
 	return client.Database(dbConnectivity.Name), nil
@@ -114,7 +114,7 @@ func (d *DbMongo) saveAttestation(attestation models.Attestation) error {
 	// get document representation of Attestation object
 	docAttestation, docErr := models.GetDocumentFromModel(attestation)
 	if docErr != nil {
-		return errors.New(fmt.Sprintf("%s %v", BAD_DATA_ATTESTATION_MODEL, docErr))
+		return errors.New(fmt.Sprintf("%s %v", BadDataAttestationModel, docErr))
 	}
 
 	newAttestation := bsonx.Doc{
@@ -123,18 +123,18 @@ func (d *DbMongo) saveAttestation(attestation models.Attestation) error {
 
 	// search if attestation already exists
 	filterAttestation := bsonx.Doc{
-		{models.ATTESTATION_TXID_NAME, bsonx.String(docAttestation.Lookup(models.ATTESTATION_TXID_NAME).StringValue())},
-		{models.ATTESTATION_MERKLE_ROOT_NAME, bsonx.String(docAttestation.Lookup(models.ATTESTATION_MERKLE_ROOT_NAME).StringValue())},
+		{models.AttestationTxidName, bsonx.String(docAttestation.Lookup(models.AttestationTxidName).StringValue())},
+		{models.AttestationMerkleRootName, bsonx.String(docAttestation.Lookup(models.AttestationMerkleRootName).StringValue())},
 	}
 
 	// insert or update attestation
 	var t bsonx.Doc
 	opts := &options.FindOneAndUpdateOptions{}
 	opts.SetUpsert(true)
-	res := d.db.Collection(COL_NAME_ATTESTATION).FindOneAndUpdate(d.ctx, filterAttestation, newAttestation, opts)
+	res := d.db.Collection(ColNameAttestation).FindOneAndUpdate(d.ctx, filterAttestation, newAttestation, opts)
 	resErr := res.Decode(&t)
 	if resErr != nil && resErr != mongo.ErrNoDocuments {
-		return errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_SAVE, resErr))
+		return errors.New(fmt.Sprintf("%s %v", ErrorAttestationSave, resErr))
 	}
 
 	return nil
@@ -146,7 +146,7 @@ func (d *DbMongo) saveAttestationInfo(attestationInfo models.AttestationInfo) er
 	// get document representation of AttestationInfo object
 	docAttestationInfo, docErr := models.GetDocumentFromModel(attestationInfo)
 	if docErr != nil {
-		return errors.New(fmt.Sprintf("%s %v", BAD_DATA_ATTESTATION_INFO_MODEL, docErr))
+		return errors.New(fmt.Sprintf("%s %v", BadDataAttestationInfoModel, docErr))
 	}
 	newAttestationInfo := bsonx.Doc{
 		{"$set", bsonx.Document(*docAttestationInfo)},
@@ -154,17 +154,17 @@ func (d *DbMongo) saveAttestationInfo(attestationInfo models.AttestationInfo) er
 
 	// search if attestationInfo already exists
 	filterAttestationInfo := bsonx.Doc{
-		{models.ATTESTATION_INFO_TXID_NAME, bsonx.String(docAttestationInfo.Lookup(models.ATTESTATION_INFO_TXID_NAME).StringValue())},
+		{models.AttestationInfoTxidName, bsonx.String(docAttestationInfo.Lookup(models.AttestationInfoTxidName).StringValue())},
 	}
 
 	// insert or update attestationInfo
 	var t bsonx.Doc
 	opts := &options.FindOneAndUpdateOptions{}
 	opts.SetUpsert(true)
-	res := d.db.Collection(COL_NAME_ATTESTATION_INFO).FindOneAndUpdate(d.ctx, filterAttestationInfo, newAttestationInfo, opts)
+	res := d.db.Collection(ColNameAttestationInfo).FindOneAndUpdate(d.ctx, filterAttestationInfo, newAttestationInfo, opts)
 	resErr := res.Decode(&t)
 	if resErr != nil && resErr != mongo.ErrNoDocuments {
-		return errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_INFO_SAVE, resErr))
+		return errors.New(fmt.Sprintf("%s %v", ErrorAttestationInfoSave, resErr))
 	}
 
 	return nil
@@ -177,7 +177,7 @@ func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCom
 		// get document representation of Attestation object
 		docCommitment, docErr := models.GetDocumentFromModel(commitments[pos])
 		if docErr != nil {
-			return errors.New(fmt.Sprintf("%s %v", BAD_DATA_MERKLE_COMMITMENT_MODEL, docErr))
+			return errors.New(fmt.Sprintf("%s %v", BadDataMerkleCommitmentModel, docErr))
 		}
 
 		newCommitment := bsonx.Doc{
@@ -186,20 +186,20 @@ func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCom
 
 		// search if merkle commitment already exists
 		filterMerkleCommitment := bsonx.Doc{
-			{models.COMMITMENT_MERKLE_ROOT_NAME,
-				bsonx.String(docCommitment.Lookup(models.COMMITMENT_MERKLE_ROOT_NAME).StringValue())},
-			{models.COMMITMENT_CLIENT_POSITION_NAME,
-				bsonx.Int32(docCommitment.Lookup(models.COMMITMENT_CLIENT_POSITION_NAME).Int32())},
+			{models.CommitmentMerkleRootName,
+				bsonx.String(docCommitment.Lookup(models.CommitmentMerkleRootName).StringValue())},
+			{models.CommitmentClientPositionName,
+				bsonx.Int32(docCommitment.Lookup(models.CommitmentClientPositionName).Int32())},
 		}
 
 		// insert or update merkle commitment
 		var t bsonx.Doc
 		opts := &options.FindOneAndUpdateOptions{}
 		opts.SetUpsert(true)
-		res := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).FindOneAndUpdate(d.ctx, filterMerkleCommitment, newCommitment, opts)
+		res := d.db.Collection(ColNameMerkleCommitment).FindOneAndUpdate(d.ctx, filterMerkleCommitment, newCommitment, opts)
 		resErr := res.Decode(&t)
 		if resErr != nil && resErr != mongo.ErrNoDocuments {
-			return errors.New(fmt.Sprintf("%s %v", ERROR_MERKLE_COMMITMENT_SAVE, resErr))
+			return errors.New(fmt.Sprintf("%s %v", ErrorMerkleCommitmentSave, resErr))
 		}
 	}
 	return nil
@@ -211,7 +211,7 @@ func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error 
 		// get document representation of merkle proof
 		docProof, docErr := models.GetDocumentFromModel(proofs[pos])
 		if docErr != nil {
-			return errors.New(fmt.Sprintf("%s %v", BAD_DATA_MERKLE_PROOF_MODEL, docErr))
+			return errors.New(fmt.Sprintf("%s %v", BadDataMerkleProofModel, docErr))
 		}
 
 		newProof := bsonx.Doc{
@@ -220,20 +220,20 @@ func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error 
 
 		// search if merkle proof already exists
 		filterMerkleProof := bsonx.Doc{
-			{models.PROOF_MERKLE_ROOT_NAME,
-				bsonx.String(docProof.Lookup(models.PROOF_MERKLE_ROOT_NAME).StringValue())},
-			{models.PROOF_CLIENT_POSITION_NAME,
-				bsonx.Int32(docProof.Lookup(models.PROOF_CLIENT_POSITION_NAME).Int32())},
+			{models.ProofMerkleRootName,
+				bsonx.String(docProof.Lookup(models.ProofMerkleRootName).StringValue())},
+			{models.ProofClientPositionName,
+				bsonx.Int32(docProof.Lookup(models.ProofClientPositionName).Int32())},
 		}
 
 		// insert or update merkle proof
 		var t bsonx.Doc
 		opts := &options.FindOneAndUpdateOptions{}
 		opts.SetUpsert(true)
-		res := d.db.Collection(COL_NAME_MERKLE_PROOF).FindOneAndUpdate(d.ctx, filterMerkleProof, newProof, opts)
+		res := d.db.Collection(ColNameMerkleProof).FindOneAndUpdate(d.ctx, filterMerkleProof, newProof, opts)
 		resErr := res.Decode(&t)
 		if resErr != nil && resErr != mongo.ErrNoDocuments {
-			return errors.New(fmt.Sprintf("%s %v", ERROR_MERKLE_PROOF_SAVE, resErr))
+			return errors.New(fmt.Sprintf("%s %v", ErrorMerkleProofSave, resErr))
 		}
 	}
 	return nil
@@ -244,7 +244,7 @@ func (d *DbMongo) SaveClientDetails(details models.ClientDetails) error {
 	// get document representation of client details
 	docDetails, docErr := models.GetDocumentFromModel(details)
 	if docErr != nil {
-		return errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_DETAILS_MODEL, docErr))
+		return errors.New(fmt.Sprintf("%s %v", BadDataClientDetailsModel, docErr))
 	}
 
 	newDetails := bsonx.Doc{
@@ -253,18 +253,18 @@ func (d *DbMongo) SaveClientDetails(details models.ClientDetails) error {
 
 	// search if client details for position already exists
 	filterClientDetails := bsonx.Doc{
-		{models.CLIENT_DETAILS_CLIENT_POSITION_NAME,
-			bsonx.Int32(docDetails.Lookup(models.CLIENT_DETAILS_CLIENT_POSITION_NAME).Int32())},
+		{models.ClientDetailsClientPositionName,
+			bsonx.Int32(docDetails.Lookup(models.ClientDetailsClientPositionName).Int32())},
 	}
 
 	// insert or update client details
 	var t bsonx.Doc
 	opts := &options.FindOneAndUpdateOptions{}
 	opts.SetUpsert(true)
-	res := d.db.Collection(COL_NAME_CLIENT_DETAILS).FindOneAndUpdate(d.ctx, filterClientDetails, newDetails, opts)
+	res := d.db.Collection(ColNameClientDetails).FindOneAndUpdate(d.ctx, filterClientDetails, newDetails, opts)
 	resErr := res.Decode(&t)
 	if resErr != nil && resErr != mongo.ErrNoDocuments {
-		return errors.New(fmt.Sprintf("%s %v", ERROR_CLIENT_DETAILS_SAVE, resErr))
+		return errors.New(fmt.Sprintf("%s %v", ErrorClientDetailsSave, resErr))
 	}
 	return nil
 }
@@ -272,11 +272,11 @@ func (d *DbMongo) SaveClientDetails(details models.ClientDetails) error {
 // Get latest ClientDetails document
 func (d *DbMongo) GetClientDetails() ([]models.ClientDetails, error) {
 	// sort by client position
-	sortFilter := bsonx.Doc{{models.CLIENT_DETAILS_CLIENT_POSITION_NAME, bsonx.Int32(1)}}
-	res, resErr := d.db.Collection(COL_NAME_CLIENT_DETAILS).Find(d.ctx, bsonx.Doc{}, &options.FindOptions{Sort: sortFilter})
+	sortFilter := bsonx.Doc{{models.ClientDetailsClientPositionName, bsonx.Int32(1)}}
+	res, resErr := d.db.Collection(ColNameClientDetails).Find(d.ctx, bsonx.Doc{}, &options.FindOptions{Sort: sortFilter})
 	if resErr != nil {
 		return []models.ClientDetails{},
-			errors.New(fmt.Sprintf("%s %v", ERROR_CLIENT_DETAILS_GET, resErr))
+			errors.New(fmt.Sprintf("%s %v", ErrorClientDetailsGet, resErr))
 	}
 
 	// iterate through details
@@ -285,17 +285,17 @@ func (d *DbMongo) GetClientDetails() ([]models.ClientDetails, error) {
 		var detailsDoc bsonx.Doc
 		if err := res.Decode(&detailsDoc); err != nil {
 			return []models.ClientDetails{},
-				errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_DETAILS_COL, err))
+				errors.New(fmt.Sprintf("%s %v", BadDataClientDetailsCol, err))
 		}
 		detailsModel := &models.ClientDetails{}
 		modelErr := models.GetModelFromDocument(&detailsDoc, detailsModel)
 		if modelErr != nil {
-			return []models.ClientDetails{}, errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_DETAILS_COL, modelErr))
+			return []models.ClientDetails{}, errors.New(fmt.Sprintf("%s %v", BadDataClientDetailsCol, modelErr))
 		}
 		details = append(details, *detailsModel)
 	}
 	if err := res.Err(); err != nil {
-		return []models.ClientDetails{}, errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_DETAILS_COL, err))
+		return []models.ClientDetails{}, errors.New(fmt.Sprintf("%s %v", BadDataClientDetailsCol, err))
 	}
 	return details, nil
 }
@@ -305,14 +305,14 @@ func (d *DbMongo) getAttestationCount(confirmed ...bool) (int64, error) {
 	// set optional confirmed filter
 	confirmedFilter := bsonx.Doc{}
 	if len(confirmed) > 0 {
-		confirmedFilter = bsonx.Doc{{models.ATTESTATION_CONFIRMED_NAME, bsonx.Boolean(confirmed[0])}}
+		confirmedFilter = bsonx.Doc{{models.AttestationConfirmedName, bsonx.Boolean(confirmed[0])}}
 	}
 	// find latest attestation count
 	opts := options.CountOptions{}
 	opts.SetLimit(1)
-	count, countErr := d.db.Collection(COL_NAME_ATTESTATION).Count(d.ctx, confirmedFilter, &opts)
+	count, countErr := d.db.Collection(ColNameAttestation).Count(d.ctx, confirmedFilter, &opts)
 	if countErr != nil {
-		return 0, errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_GET, countErr))
+		return 0, errors.New(fmt.Sprintf("%s %v", ErrorAttestationGet, countErr))
 	}
 
 	return count, nil
@@ -329,16 +329,16 @@ func (d *DbMongo) getLatestAttestationMerkleRoot(confirmed bool) (string, error)
 	}
 
 	// filter by inserted date and confirmed to get latest attestation from Attestation collection
-	sortFilter := bsonx.Doc{{models.ATTESTATION_INSERTED_AT_NAME, bsonx.Int32(-1)}}
-	confirmedFilter := bsonx.Doc{{models.ATTESTATION_CONFIRMED_NAME, bsonx.Boolean(confirmed)}}
+	sortFilter := bsonx.Doc{{models.AttestationInsertedAtName, bsonx.Int32(-1)}}
+	confirmedFilter := bsonx.Doc{{models.AttestationConfirmedName, bsonx.Boolean(confirmed)}}
 
 	var attestationDoc bsonx.Doc
-	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx,
+	resErr := d.db.Collection(ColNameAttestation).FindOne(d.ctx,
 		confirmedFilter, &options.FindOneOptions{Sort: sortFilter}).Decode(&attestationDoc)
 	if resErr != nil {
-		return "", errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_GET, resErr))
+		return "", errors.New(fmt.Sprintf("%s %v", ErrorAttestationGet, resErr))
 	}
-	return attestationDoc.Lookup(models.ATTESTATION_MERKLE_ROOT_NAME).StringValue(), nil
+	return attestationDoc.Lookup(models.AttestationMerkleRootName).StringValue(), nil
 }
 
 // Return Commitment from MerkleCommitment commitments for attestation with given txid hash
@@ -353,18 +353,18 @@ func (d *DbMongo) getAttestationMerkleRoot(txid chainhash.Hash) (string, error) 
 
 	// get merke_root from Attestation collection for attestation txid provided
 	filterAttestation := bsonx.Doc{
-		{models.ATTESTATION_TXID_NAME, bsonx.String(txid.String())},
+		{models.AttestationTxidName, bsonx.String(txid.String())},
 	}
 
 	var attestationDoc bsonx.Doc
-	resErr := d.db.Collection(COL_NAME_ATTESTATION).FindOne(d.ctx, filterAttestation).Decode(&attestationDoc)
+	resErr := d.db.Collection(ColNameAttestation).FindOne(d.ctx, filterAttestation).Decode(&attestationDoc)
 	if resErr != nil {
 		if resErr == mongo.ErrNoDocuments {
 			return "", nil
 		}
-		return "", errors.New(fmt.Sprintf("%s %v", ERROR_ATTESTATION_GET, resErr))
+		return "", errors.New(fmt.Sprintf("%s %v", ErrorAttestationGet, resErr))
 	}
-	return attestationDoc.Lookup(models.COMMITMENT_MERKLE_ROOT_NAME).StringValue(), nil
+	return attestationDoc.Lookup(models.CommitmentMerkleRootName).StringValue(), nil
 }
 
 // Return Commitment from MerkleCommitment commitments for attestation with given txid hash
@@ -378,12 +378,12 @@ func (d *DbMongo) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models
 	}
 
 	// filter MerkleCommitment collection by merkle_root and sort for client position
-	sortFilter := bsonx.Doc{{models.COMMITMENT_CLIENT_POSITION_NAME, bsonx.Int32(1)}}
-	filterMerkleRoot := bsonx.Doc{{models.COMMITMENT_MERKLE_ROOT_NAME, bsonx.String(merkleRoot)}}
-	res, resErr := d.db.Collection(COL_NAME_MERKLE_COMMITMENT).Find(d.ctx, filterMerkleRoot, &options.FindOptions{Sort: sortFilter})
+	sortFilter := bsonx.Doc{{models.CommitmentClientPositionName, bsonx.Int32(1)}}
+	filterMerkleRoot := bsonx.Doc{{models.CommitmentMerkleRootName, bsonx.String(merkleRoot)}}
+	res, resErr := d.db.Collection(ColNameMerkleCommitment).Find(d.ctx, filterMerkleRoot, &options.FindOptions{Sort: sortFilter})
 	if resErr != nil {
 		return []models.CommitmentMerkleCommitment{},
-			errors.New(fmt.Sprintf("%s %v", ERROR_MERKLE_COMMITMENT_GET, resErr))
+			errors.New(fmt.Sprintf("%s %v", ErrorMerkleCommitmentGet, resErr))
 	}
 
 	// fetch commitments
@@ -391,21 +391,21 @@ func (d *DbMongo) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models
 	for res.Next(d.ctx) {
 		var commitmentDoc bsonx.Doc
 		if err := res.Decode(&commitmentDoc); err != nil {
-			fmt.Printf("%s\n", BAD_DATA_MERKLE_COMMITMENT_COL)
+			fmt.Printf("%s\n", BadDataMerkleCommitmentCol)
 			return []models.CommitmentMerkleCommitment{}, err
 		}
 		// decode document result to Commitment model and get hash
 		commitmentModel := &models.CommitmentMerkleCommitment{}
 		modelErr := models.GetModelFromDocument(&commitmentDoc, commitmentModel)
 		if modelErr != nil {
-			fmt.Printf("%s\n", BAD_DATA_MERKLE_COMMITMENT_COL)
+			fmt.Printf("%s\n", BadDataMerkleCommitmentCol)
 			return []models.CommitmentMerkleCommitment{}, modelErr
 		}
 		merkleCommitments = append(merkleCommitments, *commitmentModel)
 	}
 	if err := res.Err(); err != nil {
 		return []models.CommitmentMerkleCommitment{},
-			errors.New(fmt.Sprintf("%s %v", BAD_DATA_MERKLE_COMMITMENT_COL, err))
+			errors.New(fmt.Sprintf("%s %v", BadDataMerkleCommitmentCol, err))
 	}
 	return merkleCommitments, nil
 }
@@ -414,11 +414,11 @@ func (d *DbMongo) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models
 func (d *DbMongo) getClientCommitments() ([]models.ClientCommitment, error) {
 
 	// sort by client position to get correct commitment order
-	sortFilter := bsonx.Doc{{models.CLIENT_COMMITMENT_CLIENT_POSITION_NAME, bsonx.Int32(1)}}
-	res, resErr := d.db.Collection(COL_NAME_CLIENT_COMMITMENT).Find(d.ctx, bsonx.Doc{}, &options.FindOptions{Sort: sortFilter})
+	sortFilter := bsonx.Doc{{models.ClientCommitmentClientPositionName, bsonx.Int32(1)}}
+	res, resErr := d.db.Collection(ColNameClientCommitment).Find(d.ctx, bsonx.Doc{}, &options.FindOptions{Sort: sortFilter})
 	if resErr != nil {
 		return []models.ClientCommitment{},
-			errors.New(fmt.Sprintf("%s %v", ERROR_CLIENT_COMMITMENT_GET, resErr))
+			errors.New(fmt.Sprintf("%s %v", ErrorClientCommitmentGet, resErr))
 	}
 
 	// iterate through commitments
@@ -427,17 +427,17 @@ func (d *DbMongo) getClientCommitments() ([]models.ClientCommitment, error) {
 		var commitmentDoc bsonx.Doc
 		if err := res.Decode(&commitmentDoc); err != nil {
 			return []models.ClientCommitment{},
-				errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_COMMITMENT_COL, err))
+				errors.New(fmt.Sprintf("%s %v", BadDataClientCommitmentCol, err))
 		}
 		commitmentModel := &models.ClientCommitment{}
 		modelErr := models.GetModelFromDocument(&commitmentDoc, commitmentModel)
 		if modelErr != nil {
-			return []models.ClientCommitment{}, errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_COMMITMENT_COL, modelErr))
+			return []models.ClientCommitment{}, errors.New(fmt.Sprintf("%s %v", BadDataClientCommitmentCol, modelErr))
 		}
 		latestCommitments = append(latestCommitments, *commitmentModel)
 	}
 	if err := res.Err(); err != nil {
-		return []models.ClientCommitment{}, errors.New(fmt.Sprintf("%s %v", BAD_DATA_CLIENT_COMMITMENT_COL, err))
+		return []models.ClientCommitment{}, errors.New(fmt.Sprintf("%s %v", BadDataClientCommitmentCol, err))
 	}
 	return latestCommitments, nil
 }
