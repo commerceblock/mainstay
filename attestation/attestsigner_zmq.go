@@ -19,7 +19,6 @@ const (
 	DefaultMainPublisherPort = 5000 // port used by main signer publisher
 
 	// predefined topics for publishing/subscribing via zmq
-	TopicNewHash       = "H"
 	TopicNewTx         = "T"
 	TopicConfirmedHash = "C"
 	TopicSigs          = "S"
@@ -65,11 +64,6 @@ func NewAttestSignerZmq(config confpkg.SignerConfig) AttestSignerZmq {
 // Use zmq publisher to send confirmed hash
 func (z AttestSignerZmq) SendConfirmedHash(hash []byte) {
 	z.publisher.SendMessage(hash, TopicConfirmedHash)
-}
-
-// Use zmq publisher to send new hash
-func (z AttestSignerZmq) SendNewHash(hash []byte) {
-	z.publisher.SendMessage(hash, TopicNewHash)
 }
 
 // Transform received list of bytes into a single byte

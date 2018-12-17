@@ -22,7 +22,6 @@ import (
 // This interface allows building mock struct for testing
 type AttestSigner interface {
 	SendConfirmedHash([]byte)
-	SendNewHash([]byte)
 	SendTxPreImages([][]byte)
 	GetSigs() [][]crypto.Sig
 }

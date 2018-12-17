@@ -25,7 +25,6 @@ type AttestSignerFake struct {
 // store latest hash and transaction
 var signerTxPreImageBytes []byte
 var signerConfirmedHashBytes []byte
-var signerNewHashBytes []byte
 
 // Return new AttestSignerFake instance
 func NewAttestSignerFake(config *confpkg.Config) AttestSignerFake {
@@ -38,11 +37,6 @@ func NewAttestSignerFake(config *confpkg.Config) AttestSignerFake {
 // Store received confirmed hash
 func (f AttestSignerFake) SendConfirmedHash(hash []byte) {
 	signerConfirmedHashBytes = hash
-}
-
-// Store received new hash
-func (f AttestSignerFake) SendNewHash(hash []byte) {
-	signerNewHashBytes = hash
 }
 
 // Store received new tx

@@ -300,9 +300,6 @@ func (s *AttestService) doStateNextCommitment() {
 		return                            // will remain at the same state
 	}
 
-	// publish new commitment hash to clients
-	s.signer.SendNewHash((&latestCommitmentHash).CloneBytes())
-
 	// initialise new attestation with commitment
 	s.attestation = models.NewAttestationDefault()
 	s.attestation.SetCommitment(&latestCommitment)

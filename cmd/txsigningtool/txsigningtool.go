@@ -153,7 +153,7 @@ func init() {
 
 	// comms setup
 	poller = zmq.NewPoller()
-	topics := []string{attestation.TopicNewHash, attestation.TopicNewTx, attestation.TopicConfirmedHash}
+	topics := []string{attestation.TopicNewTx, attestation.TopicConfirmedHash}
 	sub = messengers.NewSubscriberZmq(publisherAddr, topics, poller)
 	pub = messengers.NewPublisherZmq(host, poller)
 }
@@ -167,9 +167,6 @@ func main() {
 				switch topic {
 				case attestation.TopicNewTx:
 					processTx(msg)
-				case attestation.TopicNewHash:
-					nextHash = processHash(msg)
-					fmt.Printf("nexthash %s\n", nextHash.String())
 				case attestation.TopicConfirmedHash:
 					attestedHash = processHash(msg)
 					fmt.Printf("attestedhash %s\n", attestedHash.String())
