@@ -67,7 +67,7 @@ func parseFlags() {
 	flag.StringVar(&pkTopup, "pkTopup", "", "Client pk for topup address")
 	flag.StringVar(&scriptTopup, "scriptTopup", "", "Redeem script for topup")
 
-	flag.StringVar(&host, "host", "*:5001", "Client host to publish signatures at")
+	flag.StringVar(&host, "host", "*:5002", "Client host to publish signatures at")
 	flag.Parse()
 
 	if pk0 == "" && !isRegtest {
@@ -99,9 +99,9 @@ func init() {
 		if configErr != nil {
 			log.Fatal(configErr)
 		}
-		pk0 = test.PrivClient
+		pk0 = test.PrivMain
 		script0 = test.Script
-		pkTopup = test.TopupPrivClient
+		pkTopup = test.TopupPrivMain
 		scriptTopup = test.TopupScript
 		addrTopup = test.TopupAddress
 	} else {

@@ -33,7 +33,7 @@ var testConf = []byte(`
         "chain": "regtest"
     },
     "signer": {
-        "signers": "127.0.0.1:5001"
+        "signers": "127.0.0.1:5001,127.0.0.1:5002"
     },
     "db": {
         "user":"serviceUser",
@@ -46,16 +46,12 @@ var testConf = []byte(`
 `)
 
 // test parameters for a 1-2 multisig redeemScript and P2SH address
-const Address = "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB"
-const Script = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332102f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e7552ae"
+const Address = "2N6kVS5GVY8jRtQV861Q6NchaaHZsyxSU7D"
+const Script = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332103820968a1518a1d6edb9ba168402480cd3988b589f1aa2dd0d60c6cead25794f652ae"
 
-// address - "2N9z6a8BQB1xWmesCJcBWZm1R3f1PZcwrGz"
-// pubkey - "03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33"
+// pubkey hsm -  "03820968a1518a1d6edb9ba168402480cd3988b589f1aa2dd0d60c6cead25794f6"
+// pubkey main - "03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33"
 const PrivMain = "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz"
-
-// address - "2MyC1i1FGy6MZWyMgmZXku4gdWZxWCRa6RL"
-// pubkey -  "02f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e75"
-const PrivClient = "cSS9R4XPpajhqy28hcfHEzEzAbyWDqBaGZR4xtV7Jg8TixSWee1x"
 
 // test parameters for a 1-2 multisig redeemScript and P2SH address for TOPUP
 const TopupAddress = "2NG3LCHuausgrYEsJQjYqhmgDVjRPYYrB5w"
