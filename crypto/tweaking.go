@@ -25,8 +25,8 @@ func GetWalletPrivKey(privKey string) (*btcutil.WIF, error) {
 }
 
 // define consts for derivation path -- all unexported
-const derivationPathSize = 8                                        // derivation path size set to 8
-const derivationPathChildSize = 4                                   // derivation path child size set to 4 bytes
+const derivationPathSize = 16                                       // derivation path size set to 8
+const derivationPathChildSize = 2                                   // derivation path child size set to 4 bytes
 const derivationSize = derivationPathSize * derivationPathChildSize // derivation size 32 bytes
 
 // type for derivation path child

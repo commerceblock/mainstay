@@ -30,13 +30,13 @@ func TestTweaking(t *testing.T) {
 	// test TweakprivKey
 	tweakedPrivKey, errTweak := TweakPrivKey(privKey, tweak.CloneBytes(), mainChainCfg)
 	assert.Equal(t, nil, errTweak)
-	assert.Equal(t, "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKhNQUxRipQauKq", tweakedPrivKey.String())
+	assert.Equal(t, "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo2XQUs8qChQu", tweakedPrivKey.String())
 
 	// test GetAddressFromPrivKey and IsAddrTweakedFromHash
 	addr, errAddr := GetAddressFromPrivKey(tweakedPrivKey, mainChainCfg)
 	assert.Equal(t, nil, errAddr)
 	assert.Equal(t, true, IsAddrTweakedFromHash(addr.String(), tweak.CloneBytes(), privKey, mainChainCfg))
-	assert.Equal(t, "mzas8YeYR3cPa8dqyu8FZVbeJUeV5cE1JL", addr.String())
+	assert.Equal(t, "mhUEBanz8ytATniaVvVNyERkHP9Vc9rpHj", addr.String())
 
 	// Test TweakPubKey and GetAddressFromPubKey
 	pubkey := privKey.PrivKey.PubKey()
@@ -70,35 +70,16 @@ func TestTweaking_getDerivationPathFromTweak(t *testing.T) {
 	path := getDerivationPathFromTweak(hashX.CloneBytes())
 
 	// test output lengths
-	assert.Equal(t, 8, len(path))
-	assert.Equal(t, 32, len(hashXBytes))
+	assert.Equal(t, derivationPathSize, len(path))
+	assert.Equal(t, derivationSize, len(hashXBytes))
 
 	// test all child paths
 	var testPathChild derivationPathChild
 
-	copy(testPathChild[:], hashXBytes[0:4])
-	assert.Equal(t, testPathChild, path[0])
-
-	copy(testPathChild[:], hashXBytes[4:8])
-	assert.Equal(t, testPathChild, path[1])
-
-	copy(testPathChild[:], hashXBytes[8:12])
-	assert.Equal(t, testPathChild, path[2])
-
-	copy(testPathChild[:], hashXBytes[12:16])
-	assert.Equal(t, testPathChild, path[3])
-
-	copy(testPathChild[:], hashXBytes[16:20])
-	assert.Equal(t, testPathChild, path[4])
-
-	copy(testPathChild[:], hashXBytes[20:24])
-	assert.Equal(t, testPathChild, path[5])
-
-	copy(testPathChild[:], hashXBytes[24:28])
-	assert.Equal(t, testPathChild, path[6])
-
-	copy(testPathChild[:], hashXBytes[28:32])
-	assert.Equal(t, testPathChild, path[7])
+	for i := 0; i < derivationPathSize; i++ {
+		copy(testPathChild[:], hashXBytes[i*derivationPathChildSize:(i+1)*derivationPathChildSize])
+		assert.Equal(t, testPathChild, path[i])
+	}
 
 	// test function with invalid hash sizes
 	path = getDerivationPathFromTweak([]byte{1, 2, 3})
@@ -132,7 +113,7 @@ func TestTweaking_childPathTweaking(t *testing.T) {
 	// test all child paths
 	var testPathChild derivationPathChild
 
-	copy(testPathChild[:], hashXBytes[0:4])
+	copy(testPathChild[:], hashXBytes[0:derivationPathChildSize])
 	tweakedVal := tweakValWithPathChild(testPathChild, privVal)
 	tweakedPubX, tweakedPubY := tweakPubWithPathChild(testPathChild, pubX, pubY)
 
