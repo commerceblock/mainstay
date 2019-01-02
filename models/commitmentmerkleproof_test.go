@@ -329,8 +329,7 @@ func TestMerkleProof_BSON(t *testing.T) {
 
 	for pos := range proof0.Ops {
 		arrVal := doc.Lookup(ProofOpsName).Array()[uint(pos)]
-		docOp, docOpErr := GetDocumentFromModel(arrVal)
-		assert.Equal(t, nil, docOpErr)
+		docOp := arrVal.Document()
 		assert.Equal(t, proof0.Ops[pos].Append, docOp.Lookup(ProofOpAppendName).Boolean())
 		assert.Equal(t, proof0.Ops[pos].Commitment.String(), docOp.Lookup(ProofOpCommitmentName).StringValue())
 	}
