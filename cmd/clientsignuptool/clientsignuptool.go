@@ -40,27 +40,41 @@ func init() {
 	}
 }
 
-// read client details and get client position
-func clientPosition() int32 {
+// print client details
+func printClientDetails() {
 	// Read existing clients and get next available client position
 	fmt.Println("existing clients")
 	details, errDb := dbMongo.GetClientDetails()
 	if errDb != nil {
 		log.Fatal(errDb)
 	}
-	var maxClientPosition int32
 	if len(details) == 0 {
 		fmt.Println("no existing client positions")
-		return 0
-	} else {
-		for _, client := range details {
-			if client.ClientPosition > maxClientPosition {
-				maxClientPosition = client.ClientPosition
-			}
-			fmt.Printf("client_position: %d pubkey: %s\n", client.ClientPosition, client.Pubkey)
-		}
+		return
+	}
+	for _, client := range details {
+		fmt.Printf("client_position: %d pubkey: %s name: %s\n",
+			client.ClientPosition, client.Pubkey, client.ClientName)
 	}
 	fmt.Println()
+}
+
+// read client details and get client position
+func clientPosition() int32 {
+	// Read existing clients and get next available client position
+	details, errDb := dbMongo.GetClientDetails()
+	if errDb != nil {
+		log.Fatal(errDb)
+	}
+	var maxClientPosition int32
+	if len(details) == 0 {
+		return 0
+	}
+	for _, client := range details {
+		if client.ClientPosition > maxClientPosition {
+			maxClientPosition = client.ClientPosition
+		}
+	}
 	return maxClientPosition + 1
 }
 
@@ -76,6 +90,7 @@ func main() {
 	fmt.Println("************ Client Signup Tool *************")
 	fmt.Println("*********************************************")
 	fmt.Println()
+	printClientDetails()
 
 	nextClientPosition := clientPosition()
 	fmt.Printf("next available position: %d\n", nextClientPosition)
@@ -113,7 +128,14 @@ func main() {
 	fmt.Println("*********** Inserting New Client ************")
 	fmt.Println("*********************************************")
 	fmt.Println()
-	newClientDetails := models.ClientDetails{ClientPosition: nextClientPosition, AuthToken: uuid.String(), Pubkey: addr}
+	fmt.Print("Insert client name: ")
+	var clientName string
+	fmt.Scanln(&clientName)
+	newClientDetails := models.ClientDetails{
+		ClientPosition: nextClientPosition,
+		AuthToken:      uuid.String(),
+		Pubkey:         addr,
+		ClientName:     clientName}
 	saveErr := dbMongo.SaveClientDetails(newClientDetails)
 	if saveErr != nil {
 		log.Fatal(saveErr)
@@ -123,5 +145,5 @@ func main() {
 	fmt.Printf("auth_token: %s\n", newClientDetails.AuthToken)
 	fmt.Printf("pubkey: %s\n", newClientDetails.Pubkey)
 	fmt.Println()
-	clientPosition()
+	printClientDetails()
 }
