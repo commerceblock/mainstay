@@ -14,8 +14,6 @@ import (
 
 	"mainstay/clients"
 	confpkg "mainstay/config"
-
-	"github.com/btcsuite/btcd/btcjson"
 )
 
 // For regtest attestation demonstration
@@ -96,19 +94,19 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	}
 	oceanClient := confpkg.NewClientFromConfig("ocean", true, testConf)
 
-	// Get first unspent as initial TX for attestation chain
-	unspent, errUnspent := config.MainClient().ListUnspent()
+	// Get transaction for Address as initial TX for attestation chain
+	unspent, errUnspent := config.MainClient().ListTransactions("*")
 	if errUnspent != nil {
 		log.Fatal(errUnspent)
 	}
-	var tx0 btcjson.ListUnspentResult
+	var txid string
 	for _, vout := range unspent {
-		if vout.Amount > 50 { // skip regtest txs
-			tx0 = vout
+		if vout.Address == Address {
+			txid = vout.TxID
 		}
 	}
 
-	config.SetInitTx(tx0.TxID)
+	config.SetInitTx(txid)
 	config.SetInitPK(PrivMain)
 	config.SetInitScript(Script)
 
