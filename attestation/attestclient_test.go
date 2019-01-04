@@ -14,7 +14,7 @@ import (
 	confpkg "mainstay/config"
 	"mainstay/crypto"
 	"mainstay/models"
-	"mainstay/test"
+	testpkg "mainstay/test"
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -182,7 +182,7 @@ func verifyTxs(t *testing.T, client *AttestClient, txs []string) {
 // Test case with single Client Signer
 func TestAttestClient_Signer(t *testing.T) {
 	// TEST INIT
-	test := test.NewTest(false, false)
+	test := testpkg.NewTest(false, false)
 	sideClientFake := test.OceanClient.(*clients.SidechainClientFake)
 	client := NewAttestClient(test.Config, true) // set isSigner flag
 	txs := []string{client.txid0}
@@ -267,7 +267,7 @@ func TestAttestClient_Signer(t *testing.T) {
 // Test 2 attest clients, one signing, one not signing
 func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 	// TEST INIT
-	test := test.NewTest(false, false)
+	test := testpkg.NewTest(false, false)
 	sideClientFake := test.OceanClient.(*clients.SidechainClientFake)
 	client := NewAttestClient(test.Config) // set isSigner flag
 	clientSigner := NewAttestClient(test.Config, true)
@@ -279,6 +279,19 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 
 	lastHash := chainhash.Hash{}
 	topupHash := chainhash.Hash{}
+
+	// test that when attempting to generate a new address with
+	// an empty hash, the intial address/script are returned
+	addrNoHash, scriptNoHash := client.GetNextAttestationAddr(nil, lastHash)
+	assert.Equal(t, testpkg.Address, addrNoHash.String())
+	assert.Equal(t, testpkg.Script, scriptNoHash)
+	assert.Equal(t, client.script0, scriptNoHash)
+	assert.Equal(t, unspent.Address, addrNoHash.String())
+	addrNoHash, scriptNoHash = clientSigner.GetNextAttestationAddr(nil, lastHash)
+	assert.Equal(t, testpkg.Address, addrNoHash.String())
+	assert.Equal(t, testpkg.Script, scriptNoHash)
+	assert.Equal(t, clientSigner.script0, scriptNoHash)
+	assert.Equal(t, unspent.Address, addrNoHash.String())
 
 	// test invalid tx signing
 	_, _, errSign := clientSigner.SignTransaction(chainhash.Hash{}, wire.MsgTx{})
@@ -425,7 +438,7 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 // Test fee bumping on existing attestation
 func TestAttestClient_FeeBumping(t *testing.T) {
 	// TEST INIT
-	test := test.NewTest(false, false)
+	test := testpkg.NewTest(false, false)
 	sideClientFake := test.OceanClient.(*clients.SidechainClientFake)
 	client := NewAttestClient(test.Config, true) // set isSigner flag
 	txs := []string{client.txid0}

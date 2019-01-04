@@ -220,6 +220,12 @@ func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.H
 	// In multisig case tweak all initial pubkeys and import
 	// a multisig address to the main client wallet
 	if len(w.pubkeys) > 0 {
+		// empty hash - no tweaking
+		if hash.IsEqual(&chainhash.Hash{}) {
+			return crypto.CreateMultisig(w.pubkeys, w.numOfSigs, w.MainChainCfg)
+		}
+
+		// hash non empty - tweak each pubkey
 		var tweakedPubs []*btcec.PublicKey
 		hashBytes := hash.CloneBytes()
 		for _, pub := range w.pubkeys {
