@@ -19,6 +19,7 @@ import (
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	_ "github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 )
 
 // Attestation Service is the main processes that handles generating
@@ -166,7 +167,7 @@ func (s *AttestService) Run() {
 func (s *AttestService) doStateError() {
 	log.Println("*AttestService* ATTESTATION SERVICE FAILURE")
 	log.Println(s.errorState)
-	s.state = AStateInit
+	s.state = AStateInit // update attestation state
 }
 
 // part of AStateInit
@@ -221,31 +222,41 @@ func (s *AttestService) stateInitUnspent(unspent btcjson.ListUnspentResult) {
 
 // part of AStateInit
 // handles wallet failure when neither unconfirmed or unspent is found
-// above case should never actually happen - untested grey area
-// TODO: sort this state, as implementation below is incorrect
+// above case should happen very rarely but when it does, import
+// both latest unconfirmed and confirmed attestation addresses to wallet
 func (s *AttestService) stateInitWalletFailure() {
 
 	log.Println("********** wallet failure")
-	s.state = AStateInit
 
-	// // no unspent so there must be a transaction waiting confirmation not on the mempool
-	// // check server for latest unconfirmed attestation
-	// lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash(false)
-	// if s.setFailure(latestErr) {
-	//     return // will rebound to init
-	// }
-	// commitment, commitmentErr := s.server.GetAttestationCommitment(lastCommitmentHash, false)
-	// if s.setFailure(commitmentErr) {
-	//     return // will rebound to init
-	// }
-	// log.Printf("********** found unconfirmed attestation: %s\n", lastCommitmentHash.String())
-	// s.attestation = models.NewAttestation(lastCommitmentHash, &commitment) // initialise attestation
-	// rawTx, _ := s.config.MainClient().GetRawTransaction(&unconfirmedTxid)
-	// s.attestation.Tx = *rawTx.MsgTx() // set msgTx
+	// get last confirmed commitment from server
+	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()
+	if s.setFailure(latestErr) {
+		return // will rebound to init
+	}
 
-	// s.state = AStateAwaitConfirmation // update attestation state
-	// confirmTime = time.Now()
+	// Get latest confirmed attestation address and re-import to wallet
+	paytoaddr, _ := s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), lastCommitmentHash)
+	log.Printf("********** importing latest confirmed addr: %s ...\n", paytoaddr.String())
+	importErr := s.attester.ImportAttestationAddr(paytoaddr)
+	if s.setFailure(importErr) {
+		return // will rebound to init
+	}
 
+	// get last unconfirmed commitment from server
+	lastCommitmentHash, latestErr = s.server.GetLatestAttestationCommitmentHash(false)
+	if s.setFailure(latestErr) {
+		return // will rebound to init
+	}
+
+	// Get latest unconfirmed attestation address and re-import to wallet
+	paytoaddr, _ = s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), lastCommitmentHash)
+	log.Printf("********** importing latest unconfirmed addr: %s ...\n", paytoaddr.String())
+	importErr = s.attester.ImportAttestationAddr(paytoaddr)
+	if s.setFailure(importErr) {
+		return // will rebound to init
+	}
+
+	s.state = AStateInit // update attestation state
 }
 
 // AStateInit
