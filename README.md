@@ -93,3 +93,30 @@ To run this tool you need to first fetch the `TX_HASH` from the `attestationhash
 `go run cmd/confirmationtool/confirmationtool.go -tx TX_HASH -script REDEEM_SCRIPT -position CLIENT_POSITION -apiHost https://mainstay.xyz`
 
 This will initially take some time to sync up all the attestations that have been committed so far and then will wait for any new attestations. Logging is displayed for each attestation and for full details the `-detailed` flag can be used.
+
+### Commitment Tool
+
+The commitment tool `cmd/commitmenttool` can be used to send hash commitments to the Mainstay API.
+
+The tool functions in three different modes:
+
+- Init mode to generate ECDSA keys
+- One time commitment mode
+- Recurrent commitment of Ocean blockhashes mode
+
+Various command line arguments need to be provided:
+
+- `-apiHost`: host address of Mainstay API (default: https://testnet.mainstay.xyz)
+- `-init`: init mode to generate ECDSA pubkey/privkey (default: false)
+- `-ocean`: ocean mode to use recurrent commitment mode (default: false)
+- `-position`: client position on commitment merkle tree
+- `-authtoken`: client authorization token generated on registration
+- `-privkey`: Client private key, if signature has not been generated using a different source
+- `-signature`: Client signature for commitment, for one time mode only
+- `-commitment`: Commitment to be sent to API, for one time mode only
+
+Ocean connectivity details need to be provided in the `cmd/commitmenttool/conf.json` file if Ocean mode is selected.
+
+To run use the following along with the command line arguments, e.g.:
+
+`go run $GOPATH/src/mainstay/cmd/commitmentool/commitmenttool.go -position 5 -authtoken abcbd-eddde-fllqqwoe -commitment 73902d2a365fff2724e26d975148124268ec6a84991016683817ea2c973b199b -signature MEUCIQCuuFmkoYnwRo5CsR7jE3m6MODsQMMLfCL4Vb5ILPYKCAIgCeh1AJD70L0s6TRr5dyoQAwdLbuBwUsgrYTux9XtXn0=`
