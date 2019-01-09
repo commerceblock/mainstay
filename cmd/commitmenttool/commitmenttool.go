@@ -44,6 +44,7 @@ var (
 	position   int    // client position
 	authtoken  string // client authorisation token
 	privkey    string // client private key
+	signature  string // client signature for commitment
 	commitment string // client commitment
 )
 
@@ -60,6 +61,7 @@ func init() {
 	flag.IntVar(&position, "position", -1, "Client merkle commitment position")
 	flag.StringVar(&authtoken, "authtoken", "", "Client authorization token")
 	flag.StringVar(&privkey, "privkey", "", "Client private key for signing")
+	flag.StringVar(&signature, "signature", "", "Client signature for commitment")
 	flag.StringVar(&commitment, "commitment", "", "Client commitment to sign and send")
 	flag.Parse()
 }
@@ -176,9 +178,24 @@ func doStandardMode() {
 		log.Fatal(fmt.Sprintf("Commitment ('%s') to hash error: %v\n", commitment, hashErr))
 	}
 
-	// sign commitment and send
-	sig := sign(hash.CloneBytes())
-	sendErr := send(sig)
+	if signature == "" && privkey == "" {
+		log.Fatal("Need to provide either -signature or -privkey.")
+	}
+
+	// get commitment signature
+	var sigBytes []byte
+	if signature != "" {
+		var sigBytesErr error
+		sigBytes, sigBytesErr = b64.StdEncoding.DecodeString(signature)
+		if sigBytesErr != nil {
+			log.Fatal(fmt.Sprintf("Signature (%s) decoding error: %v\n", signature, sigBytesErr))
+		}
+	} else {
+		sigBytes = sign(hash.CloneBytes())
+	}
+
+	// send signed commitment
+	sendErr := send(sigBytes)
 	if sendErr != nil {
 		log.Fatal(fmt.Sprintf("Commitment send error: %v\n", sendErr))
 	} else {
