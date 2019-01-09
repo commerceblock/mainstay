@@ -11,15 +11,15 @@ import (
 	b64 "encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	_ "encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	_ "io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"time"
 
-	_ "mainstay/config"
+	"mainstay/config"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -40,6 +40,7 @@ var (
 	apiHost string // mainstay host
 	isInit  bool   // init flag
 	isOcean bool   // ocean flag
+	delay   int    // commitment delay
 
 	position   int    // client position
 	authtoken  string // client authorisation token
@@ -56,6 +57,7 @@ func init() {
 	// mode options
 	flag.BoolVar(&isInit, "init", false, "Init mode")
 	flag.BoolVar(&isOcean, "ocean", false, "Ocean mode")
+	flag.IntVar(&delay, "delay", 60, "Delay in minutes between commitments")
 
 	// commitment variables
 	flag.IntVar(&position, "position", -1, "Client merkle commitment position")
@@ -93,13 +95,13 @@ func doInitMode() {
 // data sent:
 // - pubkey (serialized hex format compressed or uncompressed)
 // - authtoken (authorization token generated on signup)
-// - commitment (32 byte hash commitment in bytes)
+// - msg (32 byte hash commitment in hex encoded string)
 // - signature (ECDSA signature encoded to base64)
-func send(sig []byte) error {
+func send(sig []byte, msg string) error {
 
 	// construct payload and signature and bring to base64 format
 	payload := fmt.Sprintf("{\"commitment\": \"%s\", \"position\": %d, \"token\": \"%s\"}",
-		commitment, position, authtoken)
+		msg, position, authtoken)
 	payload64 := b64.StdEncoding.EncodeToString([]byte(payload))
 	sig64 := b64.StdEncoding.EncodeToString(sig)
 	var chunk = fmt.Sprintf("{\"X-MAINSTAY-PAYLOAD\": \"%s\", \"X-MAINSTAY-SIGNATURE\": \"%s\"}",
@@ -160,6 +162,49 @@ func sign(msg []byte) []byte {
 func doOceanMode() {
 	log.Printf("Ocean mode\n")
 
+	// check priv key is set
+	if privkey == "" {
+		log.Fatal("Need to provide -privkey.")
+	}
+
+	// get conf file
+	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + ConfPath)
+	if confErr != nil {
+		log.Fatal(confErr)
+	}
+
+	// get ocean sidechain client from config
+	client := config.NewClientFromConfig(ClientChainName, false, confFile)
+
+	sleepTime := 0 * time.Second // start immediately
+	for {
+		timer := time.NewTimer(sleepTime)
+		select {
+		case <-timer.C:
+			log.Println("Fetching next blockhash commitment...")
+
+			// get next blockhash
+			blockhash, blockhashErr := client.GetBestBlockHash()
+			if blockhashErr != nil {
+				log.Fatal(fmt.Sprintf("Client fetching error: %v\n", blockhashErr))
+			}
+			log.Println("Commitment: ", blockhash.String())
+
+			// sign commitment
+			sigBytes := sign(blockhash.CloneBytes())
+
+			// send signed commitment
+			sendErr := send(sigBytes, hex.EncodeToString(blockhash.CloneBytes()))
+			if sendErr != nil {
+				log.Fatal(fmt.Sprintf("Commitment send error: %v\n", sendErr))
+			} else {
+				log.Println("Success!")
+			}
+
+			sleepTime = time.Duration(delay) * time.Minute
+			log.Printf("********** sleeping for: %s ...\n", sleepTime.String())
+		}
+	}
 }
 
 // Standard mode
@@ -195,7 +240,7 @@ func doStandardMode() {
 	}
 
 	// send signed commitment
-	sendErr := send(sigBytes)
+	sendErr := send(sigBytes, commitment)
 	if sendErr != nil {
 		log.Fatal(fmt.Sprintf("Commitment send error: %v\n", sendErr))
 	} else {
