@@ -43,10 +43,11 @@ var (
 	scriptTopup string
 
 	// communication with attest service
-	sub    *messengers.SubscriberZmq
-	pub    *messengers.PublisherZmq
-	poller *zmq.Poller
-	host   string
+	sub      *messengers.SubscriberZmq
+	pub      *messengers.PublisherZmq
+	poller   *zmq.Poller
+	host     string
+	hostMain string
 
 	attestedHash chainhash.Hash // previous attested hash
 	nextHash     chainhash.Hash // next hash to sign with
@@ -68,6 +69,8 @@ func parseFlags() {
 	flag.StringVar(&scriptTopup, "scriptTopup", "", "Redeem script for topup")
 
 	flag.StringVar(&host, "host", "*:5002", "Client host to publish signatures at")
+	hostMainDefault := fmt.Sprintf("127.0.0.1:%d", attestation.DefaultMainPublisherPort)
+	flag.StringVar(&hostMain, "hostMain", hostMainDefault, "Mainstay host for signer to subscribe to")
 	flag.Parse()
 
 	if pk0 == "" && !isRegtest {
@@ -145,16 +148,10 @@ func init() {
 	// init client interface with isSigner flag set
 	client = attestation.NewAttestClient(config, true)
 
-	// get publisher addr from config, if set
-	publisherAddr := fmt.Sprintf("127.0.0.1:%d", attestation.DefaultMainPublisherPort)
-	if config.SignerConfig().Publisher != "" {
-		publisherAddr = config.SignerConfig().Publisher
-	}
-
 	// comms setup
 	poller = zmq.NewPoller()
 	topics := []string{attestation.TopicNewTx, attestation.TopicConfirmedHash}
-	sub = messengers.NewSubscriberZmq(publisherAddr, topics, poller)
+	sub = messengers.NewSubscriberZmq(hostMain, topics, poller)
 	pub = messengers.NewPublisherZmq(host, poller)
 }
 
