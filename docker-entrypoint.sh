@@ -1,8 +1,8 @@
 #!/bin/bash
 
-export HOST_MAIN="$(uname -n):5000"
-export HOST_1="$(uname -n):5001"
-export HOST_2="$(uname -n):5002"
+export HOST_MAIN="*:5000"
+export HOST_1="*:5001"
+export HOST_2="*:5002"
 
 if [[ "$1" == "mainstay" ]]; then
     echo "Running attestation"
