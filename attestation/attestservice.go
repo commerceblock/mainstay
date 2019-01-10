@@ -334,7 +334,7 @@ func (s *AttestService) doStateNewAttestation() {
 	}
 	paytoaddr, _ := s.attester.GetNextAttestationAddr(key, s.attestation.CommitmentHash())
 	log.Printf("********** importing pay-to addr: %s ...\n", paytoaddr.String())
-	importErr := s.attester.ImportAttestationAddr(paytoaddr)
+	importErr := s.attester.ImportAttestationAddr(paytoaddr, false) // no rescan needed here
 	if s.setFailure(importErr) {
 		return // will rebound to init
 	}

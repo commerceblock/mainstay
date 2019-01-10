@@ -320,7 +320,7 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 		assert.Equal(t, script, scriptTest)
 
 		// test importing address
-		importErr := client.ImportAttestationAddr(addr)
+		importErr := client.ImportAttestationAddr(addr, false)
 		assert.Equal(t, nil, importErr)
 
 		var unspentList []btcjson.ListUnspentResult
