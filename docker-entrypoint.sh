@@ -1,6 +1,5 @@
 #!/bin/bash
 
-export HOST_MAIN="*:5000"
 export HOST_1="*:5001"
 export HOST_2="*:5002"
 
