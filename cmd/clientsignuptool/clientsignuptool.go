@@ -7,6 +7,7 @@ package main
 // Client signup tool
 
 import (
+	"bufio"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -134,8 +135,12 @@ func main() {
 	fmt.Println("*********************************************")
 	fmt.Println()
 	fmt.Print("Insert client name: ")
-	var clientName string
-	fmt.Scanln(&clientName)
+
+	// scan input client name
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	clientName := scanner.Text()
+
 	newClientDetails := models.ClientDetails{
 		ClientPosition: nextClientPosition,
 		AuthToken:      uuid.String(),
