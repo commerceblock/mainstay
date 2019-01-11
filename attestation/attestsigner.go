@@ -24,4 +24,5 @@ type AttestSigner interface {
 	SendConfirmedHash([]byte)
 	SendTxPreImages([][]byte)
 	GetSigs() [][]crypto.Sig
+	ReSubscribe()
 }

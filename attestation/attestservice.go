@@ -140,7 +140,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Se
 func (s *AttestService) Run() {
 	defer s.wg.Done()
 
-	attestDelay = 30 * time.Second // add some delay for subscribers to have time to set up
+	attestDelay = 10 * time.Second // add some delay for subscribers to have time to set up
 
 	for { //Doing attestations using attestation client and waiting for transaction confirmation
 		timer := time.NewTimer(attestDelay)
@@ -415,6 +415,8 @@ func (s *AttestService) doStateSignAttestation() {
 	// sign attestation with combined sigs and last commitment
 	signedTx, signErr := s.attester.signAttestation(&s.attestation.Tx, sigs, lastCommitmentHash)
 	if s.setFailure(signErr) {
+		log.Printf("********** signer failure. resubscribing to signers...")
+		s.signer.ReSubscribe()
 		return // will rebound to init
 	}
 	s.attestation.Tx = *signedTx

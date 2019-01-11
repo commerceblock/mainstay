@@ -34,6 +34,11 @@ func NewAttestSignerFake(config *confpkg.Config) AttestSignerFake {
 	return AttestSignerFake{client: client}
 }
 
+// Resubscribe - do nothing
+func (f AttestSignerFake) ReSubscribe() {
+	return
+}
+
 // Store received confirmed hash
 func (f AttestSignerFake) SendConfirmedHash(hash []byte) {
 	signerConfirmedHashBytes = hash

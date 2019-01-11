@@ -156,21 +156,32 @@ func init() {
 }
 
 func main() {
+	// delay to resubscribe
+	resubscribeDelay := 5 * time.Minute
+	timer := time.NewTimer(resubscribeDelay)
 	for {
-		sockets, _ := poller.Poll(-1)
-		for _, socket := range sockets {
-			if sub.Socket() == socket.Socket {
-				topic, msg := sub.ReadMessage()
-				switch topic {
-				case attestation.TopicNewTx:
-					processTx(msg)
-				case attestation.TopicConfirmedHash:
-					attestedHash = processHash(msg)
-					fmt.Printf("attestedhash %s\n", attestedHash.String())
+		select {
+		case <-timer.C:
+			log.Println("resubscribing to mainstay...")
+			topics := []string{attestation.TopicNewTx, attestation.TopicConfirmedHash}
+			sub = messengers.NewSubscriberZmq(hostMain, topics, poller)
+			timer = time.NewTimer(resubscribeDelay)
+		default:
+			sockets, _ := poller.Poll(-1)
+			for _, socket := range sockets {
+				if sub.Socket() == socket.Socket {
+					topic, msg := sub.ReadMessage()
+					switch topic {
+					case attestation.TopicNewTx:
+						processTx(msg)
+					case attestation.TopicConfirmedHash:
+						attestedHash = processHash(msg)
+						log.Printf("attestedhash %s\n", attestedHash.String())
+					}
 				}
 			}
+			time.Sleep(1 * time.Second)
 		}
-		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -214,7 +225,7 @@ func processTx(msg []byte) {
 		// add hash type to signature as well
 		sigBytes := append(sig.Serialize(), []byte{byte(1)}...)
 
-		fmt.Printf("sending sig(%d) %s\n", txIt, hex.EncodeToString(sigBytes))
+		log.Printf("sending sig(%d) %s\n", txIt, hex.EncodeToString(sigBytes))
 
 		sigs = append(sigs, sigBytes)
 	}

@@ -35,13 +35,16 @@ type AttestSignerZmq struct {
 
 	// zmq subscribe interface to signers to receive tx signatures
 	subscribers []*messengers.SubscriberZmq
+
+	// store config for future later use when resubscribing
+	config confpkg.SignerConfig
 }
 
 // poller to add all subscriber/publisher sockets
 var poller *zmq.Poller
 
 // Return new AttestSignerZmq instance
-func NewAttestSignerZmq(config confpkg.SignerConfig) AttestSignerZmq {
+func NewAttestSignerZmq(config confpkg.SignerConfig) *AttestSignerZmq {
 	// get publisher addr from config, if set
 	publisherAddr := fmt.Sprintf("*:%d", DefaultMainPublisherPort)
 	if config.Publisher != "" {
@@ -58,7 +61,17 @@ func NewAttestSignerZmq(config confpkg.SignerConfig) AttestSignerZmq {
 		subscribers = append(subscribers, messengers.NewSubscriberZmq(nodeaddr, subtopics, poller))
 	}
 
-	return AttestSignerZmq{publisher, subscribers}
+	return &AttestSignerZmq{publisher, subscribers, config}
+}
+
+// Zmq Resubscribe to the transaction signers
+func (z *AttestSignerZmq) ReSubscribe() {
+	var subscribers []*messengers.SubscriberZmq
+	subtopics := []string{TopicSigs}
+	for _, nodeaddr := range z.config.Signers {
+		subscribers = append(subscribers, messengers.NewSubscriberZmq(nodeaddr, subtopics, poller))
+	}
+	z.subscribers = subscribers
 }
 
 // Use zmq publisher to send confirmed hash
