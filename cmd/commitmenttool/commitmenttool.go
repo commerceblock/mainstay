@@ -190,11 +190,14 @@ func doOceanMode() {
 			}
 			log.Println("Commitment: ", blockhash.String())
 
+			// get reverse blockhash bytes as this is how blockhashes are displayed
+			revBlockHashBytes, _ := hex.DecodeString(blockhash.String())
+
 			// sign commitment
-			sigBytes := sign(blockhash.CloneBytes())
+			sigBytes := sign(revBlockHashBytes)
 
 			// send signed commitment
-			sendErr := send(sigBytes, hex.EncodeToString(blockhash.CloneBytes()))
+			sendErr := send(sigBytes, hex.EncodeToString(revBlockHashBytes))
 			if sendErr != nil {
 				log.Fatal(fmt.Sprintf("Commitment send error: %v\n", sendErr))
 			} else {
