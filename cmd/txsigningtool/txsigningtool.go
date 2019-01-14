@@ -43,10 +43,11 @@ var (
 	scriptTopup string
 
 	// communication with attest service
-	sub    *messengers.SubscriberZmq
-	pub    *messengers.PublisherZmq
-	poller *zmq.Poller
-	host   string
+	sub      *messengers.SubscriberZmq
+	pub      *messengers.PublisherZmq
+	poller   *zmq.Poller
+	host     string
+	hostMain string
 
 	attestedHash chainhash.Hash // previous attested hash
 	nextHash     chainhash.Hash // next hash to sign with
@@ -67,7 +68,9 @@ func parseFlags() {
 	flag.StringVar(&pkTopup, "pkTopup", "", "Client pk for topup address")
 	flag.StringVar(&scriptTopup, "scriptTopup", "", "Redeem script for topup")
 
-	flag.StringVar(&host, "host", "*:5001", "Client host to publish signatures at")
+	flag.StringVar(&host, "host", "*:5002", "Client host to publish signatures at")
+	hostMainDefault := fmt.Sprintf("127.0.0.1:%d", attestation.DefaultMainPublisherPort)
+	flag.StringVar(&hostMain, "hostMain", hostMainDefault, "Mainstay host for signer to subscribe to")
 	flag.Parse()
 
 	if pk0 == "" && !isRegtest {
@@ -99,9 +102,9 @@ func init() {
 		if configErr != nil {
 			log.Fatal(configErr)
 		}
-		pk0 = test.PrivClient
+		pk0 = test.PrivMain
 		script0 = test.Script
-		pkTopup = test.TopupPrivClient
+		pkTopup = test.TopupPrivMain
 		scriptTopup = test.TopupScript
 		addrTopup = test.TopupAddress
 	} else {
@@ -145,38 +148,40 @@ func init() {
 	// init client interface with isSigner flag set
 	client = attestation.NewAttestClient(config, true)
 
-	// get publisher addr from config, if set
-	publisherAddr := fmt.Sprintf("127.0.0.1:%d", attestation.DefaultMainPublisherPort)
-	if config.SignerConfig().Publisher != "" {
-		publisherAddr = config.SignerConfig().Publisher
-	}
-
 	// comms setup
 	poller = zmq.NewPoller()
-	topics := []string{attestation.TopicNewHash, attestation.TopicNewTx, attestation.TopicConfirmedHash}
-	sub = messengers.NewSubscriberZmq(publisherAddr, topics, poller)
+	topics := []string{attestation.TopicNewTx, attestation.TopicConfirmedHash}
+	sub = messengers.NewSubscriberZmq(hostMain, topics, poller)
 	pub = messengers.NewPublisherZmq(host, poller)
 }
 
 func main() {
+	// delay to resubscribe
+	resubscribeDelay := 5 * time.Minute
+	timer := time.NewTimer(resubscribeDelay)
 	for {
-		sockets, _ := poller.Poll(-1)
-		for _, socket := range sockets {
-			if sub.Socket() == socket.Socket {
-				topic, msg := sub.ReadMessage()
-				switch topic {
-				case attestation.TopicNewTx:
-					processTx(msg)
-				case attestation.TopicNewHash:
-					nextHash = processHash(msg)
-					fmt.Printf("nexthash %s\n", nextHash.String())
-				case attestation.TopicConfirmedHash:
-					attestedHash = processHash(msg)
-					fmt.Printf("attestedhash %s\n", attestedHash.String())
+		select {
+		case <-timer.C:
+			log.Println("resubscribing to mainstay...")
+			topics := []string{attestation.TopicNewTx, attestation.TopicConfirmedHash}
+			sub = messengers.NewSubscriberZmq(hostMain, topics, poller)
+			timer = time.NewTimer(resubscribeDelay)
+		default:
+			sockets, _ := poller.Poll(-1)
+			for _, socket := range sockets {
+				if sub.Socket() == socket.Socket {
+					topic, msg := sub.ReadMessage()
+					switch topic {
+					case attestation.TopicNewTx:
+						processTx(msg)
+					case attestation.TopicConfirmedHash:
+						attestedHash = processHash(msg)
+						log.Printf("attestedhash %s\n", attestedHash.String())
+					}
 				}
 			}
+			time.Sleep(1 * time.Second)
 		}
-		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -220,7 +225,7 @@ func processTx(msg []byte) {
 		// add hash type to signature as well
 		sigBytes := append(sig.Serialize(), []byte{byte(1)}...)
 
-		fmt.Printf("sending sig(%d) %s\n", txIt, hex.EncodeToString(sigBytes))
+		log.Printf("sending sig(%d) %s\n", txIt, hex.EncodeToString(sigBytes))
 
 		sigs = append(sigs, sigBytes)
 	}

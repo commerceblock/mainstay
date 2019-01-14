@@ -220,6 +220,12 @@ func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.H
 	// In multisig case tweak all initial pubkeys and import
 	// a multisig address to the main client wallet
 	if len(w.pubkeys) > 0 {
+		// empty hash - no tweaking
+		if hash.IsEqual(&chainhash.Hash{}) {
+			return crypto.CreateMultisig(w.pubkeys, w.numOfSigs, w.MainChainCfg)
+		}
+
+		// hash non empty - tweak each pubkey
 		var tweakedPubs []*btcec.PublicKey
 		hashBytes := hash.CloneBytes()
 		for _, pub := range w.pubkeys {
@@ -241,9 +247,17 @@ func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.H
 // Method to import address to client rpc wallet and report import error
 // This address is required to watch unspent and mempool transactions
 // IDEALLY would import the P2SH script as well, but not supported by btcsuite
-func (w *AttestClient) ImportAttestationAddr(addr btcutil.Address) error {
+// Optional argument to set rescan flag for import - default value set to true
+func (w *AttestClient) ImportAttestationAddr(addr btcutil.Address, rescan ...bool) error {
+
+	// check if rescan is set - defaults to true
+	var isRescan = true
+	if len(rescan) > 0 {
+		isRescan = rescan[0]
+	}
+
 	// import address for unspent watching
-	importErr := w.MainClient.ImportAddress(addr.String())
+	importErr := w.MainClient.ImportAddressRescan(addr.String(), "", isRescan)
 	if importErr != nil {
 		return importErr
 	}

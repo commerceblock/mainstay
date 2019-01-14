@@ -13,6 +13,7 @@ type ClientDetails struct {
 	ClientPosition int32  `bson:"client_position"`
 	AuthToken      string `bson:"auth_token"`
 	Pubkey         string `bson:"pubkey"`
+	ClientName     string `bson:"client_name"`
 }
 
 // ClientDetails field names
@@ -20,4 +21,5 @@ const (
 	ClientDetailsClientPositionName = "client_position"
 	ClientDetailsAuthTokenName      = "auth_token"
 	ClientDetailsPubkeyName         = "pubkey"
+	ClientDetailsClientNameName     = "client_name"
 )
