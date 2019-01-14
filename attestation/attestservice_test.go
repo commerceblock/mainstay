@@ -27,6 +27,15 @@ func verifyStateInit(t *testing.T, attestService *AttestService) {
 	assert.Equal(t, AStateInit, attestService.state)
 }
 
+// verify AStateInit wallet failure
+// feature is hard to test without crashing the bitcoin
+// wallet, therefore just testing it doesn't break anything
+func verifyStateInitWalletFailure(t *testing.T, attestService *AttestService) {
+	// hard to test - just run here for now
+	attestService.stateInitWalletFailure()
+	assert.Equal(t, AStateInit, attestService.state)
+}
+
 // verify AStateInit to AStateNextCommitment
 func verifyStateInitToNextCommitment(t *testing.T, attestService *AttestService) {
 	attestService.doAttestation()
@@ -448,6 +457,7 @@ func TestAttestService_FailureInit(t *testing.T) {
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
+	verifyStateInitWalletFailure(t, attestService)
 	// Test AStateInit -> AStateNextCommitment
 	verifyStateInitToNextCommitment(t, attestService)
 
@@ -477,6 +487,7 @@ func TestAttestService_FailureNextCommitment(t *testing.T) {
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
+	verifyStateInitWalletFailure(t, attestService)
 	// Test AStateInit -> AStateNextCommitment
 	verifyStateInitToNextCommitment(t, attestService)
 
@@ -519,6 +530,7 @@ func TestAttestService_FailureNewAttestation(t *testing.T) {
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
+	verifyStateInitWalletFailure(t, attestService)
 	// Test AStateInit -> AStateNextCommitment
 	verifyStateInitToNextCommitment(t, attestService)
 
@@ -563,6 +575,7 @@ func TestAttestService_FailureSignAttestation(t *testing.T) {
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
+	verifyStateInitWalletFailure(t, attestService)
 
 	// Test AStateInit -> AStateNextCommitment
 	verifyStateInitToNextCommitment(t, attestService)
@@ -613,6 +626,7 @@ func TestAttestService_FailurePreSendStore(t *testing.T) {
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
+	verifyStateInitWalletFailure(t, attestService)
 
 	// Test AStateInit -> AStateNextCommitment
 	verifyStateInitToNextCommitment(t, attestService)
@@ -748,6 +762,7 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
+	verifyStateInitWalletFailure(t, attestService)
 	// Test AStateInit -> AStateNextCommitment
 	verifyStateInitToNextCommitment(t, attestService)
 
