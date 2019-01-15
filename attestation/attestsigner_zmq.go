@@ -6,6 +6,7 @@ package attestation
 
 import (
 	"fmt"
+	"log"
 
 	confpkg "mainstay/config"
 	"mainstay/crypto"
@@ -66,6 +67,13 @@ func NewAttestSignerZmq(config confpkg.SignerConfig) *AttestSignerZmq {
 
 // Zmq Resubscribe to the transaction signers
 func (z *AttestSignerZmq) ReSubscribe() {
+	// close current sockets
+	for _, sub := range z.subscribers {
+		sub.Close(poller)
+	}
+	z.subscribers = nil // empty slice
+
+	// reconnect to signers
 	var subscribers []*messengers.SubscriberZmq
 	subtopics := []string{TopicSigs}
 	for _, nodeaddr := range z.config.Signers {
@@ -173,7 +181,10 @@ func updateNumOfTxInputs(msgSplit [][]byte, numOfInputs int) int {
 func (z AttestSignerZmq) GetSigs() [][]crypto.Sig {
 	var msgs [][][]byte
 	numOfTxInputs := 0
-	sockets, _ := poller.Poll(-1)
+	sockets, pollErr := poller.Poll(-1)
+	if pollErr != nil {
+		log.Println(pollErr)
+	}
 	for _, socket := range sockets {
 		for _, sub := range z.subscribers {
 			if sub.Socket() == socket.Socket {

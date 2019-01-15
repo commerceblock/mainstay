@@ -157,12 +157,15 @@ func init() {
 
 func main() {
 	// delay to resubscribe
-	resubscribeDelay := 5 * time.Minute
+	resubscribeDelay := 90 * time.Minute
 	timer := time.NewTimer(resubscribeDelay)
 	for {
 		select {
 		case <-timer.C:
 			log.Println("resubscribing to mainstay...")
+			// remove socket and close
+			sub.Close(poller)
+			// re-assign subscriber socket
 			topics := []string{attestation.TopicNewTx, attestation.TopicConfirmedHash}
 			sub = messengers.NewSubscriberZmq(hostMain, topics, poller)
 			timer = time.NewTimer(resubscribeDelay)
