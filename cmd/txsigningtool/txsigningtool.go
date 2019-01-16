@@ -157,7 +157,7 @@ func init() {
 
 func main() {
 	// delay to resubscribe
-	resubscribeDelay := 90 * time.Minute
+	resubscribeDelay := 5 * time.Minute
 	timer := time.NewTimer(resubscribeDelay)
 	for {
 		select {
