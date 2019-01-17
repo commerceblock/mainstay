@@ -27,8 +27,9 @@ func (s *SubscriberZmq) ReadMessage() (string, []byte) {
 	return string(address), contents
 }
 
-// Close underlying zmq socket - To be used with defer
-func (s *SubscriberZmq) Close() {
+// Close underlying zmq socket and remove from poller - To be used with defer
+func (s *SubscriberZmq) Close(poller *zmq.Poller) {
+	poller.RemoveBySocket(s.Socket())
 	s.socket.Close()
 }
 
