@@ -163,6 +163,9 @@ func main() {
 		select {
 		case <-timer.C:
 			log.Println("resubscribing to mainstay...")
+			// remove socket and close
+			sub.Close(poller)
+			// re-assign subscriber socket
 			topics := []string{attestation.TopicNewTx, attestation.TopicConfirmedHash}
 			sub = messengers.NewSubscriberZmq(hostMain, topics, poller)
 			timer = time.NewTimer(resubscribeDelay)
