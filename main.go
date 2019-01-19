@@ -99,9 +99,12 @@ func main() {
 	wg.Add(1)
 	go attestService.Run()
 
-	if isRegtest { // In regtest demo mode do block generation work
+	// In regtest demo mode do block generation work
+	// Also auto commitment to ClientCommitment to
+	// allow easier testing without db intervention
+	if isRegtest {
 		wg.Add(1)
-		go test.DoRegtestWork(mainConfig, wg, ctx)
+		go test.DoRegtestWork(dbInterface, mainConfig, wg, ctx)
 	}
 	wg.Wait()
 }

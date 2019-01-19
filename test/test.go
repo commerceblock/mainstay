@@ -14,6 +14,8 @@ import (
 
 	"mainstay/clients"
 	confpkg "mainstay/config"
+	"mainstay/models"
+	"mainstay/server"
 )
 
 // For regtest attestation demonstration
@@ -44,10 +46,10 @@ var testConf = []byte(`
 `)
 
 // test parameters for a 1-2 multisig redeemScript and P2SH address
-const Address = "2N6kVS5GVY8jRtQV861Q6NchaaHZsyxSU7D"
-const Script = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332103820968a1518a1d6edb9ba168402480cd3988b589f1aa2dd0d60c6cead25794f652ae"
+const Address = "2N8AAQy6SH5HGoAtzwr5xp4LTicqJ3fic8d"
+const Script = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b3321037361a2dba6a9e82faaf5465c36937adba283c878c506000b8479894c6f9cbae752ae"
 
-// pubkey hsm -  "03820968a1518a1d6edb9ba168402480cd3988b589f1aa2dd0d60c6cead25794f6"
+// pubkey hsm -  "037361a2dba6a9e82faaf5465c36937adba283c878c506000b8479894c6f9cbae7"
 // pubkey main - "03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33"
 const PrivMain = "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz"
 
@@ -119,16 +121,40 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	return &Test{config, oceanClient}
 }
 
-// Work on main client for regtest - block generation automatically
-func DoRegtestWork(config *confpkg.Config, wg *sync.WaitGroup, ctx context.Context) {
+// Work on main client for regtest
+// Do block generation automatically
+// Do auto commitment for position 0
+func DoRegtestWork(dbMongo *server.DbMongo, config *confpkg.Config, wg *sync.WaitGroup, ctx context.Context) {
 	defer wg.Done()
+	doCommit := false
 	for {
 		newBlockTimer := time.NewTimer(60 * time.Second)
 		select {
 		case <-ctx.Done():
 			return
 		case <-newBlockTimer.C:
-			config.MainClient().Generate(1)
+			// generate and get hash
+			hash, genErr := config.MainClient().Generate(1)
+			if genErr != nil {
+				log.Println(genErr)
+			}
+
+			// every other block generation commit
+			// dummy block hash as commitment for
+			// client position 0 in ClientCommitment
+			if doCommit {
+				newClientCommitment := models.ClientCommitment{
+					Commitment:     *hash[0],
+					ClientPosition: 0}
+
+				saveErr := dbMongo.SaveClientCommitment(newClientCommitment)
+				if saveErr != nil {
+					log.Println(saveErr)
+				}
+				doCommit = false
+			} else {
+				doCommit = true
+			}
 		}
 	}
 }
