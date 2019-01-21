@@ -5,6 +5,7 @@
 package staychain
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -17,6 +18,7 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcutil/hdkeychain"
 )
 
 // mainstay API url consts
@@ -85,18 +87,44 @@ type ChainVerifier struct {
 	apiHost      string
 	cfgMain      *chaincfg.Params
 	position     int
-	pubkeys      []*btcec.PublicKey
+	pubkeys      []*hdkeychain.ExtendedKey
 	numOfSigs    int
 	latestHeight int64
 }
 
 // Return new Chain Verifier instance that verifies attestations on the side chain
-func NewChainVerifier(cfgMain *chaincfg.Params, side clients.SidechainClient, position int, script string, host string) ChainVerifier {
+func NewChainVerifier(cfgMain *chaincfg.Params, side clients.SidechainClient, position int, script string, chaincodesStr []string, host string) ChainVerifier {
 
 	// parse base pubkeys from multisig redeemscript of attestation service
 	pubkeys, numOfSigs := crypto.ParseRedeemScript(script)
 
-	return ChainVerifier{side, host, cfgMain, position, pubkeys, numOfSigs, 0}
+	// get chaincodes of pubkeys from config
+	if len(chaincodesStr) != len(pubkeys) {
+		log.Fatal(fmt.Sprintf("Missing chaincodes for pubkeys %d != %d", len(chaincodesStr), len(pubkeys)))
+	}
+
+	// get chaincode bytes
+	chaincodes := make([][]byte, len(pubkeys))
+	for i_c := range chaincodesStr {
+		ccBytes, ccBytesErr := hex.DecodeString(chaincodesStr[i_c])
+		if ccBytesErr != nil || len(ccBytes) != 32 {
+			log.Fatal(fmt.Sprintf("Invalid chaincode provided %s", chaincodesStr[i_c]))
+		}
+		chaincodes[i_c] = append(chaincodes[i_c], ccBytes...)
+	}
+
+	// parse extended pubkeys
+	var pubkeysExtended []*hdkeychain.ExtendedKey
+	for i_p, pub := range pubkeys {
+		// Ignoring any fields except key and chaincode, as these are only used for
+		// child derivation and these two fields are the only required for this
+		// Since any child key will be derived from these, depth limits makes no sense
+		// Xpubs/xprivs are also never exported so full configuration is irrelevant
+		pubkeysExtended = append(pubkeysExtended,
+			hdkeychain.NewExtendedKey([]byte{}, pub.SerializeCompressed(), chaincodes[i_p], []byte{}, 0, 0, false))
+	}
+
+	return ChainVerifier{side, host, cfgMain, position, pubkeysExtended, numOfSigs, 0}
 }
 
 // Basic verification for vout size and number of addresses
@@ -126,7 +154,16 @@ func (v *ChainVerifier) verifyTxAddr(tx Tx, root string) error {
 
 	// tweak base pubkey with commitment from api
 	for _, pub := range v.pubkeys {
-		tweakedPub := crypto.TweakPubKey(pub, commitmentBytes)
+		// tweak extended pubkeys
+		// pseudo bip-32 child derivation to do pub key tweaking
+		tweakedKey, tweakErr := crypto.TweakExtendedKey(pub, commitmentBytes)
+		if tweakErr != nil {
+			return &ChainVerifierError{tweakErr.Error()}
+		}
+		tweakedPub, tweakPubErr := tweakedKey.ECPubKey()
+		if tweakPubErr != nil {
+			return &ChainVerifierError{tweakPubErr.Error()}
+		}
 		tweakedPubs = append(tweakedPubs, tweakedPub)
 	}
 	tweakedAddr, _ := crypto.CreateMultisig(tweakedPubs, v.numOfSigs, v.cfgMain)
