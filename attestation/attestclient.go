@@ -41,6 +41,8 @@ const (
 	ErrorSigsMissingForTx           = `Missing signatures for transaction`
 	ErrorSigsMissingForVin          = `Missing signatures for transaction input`
 	ErrorInputMissingForTx          = `Missing input for transaction`
+	ErrorInvalidChaincode           = `Invalid chaincode provided`
+	ErrorMissingChaincodes          = `Missing chaincodes for pubkeys`
 )
 
 // coin in satoshis
@@ -80,6 +82,7 @@ type AttestClient struct {
 	script0         string
 	pubkeysExtended []*hdkeychain.ExtendedKey
 	pubkeys         []*btcec.PublicKey
+	chaincodes      [][]byte
 	numOfSigs       int
 	addrTopup       string
 	scriptTopup     string
@@ -97,9 +100,6 @@ type AttestClient struct {
 // Initially locates the genesis transaction in the main chain wallet
 // and verifies that the corresponding private key is in the wallet
 func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
-
-	// TODO: proper chaincode handling from config
-	chainCodeBytes, _ := hex.DecodeString("0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa")
 
 	// optional flag to set attest client as signer
 	isSigner := false
@@ -151,12 +151,28 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 	if multisig != "" { // if multisig is set, parse pubkeys
 		pubkeys, numOfSigs := crypto.ParseRedeemScript(config.InitScript())
 
+		// get chaincodes of pubkeys from config
+		chaincodesStr := config.InitChaincodes()
+		if len(chaincodesStr) != len(pubkeys) {
+			log.Fatal(fmt.Sprintf("%s %d != %d", ErrorMissingChaincodes, len(chaincodesStr), len(pubkeys)))
+		}
+		chaincodes := make([][]byte, len(pubkeys))
+		for i_c := range chaincodesStr {
+			ccBytes, ccBytesErr := hex.DecodeString(chaincodesStr[i_c])
+			if ccBytesErr != nil || len(ccBytes) != 32 {
+				log.Fatal(fmt.Sprintf("%s %s", ErrorInvalidChaincode, chaincodesStr[i_c]))
+			}
+			chaincodes[i_c] = append(chaincodes[i_c], ccBytes...)
+		}
+
 		// verify our key is one of the multisig keys in signer case
+		var myChaincode []byte
 		if isSigner {
 			myFound := false
-			for _, pub := range pubkeys {
+			for i_p, pub := range pubkeys {
 				if pkWif.PrivKey.PubKey().IsEqual(pub) {
 					myFound = true
+					myChaincode = chaincodes[i_p]
 				}
 			}
 			if !myFound {
@@ -168,13 +184,13 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		// using extended keys instead of normal pubkeys in order to perform key tweaking
 		// via bip-32 child derivation as opposed to regular cryptograpic tweaking
 		var pubkeysExtended []*hdkeychain.ExtendedKey
-		for _, pub := range pubkeys {
+		for i_p, pub := range pubkeys {
 			// Ignoring any fields except key and chaincode, as these are only used for
 			// child derivation and these two fields are the only required for this
 			// Since any child key will be derived from these, depth limits makes no sense
 			// Xpubs/xprivs are also never exported so full configuration is irrelevant
 			pubkeysExtended = append(pubkeysExtended,
-				hdkeychain.NewExtendedKey([]byte{}, pub.SerializeCompressed(), chainCodeBytes, []byte{}, 0, 0, false))
+				hdkeychain.NewExtendedKey([]byte{}, pub.SerializeCompressed(), chaincodes[i_p], []byte{}, 0, 0, false))
 		}
 
 		return &AttestClient{
@@ -185,12 +201,13 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 			script0:         multisig,
 			pubkeysExtended: pubkeysExtended,
 			pubkeys:         pubkeys,
+			chaincodes:      chaincodes,
 			numOfSigs:       numOfSigs,
 			addrTopup:       topupAddrStr,
 			scriptTopup:     topupScriptStr,
 			WalletPriv:      pkWif,
 			WalletPrivTopup: pkWifTopup,
-			WalletChainCode: chainCodeBytes}
+			WalletChainCode: myChaincode}
 	}
 	return &AttestClient{
 		MainClient:      config.MainClient(),
@@ -198,14 +215,15 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		Fees:            NewAttestFees(config.FeesConfig()),
 		txid0:           config.InitTx(),
 		script0:         multisig,
-		pubkeysExtended: []*hdkeychain.ExtendedKey{},
-		pubkeys:         []*btcec.PublicKey{},
+		pubkeysExtended: nil,
+		pubkeys:         nil,
+		chaincodes:      nil,
 		numOfSigs:       1,
 		addrTopup:       topupAddrStr,
 		scriptTopup:     topupScriptStr,
 		WalletPriv:      pkWif,
 		WalletPrivTopup: pkWifTopup,
-		WalletChainCode: chainCodeBytes}
+		WalletChainCode: []byte{}}
 }
 
 // Get next attestation key by tweaking with latest commitment hash

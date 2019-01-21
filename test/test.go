@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -48,6 +49,7 @@ var testConf = []byte(`
 // test parameters for a 1-2 multisig redeemScript and P2SH address
 const Address = "2N8AAQy6SH5HGoAtzwr5xp4LTicqJ3fic8d"
 const Script = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b3321037361a2dba6a9e82faaf5465c36937adba283c878c506000b8479894c6f9cbae752ae"
+const InitChaincodes = "1a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa,0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa"
 
 // pubkey hsm -  "037361a2dba6a9e82faaf5465c36937adba283c878c506000b8479894c6f9cbae7"
 // pubkey main - "03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33"
@@ -111,6 +113,7 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	config.SetInitTx(txid)
 	config.SetInitPK(PrivMain)
 	config.SetInitScript(Script)
+	config.SetInitChaincodes(strings.Split(InitChaincodes, ","))
 
 	// set topupScript-topupAddress same as init script/addr
 	config.SetTopupScript(TopupScript)
