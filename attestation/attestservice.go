@@ -235,7 +235,10 @@ func (s *AttestService) stateInitWalletFailure() {
 	}
 
 	// Get latest confirmed attestation address and re-import to wallet
-	paytoaddr, _ := s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), lastCommitmentHash)
+	paytoaddr, _, addrErr := s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), lastCommitmentHash)
+	if s.setFailure(addrErr) {
+		return // will rebound to init
+	}
 	log.Printf("********** importing latest confirmed addr: %s ...\n", paytoaddr.String())
 	importErr := s.attester.ImportAttestationAddr(paytoaddr)
 	if s.setFailure(importErr) {
@@ -249,7 +252,10 @@ func (s *AttestService) stateInitWalletFailure() {
 	}
 
 	// Get latest unconfirmed attestation address and re-import to wallet
-	paytoaddr, _ = s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), lastCommitmentHash)
+	paytoaddr, _, addrErr = s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), lastCommitmentHash)
+	if s.setFailure(addrErr) {
+		return // will rebound to init
+	}
 	log.Printf("********** importing latest unconfirmed addr: %s ...\n", paytoaddr.String())
 	importErr = s.attester.ImportAttestationAddr(paytoaddr)
 	if s.setFailure(importErr) {
@@ -332,7 +338,10 @@ func (s *AttestService) doStateNewAttestation() {
 	if s.setFailure(keyErr) {
 		return // will rebound to init
 	}
-	paytoaddr, _ := s.attester.GetNextAttestationAddr(key, s.attestation.CommitmentHash())
+	paytoaddr, _, addrErr := s.attester.GetNextAttestationAddr(key, s.attestation.CommitmentHash())
+	if s.setFailure(addrErr) {
+		return // will rebound to init
+	}
 	log.Printf("********** importing pay-to addr: %s ...\n", paytoaddr.String())
 	importErr := s.attester.ImportAttestationAddr(paytoaddr, false) // no rescan needed here
 	if s.setFailure(importErr) {

@@ -168,8 +168,10 @@ func TestTweaking_extendedKey(t *testing.T) {
 	hashX, _ := chainhash.NewHashFromStr("abcadae1214d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
 
 	// tweak both pub and priv extended keys
-	privTweaked := TweakExtendedKey(privExtended, hashX.CloneBytes())
-	pubTweaked := TweakExtendedKey(pubExtended, hashX.CloneBytes())
+	privTweaked, privTweakErr := TweakExtendedKey(privExtended, hashX.CloneBytes())
+	assert.Equal(t, nil, privTweakErr)
+	pubTweaked, pubTweakErr := TweakExtendedKey(pubExtended, hashX.CloneBytes())
+	assert.Equal(t, nil, pubTweakErr)
 
 	// get equivalent ECPub to test tweaking equivalence
 	privTweakedECPub, privECPubErr := privTweaked.ECPubKey()

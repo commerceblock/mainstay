@@ -7,7 +7,6 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"encoding/binary"
-	"log"
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -125,7 +124,9 @@ func tweakPubWithPathChild(child derivationPathChild, x *big.Int, y *big.Int) (*
 
 // Tweak a bip-32 extended key (public or private) with tweak hash
 // Tweak takes the form of bip-32 child derivation using tweak as index
-func TweakExtendedKey(extndPubKey *hdkeychain.ExtendedKey, tweak []byte) *hdkeychain.ExtendedKey {
+// Under the assumed conditions this method should never return an error
+// but we are including the error check for any 100% completeness
+func TweakExtendedKey(extndPubKey *hdkeychain.ExtendedKey, tweak []byte) (*hdkeychain.ExtendedKey, error) {
 
 	path := getDerivationPathFromTweak(tweak) // get derivation path for tweak
 
@@ -141,11 +142,11 @@ func TweakExtendedKey(extndPubKey *hdkeychain.ExtendedKey, tweak []byte) *hdkeyc
 		// get tweaked pubkey
 		extndPubKey, childErr = extndPubKey.Child(childInt)
 		if childErr != nil {
-			log.Println(childErr)
+			return nil, childErr
 		}
 	}
 
-	return extndPubKey
+	return extndPubKey, nil
 }
 
 // Tweak a pub key by adding the elliptic curve representation of the tweak to the pub key
