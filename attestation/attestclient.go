@@ -21,6 +21,7 @@ import (
 	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcutil/hdkeychain"
 )
 
 // error - warning consts
@@ -75,12 +76,13 @@ type AttestClient struct {
 	// init configuration parameters
 	// store information on initial keys and txid
 	// required to set chain start and do key tweaking
-	txid0       string
-	script0     string
-	pubkeys     []*btcec.PublicKey
-	numOfSigs   int
-	addrTopup   string
-	scriptTopup string
+	txid0           string
+	script0         string
+	pubkeysExtended []*hdkeychain.ExtendedKey
+	pubkeys         []*btcec.PublicKey
+	numOfSigs       int
+	addrTopup       string
+	scriptTopup     string
 
 	// states whether Attest Client struct is used for transaction
 	// signing or simply for address tweaking and transaction creation
@@ -88,12 +90,16 @@ type AttestClient struct {
 	// in no signer case the wallet priv is a nil pointer
 	WalletPriv      *btcutil.WIF
 	WalletPrivTopup *btcutil.WIF
+	WalletChainCode []byte
 }
 
 // NewAttestClient returns a pointer to a new AttestClient instance
 // Initially locates the genesis transaction in the main chain wallet
 // and verifies that the corresponding private key is in the wallet
 func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
+
+	// TODO: proper chaincode handling from config
+	chainCodeBytes, _ := hex.DecodeString("0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa")
 
 	// optional flag to set attest client as signer
 	isSigner := false
@@ -158,18 +164,33 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 			}
 		}
 
+		// create extended keys from multisig pubs, to be used for tweaking and address generation
+		// using extended keys instead of normal pubkeys in order to perform key tweaking
+		// via bip-32 child derivation as opposed to regular cryptograpic tweaking
+		var pubkeysExtended []*hdkeychain.ExtendedKey
+		for _, pub := range pubkeys {
+			// Ignoring any fields except key and chaincode, as these are only used for
+			// child derivation and these two fields are the only required for this
+			// Since any child key will be derived from these, depth limits makes no sense
+			// Xpubs/xprivs are also never exported so full configuration is irrelevant
+			pubkeysExtended = append(pubkeysExtended,
+				hdkeychain.NewExtendedKey([]byte{}, pub.SerializeCompressed(), chainCodeBytes, []byte{}, 0, 0, false))
+		}
+
 		return &AttestClient{
 			MainClient:      config.MainClient(),
 			MainChainCfg:    config.MainChainCfg(),
 			Fees:            NewAttestFees(config.FeesConfig()),
 			txid0:           config.InitTx(),
 			script0:         multisig,
+			pubkeysExtended: pubkeysExtended,
 			pubkeys:         pubkeys,
 			numOfSigs:       numOfSigs,
 			addrTopup:       topupAddrStr,
 			scriptTopup:     topupScriptStr,
 			WalletPriv:      pkWif,
-			WalletPrivTopup: pkWifTopup}
+			WalletPrivTopup: pkWifTopup,
+			WalletChainCode: chainCodeBytes}
 	}
 	return &AttestClient{
 		MainClient:      config.MainClient(),
@@ -177,16 +198,19 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		Fees:            NewAttestFees(config.FeesConfig()),
 		txid0:           config.InitTx(),
 		script0:         multisig,
+		pubkeysExtended: []*hdkeychain.ExtendedKey{},
 		pubkeys:         []*btcec.PublicKey{},
 		numOfSigs:       1,
 		addrTopup:       topupAddrStr,
 		scriptTopup:     topupScriptStr,
 		WalletPriv:      pkWif,
-		WalletPrivTopup: pkWifTopup}
+		WalletPrivTopup: pkWifTopup,
+		WalletChainCode: chainCodeBytes}
 }
 
 // Get next attestation key by tweaking with latest commitment hash
 // If attestation client is not a signer, then no key is returned
+// Error handling excluded here, as in prod case (nil,nil) are returned
 func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) (*btcutil.WIF, error) {
 
 	// in no signer case, client has no key - return nil
@@ -194,14 +218,20 @@ func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) (*btcutil.WIF,
 		return nil, nil
 	}
 
-	// Tweak priv key with the latest commitment hash
-	tweakedWalletPriv, tweakErr := crypto.TweakPrivKey(w.WalletPriv,
-		hash.CloneBytes(), w.MainChainCfg)
-	if tweakErr != nil {
-		return nil, tweakErr
+	// get extended key from wallet priv to do tweaking
+	// pseudo bip-32 child derivation to do priv key tweaking
+	// fields except key/chain code are irrelevant for child derivation
+	extndKey := hdkeychain.NewExtendedKey([]byte{}, w.WalletPriv.PrivKey.Serialize(), w.WalletChainCode, []byte{}, 0, 0, true)
+	tweakedExtndKey := crypto.TweakExtendedKey(extndKey, hash.CloneBytes())
+	tweakedExtndPriv, _ := tweakedExtndKey.ECPrivKey()
+
+	// Return priv key in wallet readable format
+	tweakedWalletPriv, err := btcutil.NewWIF(tweakedExtndPriv, w.MainChainCfg, w.WalletPriv.CompressPubKey)
+	if err != nil {
+		return nil, err
 	}
 
-	// Import tweaked priv key to wallet
+	// // Import tweaked priv key to wallet
 	// importErr := w.MainClient.ImportPrivKeyRescan(tweakedWalletPriv, hash.String(), false)
 	// if importErr != nil {
 	// 	return nil, importErr
@@ -214,12 +244,13 @@ func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) (*btcutil.WIF,
 // In the multisig case this is generated by tweaking all the original
 // of the multisig redeem script used to setup attestation, while in
 // the single key - attest client signer case the privkey is used
+// TODO: error handling
 func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.Hash) (
 	btcutil.Address, string) {
 
 	// In multisig case tweak all initial pubkeys and import
 	// a multisig address to the main client wallet
-	if len(w.pubkeys) > 0 {
+	if len(w.pubkeysExtended) > 0 {
 		// empty hash - no tweaking
 		if hash.IsEqual(&chainhash.Hash{}) {
 			return crypto.CreateMultisig(w.pubkeys, w.numOfSigs, w.MainChainCfg)
@@ -228,11 +259,15 @@ func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.H
 		// hash non empty - tweak each pubkey
 		var tweakedPubs []*btcec.PublicKey
 		hashBytes := hash.CloneBytes()
-		for _, pub := range w.pubkeys {
-			tweakedPub := crypto.TweakPubKey(pub, hashBytes)
+		for _, pub := range w.pubkeysExtended {
+			// tweak extended pubkeys
+			// pseudo bip-32 child derivation to do pub key tweaking
+			tweakedKey := crypto.TweakExtendedKey(pub, hashBytes)
+			tweakedPub, _ := tweakedKey.ECPubKey()
 			tweakedPubs = append(tweakedPubs, tweakedPub)
 		}
 
+		// construct multisig and address from pubkey of extended key
 		multisigAddr, redeemScript := crypto.CreateMultisig(
 			tweakedPubs, w.numOfSigs, w.MainChainCfg)
 
@@ -340,9 +375,18 @@ func (w *AttestClient) bumpAttestationFees(msgTx *wire.MsgTx) error {
 
 // Given a commitment hash return the corresponding client private key tweaked
 // This method should only be used in the attestation client signer case
+// Error handling excluded here as method is only for testing purposes
 func (w *AttestClient) GetKeyFromHash(hash chainhash.Hash) btcutil.WIF {
 	if !hash.IsEqual(&chainhash.Hash{}) {
-		tweakedKey, _ := crypto.TweakPrivKey(w.WalletPriv, hash.CloneBytes(), w.MainChainCfg)
+		// get extended key from wallet priv to do tweaking
+		// pseudo bip-32 child derivation to do priv key tweaking
+		// fields except key/chain code are irrelevant for child derivation
+		extndKey := hdkeychain.NewExtendedKey([]byte{}, w.WalletPriv.PrivKey.Serialize(), w.WalletChainCode, []byte{}, 0, 0, true)
+		tweakedExtndKey := crypto.TweakExtendedKey(extndKey, hash.CloneBytes())
+		tweakedExtndPriv, _ := tweakedExtndKey.ECPrivKey()
+
+		// Return priv key in wallet readable format
+		tweakedKey, _ := btcutil.NewWIF(tweakedExtndPriv, w.MainChainCfg, w.WalletPriv.CompressPubKey)
 		return *tweakedKey
 	}
 	return *w.WalletPriv
