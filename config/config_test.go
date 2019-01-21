@@ -236,9 +236,11 @@ func TestConfigStaychain(t *testing.T) {
         "staychain": {
             "initTx": "87e56bda501ba6a022f12e178e9f1ac03fb2c07f04e1dfa62ac9e1d83cd840e1",
             "initScript": "51210381324c14a482646e9ad7cf82372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae",
+            "initChaincodes": "0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa ,0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa ",
             "initPK": "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz",
             "topupAddress": "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB",
             "topupScript": "51210381324c14a482646e9ad7cf92372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae",
+            "topupChaincodes": " 0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa, 0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa",
             "topupPK": "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLa",
             "regtest": "1"
         }
@@ -248,11 +250,17 @@ func TestConfigStaychain(t *testing.T) {
 	assert.Equal(t, nil, configErr)
 
 	assert.Equal(t, "87e56bda501ba6a022f12e178e9f1ac03fb2c07f04e1dfa62ac9e1d83cd840e1", config.InitTx())
-	assert.Equal(t, "51210381324c14a482646e9ad7cf82372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae", config.InitScript())
+	assert.Equal(t, "51210381324c14a482646e9ad7cf82372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae",
+		config.InitScript())
 	assert.Equal(t, "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz", config.InitPK())
+	assert.Equal(t, []string{"0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa",
+		"0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa"}, config.InitChaincodes())
 	assert.Equal(t, "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB", config.TopupAddress())
-	assert.Equal(t, "51210381324c14a482646e9ad7cf92372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae", config.TopupScript())
+	assert.Equal(t, "51210381324c14a482646e9ad7cf92372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae",
+		config.TopupScript())
 	assert.Equal(t, "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLa", config.TopupPK())
+	assert.Equal(t, []string{"0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa",
+		"0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa"}, config.TopupChaincodes())
 	assert.Equal(t, true, config.Regtest())
 
 	config.SetRegtest(false)
@@ -267,6 +275,9 @@ func TestConfigStaychain(t *testing.T) {
 	config.SetInitPK("PKPKPK")
 	assert.Equal(t, "PKPKPK", config.InitPK())
 
+	config.SetInitChaincodes([]string{"chaincode1", "chaincode2"})
+	assert.Equal(t, []string{"chaincode1", "chaincode2"}, config.InitChaincodes())
+
 	config.SetTopupAddress("cc")
 	assert.Equal(t, "cc", config.TopupAddress())
 
@@ -275,6 +286,9 @@ func TestConfigStaychain(t *testing.T) {
 
 	config.SetTopupPK("TOPUPPKPK")
 	assert.Equal(t, "TOPUPPKPK", config.TopupPK())
+
+	config.SetInitChaincodes([]string{"chaincode3", "chaincode6"})
+	assert.Equal(t, []string{"chaincode3", "chaincode6"}, config.InitChaincodes())
 
 	testConf = []byte(`
     {

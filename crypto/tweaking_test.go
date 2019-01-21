@@ -6,6 +6,7 @@ package crypto
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"math/big"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -144,4 +146,43 @@ func TestTweaking_childPathTweaking(t *testing.T) {
 	tweakedPubKeyAddr, errTweakedAddr := GetAddressFromPubKey(tweakedPubKey, mainChainCfg)
 	assert.Equal(t, nil, errTweakedAddr)
 	assert.Equal(t, addr.String(), tweakedPubKeyAddr.String())
+}
+
+// Test ExtendedKey Tweaking
+// Test both priv/pub extended key tweaking
+// verifying same result for backwards compatibility
+func TestTweaking_extendedKey(t *testing.T) {
+	// some random chaincode
+	chainCodeBytes, _ := hex.DecodeString("abcdef710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa")
+
+	// get wif from config
+	wif, errWif := GetWalletPrivKey(testConfig.InitPK())
+	assert.Equal(t, nil, errWif)
+	assert.Equal(t, "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz", wif.String())
+
+	// get extended key from priv and pub keys
+	privExtended := hdkeychain.NewExtendedKey([]byte{}, wif.PrivKey.Serialize(), chainCodeBytes, []byte{}, 0, 0, true)
+	pubExtended := hdkeychain.NewExtendedKey([]byte{}, wif.PrivKey.PubKey().SerializeCompressed(), chainCodeBytes, []byte{}, 0, 0, false)
+
+	// random hash for tweaking
+	hashX, _ := chainhash.NewHashFromStr("abcadae1214d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+
+	// tweak both pub and priv extended keys
+	privTweaked, privTweakErr := TweakExtendedKey(privExtended, hashX.CloneBytes())
+	assert.Equal(t, nil, privTweakErr)
+	pubTweaked, pubTweakErr := TweakExtendedKey(pubExtended, hashX.CloneBytes())
+	assert.Equal(t, nil, pubTweakErr)
+
+	// get equivalent ECPub to test tweaking equivalence
+	privTweakedECPub, privECPubErr := privTweaked.ECPubKey()
+	assert.Equal(t, nil, privECPubErr)
+	pubTweakedECPub, pubECPubErr := pubTweaked.ECPubKey()
+	assert.Equal(t, nil, pubECPubErr)
+
+	// cover future changes by hard-coding expected returned keys
+	assert.Equal(t, privTweakedECPub, pubTweakedECPub)
+	assert.Equal(t, "YZ7jREvsw9bHjkqVtQJDgKJCvthBSXbvXDmB6wSxDhm8xxWKmX94MmTDHtjRekEJBTuKwvKZhDXxUZpWV2DA5C7L7mSerASe1KtLjsnNgR",
+		privTweaked.String())
+	assert.Equal(t, "YZ7jREvsw9bHjkqVtQJDgKJCvthBSXbvXDmB6wSxDhm8xxWKmX94MmTDNSHMcSTojdiHtQ1UnhEvW5sUf4xuL4SCPirMeJdVwEJ3BZ74CS",
+		pubTweaked.String())
 }

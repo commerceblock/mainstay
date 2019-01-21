@@ -6,11 +6,13 @@ package crypto
 
 import (
 	"crypto/ecdsa"
+	"encoding/binary"
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcutil/hdkeychain"
 )
 
 // Various utility functionalities concerning key tweaking under BIP-175
@@ -118,6 +120,33 @@ func tweakPubWithPathChild(child derivationPathChild, x *big.Int, y *big.Int) (*
 
 	// Add the two pub keys using addition on the elliptic curve
 	return btcec.S256().Add(x, y, twkPubKey.ToECDSA().X, twkPubKey.ToECDSA().Y)
+}
+
+// Tweak a bip-32 extended key (public or private) with tweak hash
+// Tweak takes the form of bip-32 child derivation using tweak as index
+// Under the assumed conditions this method should never return an error
+// but we are including the error check for any 100% completeness
+func TweakExtendedKey(extndPubKey *hdkeychain.ExtendedKey, tweak []byte) (*hdkeychain.ExtendedKey, error) {
+
+	path := getDerivationPathFromTweak(tweak) // get derivation path for tweak
+
+	var childErr error
+
+	// tweak pubkey for each path child
+	for _, pathChild := range path {
+
+		// get tweak index from path child
+		childBytes := []byte{0, 0, pathChild[0], pathChild[1]}
+		childInt := binary.BigEndian.Uint32(childBytes)
+
+		// get tweaked pubkey
+		extndPubKey, childErr = extndPubKey.Child(childInt)
+		if childErr != nil {
+			return nil, childErr
+		}
+	}
+
+	return extndPubKey, nil
 }
 
 // Tweak a pub key by adding the elliptic curve representation of the tweak to the pub key

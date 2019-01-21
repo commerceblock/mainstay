@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"mainstay/attestation"
@@ -34,8 +35,9 @@ var (
 	isRegtest bool
 
 	// init transaction parameters
-	pk0     string
-	script0 string
+	pk0         string
+	script0     string
+	chaincodes0 string
 
 	// topup parameters
 	addrTopup   string
@@ -107,6 +109,7 @@ func init() {
 		pkTopup = test.TopupPrivMain
 		scriptTopup = test.TopupScript
 		addrTopup = test.TopupAddress
+		chaincodes0 = test.InitChaincodes
 	} else {
 		// regular mode
 		// use conf file to setup config
@@ -134,6 +137,9 @@ func init() {
 	}
 	if script0 != "" {
 		config.SetInitScript(script0)
+	}
+	if chaincodes0 != "" {
+		config.SetInitChaincodes(strings.Split(chaincodes0, ","))
 	}
 
 	// overwrite topup config if set from command line

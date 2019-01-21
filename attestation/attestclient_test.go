@@ -76,11 +76,13 @@ func verifyKeysAndAddr(t *testing.T, client *AttestClient, hash chainhash.Hash) 
 	assert.Equal(t, nil, errKey)
 
 	// test getting next attestation address
-	addr, script := client.GetNextAttestationAddr(key, hash)
+	addr, script, nextAddrErr := client.GetNextAttestationAddr(key, hash)
+	assert.Equal(t, nil, nextAddrErr)
 
 	// test GetKeyAndScriptFromHash returns the same results
 	keyTest := client.GetKeyFromHash(hash)
-	scriptTest := client.GetScriptFromHash(hash)
+	scriptTest, scriptErr := client.GetScriptFromHash(hash)
+	assert.Equal(t, nil, scriptErr)
 	assert.Equal(t, *key, keyTest)
 	assert.Equal(t, script, scriptTest)
 
@@ -282,12 +284,14 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 
 	// test that when attempting to generate a new address with
 	// an empty hash, the intial address/script are returned
-	addrNoHash, scriptNoHash := client.GetNextAttestationAddr(nil, lastHash)
+	addrNoHash, scriptNoHash, nextAddrErr := client.GetNextAttestationAddr(nil, lastHash)
+	assert.Equal(t, nil, nextAddrErr)
 	assert.Equal(t, testpkg.Address, addrNoHash.String())
 	assert.Equal(t, testpkg.Script, scriptNoHash)
 	assert.Equal(t, client.script0, scriptNoHash)
 	assert.Equal(t, unspent.Address, addrNoHash.String())
-	addrNoHash, scriptNoHash = clientSigner.GetNextAttestationAddr(nil, lastHash)
+	addrNoHash, scriptNoHash, nextAddrErr = clientSigner.GetNextAttestationAddr(nil, lastHash)
+	assert.Equal(t, nil, nextAddrErr)
 	assert.Equal(t, testpkg.Address, addrNoHash.String())
 	assert.Equal(t, testpkg.Script, scriptNoHash)
 	assert.Equal(t, clientSigner.script0, scriptNoHash)
@@ -311,12 +315,14 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 		assert.Equal(t, true, key == nil)
 
 		// test getting next attestation address
-		addr, script := client.GetNextAttestationAddr(key, oceanCommitmentHash)
+		addr, script, nextAddrErr := client.GetNextAttestationAddr(key, oceanCommitmentHash)
+		assert.Equal(t, nil, nextAddrErr)
 
 		// test GetKeyAndScriptFromHash returns the same results
 		// skip testing this - not applicable in no signer case
 		//keyTest := clientSigner.GetKeyFromHash(oceanCommitmentHash)
-		scriptTest := client.GetScriptFromHash(oceanCommitmentHash)
+		scriptTest, scriptErr := client.GetScriptFromHash(oceanCommitmentHash)
+		assert.Equal(t, nil, scriptErr)
 		assert.Equal(t, script, scriptTest)
 
 		// test importing address

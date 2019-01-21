@@ -10,6 +10,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"strings"
 
 	"mainstay/clients"
 	"mainstay/config"
@@ -22,11 +23,12 @@ import (
 
 const ClientChainName = "clientchain"
 const ConfPath = "/src/mainstay/cmd/confirmationtool/conf.json"
-const DefaultApiHost = "http://localhost:8080" // to replace with actual mainstay url
+const DefaultApiHost = "http://localhost:80" // to replace with actual mainstay url
 
 var (
 	tx          string
 	script      string
+	chaincodes  string
 	apiHost     string
 	position    int
 	showDetails bool
@@ -39,13 +41,14 @@ func init() {
 	flag.BoolVar(&showDetails, "detailed", false, "Detailed information on attestation transaction")
 	flag.StringVar(&tx, "tx", "", "Tx id from which to start searching the staychain")
 	flag.StringVar(&script, "script", "", "Redeem script of multisig used by attestaton service")
+	flag.StringVar(&chaincodes, "chaincodes", "", "Chaincodes for multisig pubkeys")
 	flag.StringVar(&apiHost, "apiHost", DefaultApiHost, "Host address for mainstay API")
 	flag.IntVar(&position, "position", -1, "Client merkle commitment position")
 	flag.Parse()
 
-	if tx == "" || script == "" || position == -1 {
+	if tx == "" || script == "" || position == -1 || chaincodes == "" {
 		flag.PrintDefaults()
-		log.Fatalf("Need to provide all -tx, -script and -position argument.")
+		log.Fatalf("Need to provide all -tx, -script, -chaincodes and -position argument.")
 	}
 
 	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + ConfPath)
@@ -68,7 +71,8 @@ func main() {
 	txraw := getRawTxFromHash(tx)
 	fetcher := staychain.NewChainFetcher(mainConfig.MainClient(), txraw)
 	chain := staychain.NewChain(fetcher)
-	verifier := staychain.NewChainVerifier(mainConfig.MainChainCfg(), client, position, script, apiHost)
+	verifier := staychain.NewChainVerifier(mainConfig.MainChainCfg(),
+		client, position, script, strings.Split(chaincodes, ","), apiHost)
 
 	// await new attestations and verify
 	for transaction := range chain.Updates() {
