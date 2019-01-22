@@ -77,3 +77,31 @@ Ocean connectivity details need to be provided in the `cmd/commitmenttool/conf.j
 To run use the following along with the command line arguments, e.g.:
 
 `go run $GOPATH/src/mainstay/cmd/commitmentool/commitmenttool.go -position 5 -authtoken abcbd-eddde-fllqqwoe -commitment 73902d2a365fff2724e26d975148124268ec6a84991016683817ea2c973b199b -signature MEUCIQCuuFmkoYnwRo5CsR7jE3m6MODsQMMLfCL4Vb5ILPYKCAIgCeh1AJD70L0s6TRr5dyoQAwdLbuBwUsgrYTux9XtXn0=`
+
+## Multisig Tool
+
+The multisig tool can be used to generate multisig scripts and P2SH addresses for Mainstay configuration.
+
+Two modes:
+
+- Regtest mode (multisig/P2SH generation for regtest and unit tests)
+- Main mode
+
+Command line arguments:
+
+- `-regtest`: set regtest mode
+- `-nKeys`: num of keys (main mode)
+- `-nSigs`: num of sigs (main mode)
+- `-keys`: list of comma separated pub keys in hex format (main mode)
+- `-keysX`: list of comma separated pub key X coordinates (main mode if -keys not set)
+- `-keysY`: list of comma separated pub key Y coordinates (main mode if -keys not set)
+
+The multisig generated can be used as the Mainstay `initScript` config option.
+
+The P2SH address generated can be used to pay funds to initiate Mainstay.
+
+Examples on how to run:
+
+- `go run $GOPATH/src/mainstay/cmd/multisigtool/multisigtool.go -nKeys=2 -nSigs=1 -keys=03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33,03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33`
+- `go run $GOPATH/src/mainstay/cmd/multisigtool/multisigtool.go -nKeys=2 -nSigs=1 -keysX=17073944010873801765385810419928396464299027769026919728232198509972577863206,80413053216156218546514694130398099327511867032326801302280634421130221500147 -keysY=475813022329769762590164284448176075334749443379722569322944728779216384721,11222700187475866687235948284541357909717856537392660494591205788179681685365`
+- `go run $GOPATH/src/mainstay/cmd/multisigtool/multisigtool.go -regtest`

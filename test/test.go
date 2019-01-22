@@ -47,11 +47,11 @@ var testConf = []byte(`
 `)
 
 // test parameters for a 1-2 multisig redeemScript and P2SH address
-const Address = "2N8AAQy6SH5HGoAtzwr5xp4LTicqJ3fic8d"
-const Script = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b3321037361a2dba6a9e82faaf5465c36937adba283c878c506000b8479894c6f9cbae752ae"
-const InitChaincodes = "1a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa,0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa"
+const Address = "2N74sgEvpJRwBZqjYUEXwPfvuoLZnRaF1xJ"
+const Script = "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33210325bf82856a8fdcc7a2c08a933343d2c6332c4c252974d6b09b6232ea4080462652ae"
+const InitChaincodes = "14df7ece79e83f0f479a37832d770294014edc6884b0c8bfa2e0aaf51fb00229,14df7ece79e83f0f479a37832d770294014edc6884b0c8bfa2e0aaf51fb00229"
 
-// pubkey hsm -  "037361a2dba6a9e82faaf5465c36937adba283c878c506000b8479894c6f9cbae7"
+// pubkey hsm -  "0325bf82856a8fdcc7a2c08a933343d2c6332c4c252974d6b09b6232ea40804626"
 // pubkey main - "03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33"
 const PrivMain = "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz"
 
