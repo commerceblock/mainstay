@@ -186,7 +186,7 @@ func (z AttestSignerZmq) GetSigs() [][]crypto.Sig {
 	// Iterate through each subscriber to get the latest message sent
 	// If there is more than one message in the subscriber queue the
 	// last is retained by continuously polling the Poller to get that
-	for sub_i, sub := range z.subscribers {
+	for _, sub := range z.subscribers {
 
 		var subMsg [][]byte // store latest message
 
