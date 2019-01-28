@@ -88,3 +88,40 @@ func TestScript(t *testing.T) {
 	scriptSigTest := CreateScriptSig([]Sig{sig1Bytes, sig2Bytes}, redeemScriptBytes)
 	assert.Equal(t, scriptSig, hex.EncodeToString(scriptSigTest))
 }
+
+// Test Script utility for large redeem scripts
+func TestScript_withOpPushData1(t *testing.T) {
+	scriptSig := "00473044022077607e068a5e4570f28430e723a3292d2c01d798df0758978a8cbc1d045aa230022000d5f85d071e697369c7c4d6e3520aa719f728ed5b511f8aa4eb93ceb615ba6501473044022077607e068a5e4570f28430e723a3292d2c01d798df0758978a8cbc1d045aa230022000d5f85d071e697369c7c4d6e3520aa719f728ed5b511f8aa4eb93ceb615ba65024c6952210325bf82856a8fdcc7a2c08a933343d2c6332c4c252974d6b09b6232ea4080462621028ed149d77203c79d7524048689a80cc98f27e3427f2edaec52eae1f630978e08210254a548b59741ba35bfb085744373a8e10b1cf96e71f53356d7d97f807258d38c53ae"
+	sig1 := "3044022077607e068a5e4570f28430e723a3292d2c01d798df0758978a8cbc1d045aa230022000d5f85d071e697369c7c4d6e3520aa719f728ed5b511f8aa4eb93ceb615ba6501"
+	sig2 := "3044022077607e068a5e4570f28430e723a3292d2c01d798df0758978a8cbc1d045aa230022000d5f85d071e697369c7c4d6e3520aa719f728ed5b511f8aa4eb93ceb615ba6502"
+	redeemScript := "52210325bf82856a8fdcc7a2c08a933343d2c6332c4c252974d6b09b6232ea4080462621028ed149d77203c79d7524048689a80cc98f27e3427f2edaec52eae1f630978e08210254a548b59741ba35bfb085744373a8e10b1cf96e71f53356d7d97f807258d38c53ae"
+
+	// Test empty ParseScriptSig
+	noSigsTest, noRedeemTest := ParseScriptSig([]byte{})
+	assert.Equal(t, 0, len(noSigsTest))
+	assert.Equal(t, "", hex.EncodeToString(noRedeemTest))
+
+	// Test invalid ParseScriptSig
+	invalidSigsTest, invalidRedeemTest := ParseScriptSig([]byte{0, 5, 1, 1})
+	assert.Equal(t, 0, len(invalidSigsTest))
+	assert.Equal(t, "", hex.EncodeToString(invalidRedeemTest))
+
+	// Test ParseScriptSig
+	scriptSigBytes, _ := hex.DecodeString(scriptSig)
+	sigsTest, redeemTest := ParseScriptSig(scriptSigBytes)
+	assert.Equal(t, 2, len(sigsTest))
+	assert.Equal(t, redeemScript, hex.EncodeToString(redeemTest))
+	assert.Equal(t, sig1, hex.EncodeToString(sigsTest[0]))
+	assert.Equal(t, sig2, hex.EncodeToString(sigsTest[1]))
+
+	// Test empty CreateScriptsig
+	emptyScriptSigTest := CreateScriptSig([]Sig{}, []byte{})
+	assert.Equal(t, []byte{byte(0), byte(0)}, emptyScriptSigTest)
+
+	// Test CreateScriptsig
+	sig1Bytes, _ := hex.DecodeString(sig1)
+	sig2Bytes, _ := hex.DecodeString(sig2)
+	redeemScriptBytes, _ := hex.DecodeString(redeemScript)
+	scriptSigTest := CreateScriptSig([]Sig{sig1Bytes, sig2Bytes}, redeemScriptBytes)
+	assert.Equal(t, scriptSig, hex.EncodeToString(scriptSigTest))
+}
