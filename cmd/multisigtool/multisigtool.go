@@ -23,7 +23,8 @@ import (
 // Multisig and pay to address generation for Mainstay
 
 var (
-	isRegtest bool
+	chain    string
+	chainCfg chaincfg.Params
 
 	nKeys int
 	nSigs int
@@ -35,7 +36,7 @@ var (
 
 // init - flag parse
 func init() {
-	flag.BoolVar(&isRegtest, "regtest", false, "Do regtest work")
+	flag.StringVar(&chain, "chain", "", "Bitcoin chain configuration (regtest, testnet or mainnet)")
 
 	flag.IntVar(&nKeys, "nKeys", 0, "Number of keys")
 	flag.IntVar(&nSigs, "nSigs", 0, "Number of signatures")
@@ -49,9 +50,18 @@ func init() {
 
 // main
 func main() {
-	if isRegtest {
+	if chain == "regtest" {
+		fmt.Println("REGTEST")
+		chainCfg = chaincfg.RegressionNetParams
 		doRegtest()
 	} else {
+		if chain == "testnet" {
+			fmt.Println("TESTNET")
+			chainCfg = chaincfg.TestNet3Params
+		} else {
+			fmt.Println("MAINNET")
+			chainCfg = chaincfg.MainNetParams
+		}
 		doMain()
 	}
 }
@@ -68,26 +78,26 @@ func infoFromPubs(pubs []string, nKeys int, nSigs int) {
 		if pubBytesErr != nil {
 			log.Fatal(fmt.Sprintf("failed decoding pub %s %v", pub, pubBytesErr))
 		}
-		pubP2pkh, pubP2pkhErr := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pubBytes), &chaincfg.RegressionNetParams)
+		pubP2pkh, pubP2pkhErr := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pubBytes), &chainCfg)
 		if pubP2pkhErr != nil {
 			log.Fatal(fmt.Sprintf("failed generating addr from pub %s %v", pub, pubP2pkhErr))
 		}
-		fmt.Printf("pub P2PKH:\t%s\n\n", pubP2pkh)
+		fmt.Printf("pub P2PKH:\t%s\n", pubP2pkh)
 
 		pubmultistr += "21" + pub
 	}
 
 	pubmultistr += fmt.Sprintf("5%d", nKeys)
 	pubmultistr += "ae"
-	fmt.Printf("1-of-2 MULTISIG script: %s\n", pubmultistr)
+	fmt.Printf("%d-of-%d MULTISIG script: %s\n", nSigs, nKeys, pubmultistr)
 
 	// generate P2SH address
 	pubmultibytes, _ := hex.DecodeString(pubmultistr)
-	addr, err := btcutil.NewAddressScriptHash(pubmultibytes, &chaincfg.TestNet3Params)
+	addr, err := btcutil.NewAddressScriptHash(pubmultibytes, &chainCfg)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Printf("1-of-2 P2SH address: %s\n", addr.String())
+	fmt.Printf("%d-of-%d P2SH address: %s\n", nSigs, nKeys, addr.String())
 }
 
 // Generate multisig script and p2sh address for mainstay
@@ -99,7 +109,6 @@ func doMain() {
 	if keys == "" && keysX == "" && keysY == "" {
 		log.Fatal("Keys missing. Either provide -keys or -keysX and -keysY.")
 	}
-	fmt.Println("MAIN")
 
 	if keys == "" {
 		keysXSplit := strings.Split(keysX, ",")
@@ -150,19 +159,17 @@ func doRegtest() {
 
 	mainPub := "03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33"
 
-	fmt.Println("REGTEST")
-
 	// hsm pubkey
 	pub := pubFromCoordinates(hsmPubX, hsmPubY)
 	pubEnc := hex.EncodeToString(pub.SerializeCompressed())
 	fmt.Printf("pub:\t\t%s\n", pubEnc)
-	p2pkh, _ := crypto.GetAddressFromPubKey(pub, &chaincfg.RegressionNetParams)
+	p2pkh, _ := crypto.GetAddressFromPubKey(pub, &chainCfg)
 	fmt.Printf("pub P2PKH:\t%s\n\n", p2pkh)
 
 	// main pubkey
 	fmt.Printf("pubMain:\t%s\n", mainPub)
 	pubmainbytes, _ := hex.DecodeString(mainPub)
-	pubMainp2pkh, _ := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pubmainbytes), &chaincfg.RegressionNetParams)
+	pubMainp2pkh, _ := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pubmainbytes), &chainCfg)
 	fmt.Printf("pubMain P2PKH:\t%s\n\n", pubMainp2pkh)
 
 	infoFromPubs([]string{mainPub, pubEnc}, 2, 1)

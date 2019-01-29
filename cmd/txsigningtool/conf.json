@@ -12,6 +12,6 @@
         "rpcurl": "MAINSTAY_CLIENT_URL",
         "rpcuser": "MAINSTAY_CLIENT_USER",
         "rpcpass": "MAINSTAY_CLIENT_PASS",
-        "chain": "testnet"
+        "chain": "MAINSTAY_CLIENT_CHAIN"
     }
 }
