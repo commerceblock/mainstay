@@ -165,7 +165,7 @@ func TestAttestService_Regular(t *testing.T) {
 
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
-	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
@@ -246,7 +246,7 @@ func TestAttestService_Unconfirmed(t *testing.T) {
 
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
-	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	attestService.attester.Fees.ResetFee(true)
 
@@ -362,7 +362,7 @@ func TestAttestService_WithTopup(t *testing.T) {
 
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
-	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
@@ -453,7 +453,7 @@ func TestAttestService_FailureInit(t *testing.T) {
 
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
-	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
@@ -462,7 +462,7 @@ func TestAttestService_FailureInit(t *testing.T) {
 	verifyStateInitToNextCommitment(t, attestService)
 
 	// failure - re init attestation service with restart
-	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 	// Test AStateInit -> AStateNextCommitment again
 	verifyStateInitToNextCommitment(t, attestService)
 
@@ -483,7 +483,7 @@ func TestAttestService_FailureNextCommitment(t *testing.T) {
 
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
-	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
@@ -497,7 +497,7 @@ func TestAttestService_FailureNextCommitment(t *testing.T) {
 	latestCommitment := verifyStateNextCommitmentToNewAttestation(t, attestService, dbFake, hashX)
 
 	// failure - re init attestation service
-	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 	// Test AStateInit -> AStateNextCommitment
 	verifyStateInitToNextCommitment(t, attestService)
 	// Test AStateNextCommitment -> AStateNewAttestation
@@ -526,7 +526,7 @@ func TestAttestService_FailureNewAttestation(t *testing.T) {
 
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
-	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
@@ -543,7 +543,7 @@ func TestAttestService_FailureNewAttestation(t *testing.T) {
 	verifyStateNewAttestationToSignAttestation(t, attestService)
 
 	// failure - re init attestation service
-	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 	// Test AStateInit -> AStateNextCommitment
 	verifyStateInitToNextCommitment(t, attestService)
 	// Test AStateNextCommitment -> AStateNewAttestation
@@ -571,7 +571,7 @@ func TestAttestService_FailureSignAttestation(t *testing.T) {
 
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
-	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
@@ -591,7 +591,7 @@ func TestAttestService_FailureSignAttestation(t *testing.T) {
 	verifyStateSignAttestationToPreSendStore(t, attestService)
 
 	// failure - re init attestation service
-	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test AStateInit -> AStateNextCommitment
 	verifyStateInitToNextCommitment(t, attestService)
@@ -622,7 +622,7 @@ func TestAttestService_FailurePreSendStore(t *testing.T) {
 
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
-	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
@@ -644,7 +644,7 @@ func TestAttestService_FailurePreSendStore(t *testing.T) {
 	verifyStatePreSendStoreToSendAttestation(t, attestService)
 
 	// failure - re init attestation service
-	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test AStateInit -> AStateNextCommitment
 	verifyStateInitToNextCommitment(t, attestService)
@@ -680,7 +680,7 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 
 	prevAttestation := models.NewAttestationDefault()
 	for i := range []int{1, 2, 3} {
-		attestService := NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+		attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 		// Test initial state of attest service
 		verifyStateInit(t, attestService)
@@ -708,7 +708,7 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 		txid := verifyStateSendAttestationToAwaitConfirmation(t, attestService)
 
 		// failure - re init attestation service
-		attestService = NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+		attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 		// Test AStateInit -> AStateAwaitConfirmation
 		verifyStateInitToAwaitConfirmation(t, attestService, latestCommitment, txid)
@@ -758,7 +758,7 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 
 	dbFake := server.NewDbFake()
 	server := server.NewServer(dbFake)
-	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
 	verifyStateInit(t, attestService)
@@ -796,7 +796,7 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 		Time:      walletTx.Time}, attestService.attestation.Info)
 
 	// failure - re init attestation service
-	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 	// Test AStateInit -> AStateNextCommitment
 	attestService.doAttestation()
 	assert.Equal(t, AStateNextCommitment, attestService.state)
@@ -838,7 +838,7 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 
 	prevAttestation := models.NewAttestationDefault()
 	for i := range []int{1, 2, 3} {
-		attestService := NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+		attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 		attestService.attester.Fees.ResetFee(true)
 
@@ -879,7 +879,7 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 			attestService.attester.Fees.GetFee())
 
 		// failure - re init attestation service with restart
-		attestService = NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+		attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 		attestService.attester.Fees.ResetFee(true)
 		// Test AStateInit -> AStateAwaitConfirmation
 		verifyStateInitToAwaitConfirmation(t, attestService, latestCommitment, txid)
@@ -904,7 +904,7 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 		verifyStatePreSendStoreToSendAttestation(t, attestService)
 
 		// failure - re init attestation service with restart
-		attestService = NewAttestService(nil, nil, server, NewAttestSignerFake(config), config)
+		attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 		attestService.attester.Fees.ResetFee(true)
 		// Test AStateInit -> AStateAwaitConfirmation
 		verifyStateInitToAwaitConfirmation(t, attestService, latestCommitment, txid)
