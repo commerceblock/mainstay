@@ -89,7 +89,7 @@ Two modes:
 
 Command line arguments:
 
-- `-regtest`: set regtest mode
+- `-chain`: set bitcoin chain configuration to regtest/testnet/mainnet (defaults to mainnet)
 - `-nKeys`: num of keys (main mode)
 - `-nSigs`: num of sigs (main mode)
 - `-keys`: list of comma separated pub keys in hex format (main mode)
@@ -102,6 +102,7 @@ The P2SH address generated can be used to pay funds to initiate Mainstay.
 
 Examples on how to run:
 
-- `go run $GOPATH/src/mainstay/cmd/multisigtool/multisigtool.go -nKeys=2 -nSigs=1 -keys=03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33,03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33`
-- `go run $GOPATH/src/mainstay/cmd/multisigtool/multisigtool.go -nKeys=2 -nSigs=1 -keysX=17073944010873801765385810419928396464299027769026919728232198509972577863206,80413053216156218546514694130398099327511867032326801302280634421130221500147 -keysY=475813022329769762590164284448176075334749443379722569322944728779216384721,11222700187475866687235948284541357909717856537392660494591205788179681685365`
-- `go run $GOPATH/src/mainstay/cmd/multisigtool/multisigtool.go -regtest`
+
+- `go run $GOPATH/src/mainstay/cmd/multisigtool/multisigtool.go -chain=mainnet -nKeys=2 -nSigs=1 -keysX=17073944010873801765385810419928396464299027769026919728232198509972577863206,80413053216156218546514694130398099327511867032326801302280634421130221500147 -keysY=475813022329769762590164284448176075334749443379722569322944728779216384721,11222700187475866687235948284541357909717856537392660494591205788179681685365`
+- `go run $GOPATH/src/mainstay/cmd/multisigtool/multisigtool.go -chain=testnet -nKeys=2 -nSigs=1 -keys=03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33,03e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33`
+- `go run $GOPATH/src/mainstay/cmd/multisigtool/multisigtool.go -chain=regtest`
