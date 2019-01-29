@@ -169,8 +169,8 @@ const TestInitPathMulti = "/src/mainstay/test/test-init-multi.sh"
 // Set up testing environment for use by regtest demo or unit tests
 // Use multiple configs to allow multiple transaction signers for testing
 type TestMulti struct {
-    Configs      []*confpkg.Config
-    OceanClient clients.SidechainClient
+	Configs     []*confpkg.Config
+	OceanClient clients.SidechainClient
 }
 
 // test parameters for a 2-3 multisig redeemScript and P2SH address
@@ -182,59 +182,59 @@ const PrivsMulti = "cUY3m2QRr8tGypHsY8UdPH7W7QtpZPJEe4CWsv4HoK1721cHKxQx,cNtt35L
 // NewTestMulti returns a pointer to a TestMulti instance
 func NewTestMulti() *TestMulti {
 
-    initPath := os.Getenv("GOPATH") + TestInitPathMulti
-    cmd := exec.Command("/bin/sh", initPath)
-    _, err := cmd.Output()
-    if err != nil {
-        log.Fatal(err)
-    }
+	initPath := os.Getenv("GOPATH") + TestInitPathMulti
+	cmd := exec.Command("/bin/sh", initPath)
+	_, err := cmd.Output()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    // get config
-    config, configErr := confpkg.NewConfig(testConf)
-    if configErr != nil {
-        log.Fatal(configErr)
-    }
+	// get config
+	config, configErr := confpkg.NewConfig(testConf)
+	if configErr != nil {
+		log.Fatal(configErr)
+	}
 
-    // Get transaction for Address as initial TX for attestation chain
-    unspent, errUnspent := config.MainClient().ListTransactions("*")
-    if errUnspent != nil {
-        log.Fatal(errUnspent)
-    }
-    var txid string
-    for _, vout := range unspent {
-        if vout.Address == AddressMulti {
-            txid = vout.TxID
-        }
-    }
+	// Get transaction for Address as initial TX for attestation chain
+	unspent, errUnspent := config.MainClient().ListTransactions("*")
+	if errUnspent != nil {
+		log.Fatal(errUnspent)
+	}
+	var txid string
+	for _, vout := range unspent {
+		if vout.Address == AddressMulti {
+			txid = vout.TxID
+		}
+	}
 
-    var configs []*confpkg.Config
-    chaincodesList := strings.Split(InitChaincodesMulti, ",")
-    privsList := strings.Split(PrivsMulti, ",")
+	var configs []*confpkg.Config
+	chaincodesList := strings.Split(InitChaincodesMulti, ",")
+	privsList := strings.Split(PrivsMulti, ",")
 
-    // config for each private key
-    for _, priv := range privsList {
-        // get config
-        config, configErr := confpkg.NewConfig(testConf)
-        if configErr != nil {
-            log.Fatal(configErr)
-        }
+	// config for each private key
+	for _, priv := range privsList {
+		// get config
+		config, configErr := confpkg.NewConfig(testConf)
+		if configErr != nil {
+			log.Fatal(configErr)
+		}
 
-        config.SetInitTx(txid)
-        config.SetInitPK(priv)
-        config.SetInitScript(ScriptMulti)
-        config.SetInitChaincodes(chaincodesList)
+		config.SetInitTx(txid)
+		config.SetInitPK(priv)
+		config.SetInitScript(ScriptMulti)
+		config.SetInitChaincodes(chaincodesList)
 
-        // use same as init for topup for ease
-        config.SetTopupScript(ScriptMulti)
-        config.SetTopupAddress(AddressMulti)
-        config.SetTopupPK(priv)
+		// use same as init for topup for ease
+		config.SetTopupScript(ScriptMulti)
+		config.SetTopupAddress(AddressMulti)
+		config.SetTopupPK(priv)
 
-        config.SetRegtest(true)
+		config.SetRegtest(true)
 
-        configs = append(configs, config)
-    }
+		configs = append(configs, config)
+	}
 
-    oceanClient := confpkg.NewClientFromConfig("ocean", true, testConf)
+	oceanClient := confpkg.NewClientFromConfig("ocean", true, testConf)
 
-    return &TestMulti{configs, oceanClient}
+	return &TestMulti{configs, oceanClient}
 }
