@@ -59,7 +59,7 @@ Currently `main` config category is compulsory. This should be made optional in 
     - `rpcurl` : address for rpc connectivity
     - `rpcuser` : user name for rpc connectivity
     - `rpcpass` : password for rpc connectivity
-    - `chain`: chain name for inner config, i.e. testnet/regtest/main
+    - `chain`: chain name for inner config, i.e. testnet/regtest/mainnet
 
 
 The `staychain` category is compulsory and can be set from either .conf file or command line arguments. The configuration below is optional as preferred entry is via command line - [options](#command-line-options).

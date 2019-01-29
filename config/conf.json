@@ -12,7 +12,7 @@
         "rpcurl": "MAINSTAY_MAIN_URL",
         "rpcuser": "MAINSTAY_MAIN_USER",
         "rpcpass": "MAINSTAY_MAIN_PASS",
-        "chain": "testnet"
+        "chain": "MAINSTAY_MAIN_CHAIN"
     },
     "signer":
     {

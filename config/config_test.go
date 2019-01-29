@@ -15,12 +15,11 @@ import (
 
 // Test various Config error cases
 func TestConfigErrors(t *testing.T) {
-	var configErr error
 	var testConf = []byte(`
     {
     }
     `)
-	_, configErr = NewConfig(testConf)
+	config, configErr := NewConfig(testConf)
 	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErroConfigNameNotFound, MainChainName)), configErr)
 
 	testConf = []byte(`
@@ -29,7 +28,7 @@ func TestConfigErrors(t *testing.T) {
         }
     }
     `)
-	_, configErr = NewConfig(testConf)
+	config, configErr = NewConfig(testConf)
 	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, RpcClientUrlName)), configErr)
 
 	testConf = []byte(`
@@ -39,7 +38,7 @@ func TestConfigErrors(t *testing.T) {
         }
     }
     `)
-	_, configErr = NewConfig(testConf)
+	config, configErr = NewConfig(testConf)
 	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, RpcClientUserName)), configErr)
 
 	testConf = []byte(`
@@ -50,7 +49,7 @@ func TestConfigErrors(t *testing.T) {
         }
     }
     `)
-	_, configErr = NewConfig(testConf)
+	config, configErr = NewConfig(testConf)
 	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, RpcClientPassName)), configErr)
 
 	testConf = []byte(`
@@ -62,7 +61,7 @@ func TestConfigErrors(t *testing.T) {
         }
     }
     `)
-	_, configErr = NewConfig(testConf)
+	config, configErr = NewConfig(testConf)
 	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, RpcClientChainName)), configErr)
 
 	testConf = []byte(`
@@ -75,8 +74,9 @@ func TestConfigErrors(t *testing.T) {
         }
     }
     `)
-	_, configErr = NewConfig(testConf)
+	config, configErr = NewConfig(testConf)
 	assert.Equal(t, nil, configErr)
+	assert.Equal(t, &chaincfg.TestNet3Params, config.MainChainCfg())
 
 	testConf = []byte(`
     {
@@ -88,8 +88,9 @@ func TestConfigErrors(t *testing.T) {
         }
     }
     `)
-	_, configErr = NewConfig(testConf)
+	config, configErr = NewConfig(testConf)
 	assert.Equal(t, nil, configErr)
+	assert.Equal(t, &chaincfg.MainNetParams, config.MainChainCfg())
 
 	testConf = []byte(`
     {
@@ -104,7 +105,7 @@ func TestConfigErrors(t *testing.T) {
         }
     }
     `)
-	_, configErr = NewConfig(testConf)
+	config, configErr = NewConfig(testConf)
 	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, DbPasswordName)), configErr)
 
 	testConf = []byte(`
@@ -121,7 +122,7 @@ func TestConfigErrors(t *testing.T) {
         }
     }
     `)
-	_, configErr = NewConfig(testConf)
+	config, configErr = NewConfig(testConf)
 	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, DbHostName)), configErr)
 
 	testConf = []byte(`
@@ -139,7 +140,7 @@ func TestConfigErrors(t *testing.T) {
         }
     }
     `)
-	_, configErr = NewConfig(testConf)
+	config, configErr = NewConfig(testConf)
 	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, DbPortName)), configErr)
 
 	testConf = []byte(`
@@ -158,7 +159,7 @@ func TestConfigErrors(t *testing.T) {
         }
     }
     `)
-	_, configErr = NewConfig(testConf)
+	config, configErr = NewConfig(testConf)
 	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, DbNameName)), configErr)
 
 	testConf = []byte(`
@@ -178,8 +179,9 @@ func TestConfigErrors(t *testing.T) {
         }
     }
     `)
-	_, configErr = NewConfig(testConf)
+	config, configErr = NewConfig(testConf)
 	assert.Equal(t, nil, configErr)
+	assert.Equal(t, &chaincfg.TestNet3Params, config.MainChainCfg())
 }
 
 // Test actual Config parses correct values
@@ -248,6 +250,7 @@ func TestConfigStaychain(t *testing.T) {
     `)
 	config, configErr = NewConfig(testConf)
 	assert.Equal(t, nil, configErr)
+	assert.Equal(t, &chaincfg.MainNetParams, config.MainChainCfg())
 
 	assert.Equal(t, "87e56bda501ba6a022f12e178e9f1ac03fb2c07f04e1dfa62ac9e1d83cd840e1", config.InitTx())
 	assert.Equal(t, "51210381324c14a482646e9ad7cf82372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae",
