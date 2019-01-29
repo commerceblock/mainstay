@@ -19,7 +19,7 @@ import (
 // Implements AttestSigner interface and provides
 // mock functionality for receiving sigs from signers
 type AttestSignerFake struct {
-	client *AttestClient
+	clients []*AttestClient
 }
 
 // store latest hash and transaction
@@ -27,11 +27,15 @@ var signerTxPreImageBytes []byte
 var signerConfirmedHashBytes []byte
 
 // Return new AttestSignerFake instance
-func NewAttestSignerFake(config *confpkg.Config) AttestSignerFake {
+func NewAttestSignerFake(configs []*confpkg.Config) AttestSignerFake {
 
-	client := NewAttestClient(config, true) // isSigner flag set to allow signing transactions
+	var clients []*AttestClient
+	for _, config := range configs {
+		// isSigner flag set to allow signing transactions
+		clients = append(clients, NewAttestClient(config, true))
+	}
 
-	return AttestSignerFake{client: client}
+	return AttestSignerFake{clients: clients}
 }
 
 // Resubscribe - do nothing
@@ -51,42 +55,45 @@ func (f AttestSignerFake) SendTxPreImages(txs [][]byte) {
 
 // Return signatures for received tx and hashes
 func (f AttestSignerFake) GetSigs() [][]crypto.Sig {
-	var sigs [][]crypto.Sig
-
 	// get confirmed hash from received confirmed hash bytes
 	hash, hashErr := chainhash.NewHash(signerConfirmedHashBytes)
 	if hashErr != nil {
 		log.Printf("%v\n", hashErr)
-		return sigs
+		return nil
 	}
 
 	// get unserialized tx pre images
 	txPreImages := UnserializeBytes(signerTxPreImageBytes)
 
-	// process each pre image transaction and sign
-	for txIt, txPreImage := range txPreImages {
-		// add hash type to tx serialization
-		txPreImage = append(txPreImage, []byte{1, 0, 0, 0}...)
-		txPreImageHash := chainhash.DoubleHashH(txPreImage)
+	sigs := make([][]crypto.Sig, len(txPreImages)) // init sigs
 
-		// sign first tx with tweaked priv key and
-		// any remaining txs with topup key
-		var sig *btcec.Signature
-		var signErr error
-		if txIt == 0 {
-			priv := f.client.GetKeyFromHash(*hash).PrivKey
-			sig, signErr = priv.Sign(txPreImageHash.CloneBytes())
-		} else {
-			sig, signErr = f.client.WalletPrivTopup.PrivKey.Sign(txPreImageHash.CloneBytes())
-		}
-		if signErr != nil {
-			log.Printf("%v\n", signErr)
-			return sigs
-		}
+	// get sigs from each client
+	for _, client := range f.clients {
+		// process each pre image transaction and sign
+		for i_tx, txPreImage := range txPreImages {
+			// add hash type to tx serialization
+			txPreImage = append(txPreImage, []byte{1, 0, 0, 0}...)
+			txPreImageHash := chainhash.DoubleHashH(txPreImage)
 
-		// add hash type to signature as well
-		sigBytes := append(sig.Serialize(), []byte{byte(1)}...)
-		sigs = append(sigs, []crypto.Sig{sigBytes})
+			// sign first tx with tweaked priv key and
+			// any remaining txs with topup key
+			var sig *btcec.Signature
+			var signErr error
+			if i_tx == 0 {
+				priv := client.GetKeyFromHash(*hash).PrivKey
+				sig, signErr = priv.Sign(txPreImageHash.CloneBytes())
+			} else {
+				sig, signErr = client.WalletPrivTopup.PrivKey.Sign(txPreImageHash.CloneBytes())
+			}
+			if signErr != nil {
+				log.Printf("%v\n", signErr)
+				return nil
+			}
+
+			// add hash type to signature as well
+			sigBytes := append(sig.Serialize(), []byte{byte(1)}...)
+			sigs[i_tx] = append(sigs[i_tx], sigBytes)
+		}
 	}
 
 	return sigs

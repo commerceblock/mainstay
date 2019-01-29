@@ -34,7 +34,7 @@ var testConf = []byte(`
         "chain": "regtest"
     },
     "signer": {
-        "signers": "127.0.0.1:5001,127.0.0.1:5002"
+        "signers": "127.0.0.1:5001,127.0.0.1:5002,127.0.0.1:5003"
     },
     "db": {
         "user":"serviceUser",
@@ -115,7 +115,7 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	config.SetInitScript(Script)
 	config.SetInitChaincodes(strings.Split(InitChaincodes, ","))
 
-	// set topupScript-topupAddress same as init script/addr
+	// custom config for top up process
 	config.SetTopupScript(TopupScript)
 	config.SetTopupAddress(TopupAddress)
 	config.SetTopupPK(TopupPrivMain)
@@ -160,4 +160,81 @@ func DoRegtestWork(dbMongo *server.DbMongo, config *confpkg.Config, wg *sync.Wai
 			}
 		}
 	}
+}
+
+// For unit-testing
+const TestInitPathMulti = "/src/mainstay/test/test-init-multi.sh"
+
+// Test Multi structure
+// Set up testing environment for use by regtest demo or unit tests
+// Use multiple configs to allow multiple transaction signers for testing
+type TestMulti struct {
+    Configs      []*confpkg.Config
+    OceanClient clients.SidechainClient
+}
+
+// test parameters for a 2-3 multisig redeemScript and P2SH address
+const AddressMulti = "2N53Hkuyz8gSM2swdAvt7yqzxH8vVCKxgvK"
+const ScriptMulti = "522103dfc3e2f3d0a3ebf9265d30a87764206d2ee0198820eee200eee4fb3f18eaac43210375f474311ba6248dc7ea1d4044114ee8e8c9cad3974ce2ae5a44dfaa285f3f372103cf016cd19049437c1cfa241bcf1baac58e22c71cae2dc06cb15259ee2f61bb2b53ae"
+const InitChaincodesMulti = "14df7ece79e83f0f479a37832d770294014edc6884b0c8bfa2e0aaf51fb00229,24df7ece79e83f0f479a37832d770294014edc6884b0c8bfa2e0aaf51fb00229,34df7ece79e83f0f479a37832d770294014edc6884b0c8bfa2e0aaf51fb00229"
+const PrivsMulti = "cUY3m2QRr8tGypHsY8UdPH7W7QtpZPJEe4CWsv4HoK1721cHKxQx,cNtt35LyNnFTTJGnFC1fpH5FFJLtfXUYGYJM9ZZLpt5Yp5fSPYWV,cRUq5ww43yFUSdTyAWrbXxxr838qr7oHiiQKRnPGDgJjbCRZacjo"
+
+// NewTestMulti returns a pointer to a TestMulti instance
+func NewTestMulti() *TestMulti {
+
+    initPath := os.Getenv("GOPATH") + TestInitPathMulti
+    cmd := exec.Command("/bin/sh", initPath)
+    _, err := cmd.Output()
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // get config
+    config, configErr := confpkg.NewConfig(testConf)
+    if configErr != nil {
+        log.Fatal(configErr)
+    }
+
+    // Get transaction for Address as initial TX for attestation chain
+    unspent, errUnspent := config.MainClient().ListTransactions("*")
+    if errUnspent != nil {
+        log.Fatal(errUnspent)
+    }
+    var txid string
+    for _, vout := range unspent {
+        if vout.Address == AddressMulti {
+            txid = vout.TxID
+        }
+    }
+
+    var configs []*confpkg.Config
+    chaincodesList := strings.Split(InitChaincodesMulti, ",")
+    privsList := strings.Split(PrivsMulti, ",")
+
+    // config for each private key
+    for _, priv := range privsList {
+        // get config
+        config, configErr := confpkg.NewConfig(testConf)
+        if configErr != nil {
+            log.Fatal(configErr)
+        }
+
+        config.SetInitTx(txid)
+        config.SetInitPK(priv)
+        config.SetInitScript(ScriptMulti)
+        config.SetInitChaincodes(chaincodesList)
+
+        // use same as init for topup for ease
+        config.SetTopupScript(ScriptMulti)
+        config.SetTopupAddress(AddressMulti)
+        config.SetTopupPK(priv)
+
+        config.SetRegtest(true)
+
+        configs = append(configs, config)
+    }
+
+    oceanClient := confpkg.NewClientFromConfig("ocean", true, testConf)
+
+    return &TestMulti{configs, oceanClient}
 }
