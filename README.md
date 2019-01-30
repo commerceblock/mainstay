@@ -78,5 +78,5 @@ The multisig tool `cmd/multisigtool` can be used to generate multisig scripts an
 
 For more information go to [tool guidelines](/cmd/README.md).
 
-For example use cases go to [docs](/docs).
+For example use cases go to [docs](/doc/).
 

@@ -86,7 +86,7 @@ $ go run cmd/commitmenttool/commitmenttool.go -init
 2019/01/30 12:29:54 Finishing...
 ```
 
-### Commitment Verification
+### Commitment Verification
 
 To verify if a commitment has been included in an attestation the following API call can be used:
 
@@ -97,6 +97,3 @@ To get more detailed information on the commitment use:
 https://mainstay.xyz/api/v1/commitment/commitment?commitment=879d36232614b868a52549cf6961caaa4c8f09d3ecffb63714d40d6015f38229
 
 More information on the Mainstay API can be found on [github](https://github.com/commerceblock/mainstay-mvc/blob/develop/doc/mainstay_api.md).
-
-
-
