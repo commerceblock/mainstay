@@ -30,6 +30,8 @@ The client will need to provide an ECDSA public key. The corresponding private k
 
 The tool assigns a new position to the client in the commitment merkle tree and also provides a unique auth_token for authorizing API POST requests submitted by the client. For random auth-token generation only, token generator tool `cmd/tokengeneratortool` can be used.
 
+For examples [check](../doc/signup.md)
+
 ## Token Generator Tool
 
 The token generator tool can be used to generate unique authorization tokens for client signup.
@@ -69,14 +71,10 @@ Various command line arguments need to be provided:
 - `-position`: client position on commitment merkle tree
 - `-authtoken`: client authorization token generated on registration
 - `-privkey`: Client private key, if signature has not been generated using a different source
-- `-signature`: Client signature for commitment, for one time mode only
-- `-commitment`: Commitment to be sent to API, for one time mode only
 
 Ocean connectivity details need to be provided in the `cmd/commitmenttool/conf.json` file if Ocean mode is selected.
 
-To run use the following along with the command line arguments, e.g.:
-
-`go run $GOPATH/src/mainstay/cmd/commitmentool/commitmenttool.go -position 5 -authtoken abcbd-eddde-fllqqwoe -commitment 73902d2a365fff2724e26d975148124268ec6a84991016683817ea2c973b199b -signature MEUCIQCuuFmkoYnwRo5CsR7jE3m6MODsQMMLfCL4Vb5ILPYKCAIgCeh1AJD70L0s6TRr5dyoQAwdLbuBwUsgrYTux9XtXn0=`
+For examples [check](../doc/commitment.md)
 
 ## Multisig Tool
 
