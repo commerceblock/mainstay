@@ -28,8 +28,8 @@ import (
 
 // consts
 const (
-	DefaultApiHost       = "https://testnet.mainstay.xyz" // testnet mainstay url
-	ApiCommitmentSendUrl = "/api/v1/commitment/send"      // url to send commitments to
+	DefaultApiHost       = "https://mainstay.xyz"    // testnet mainstay url
+	ApiCommitmentSendUrl = "/api/v1/commitment/send" // url to send commitments to
 
 	// config for sidechain connectivity (optional)
 	ClientChainName = "ocean"

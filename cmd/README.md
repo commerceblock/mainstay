@@ -64,7 +64,7 @@ The tool functions in three different modes:
 
 Various command line arguments need to be provided:
 
-- `-apiHost`: host address of Mainstay API (default: https://testnet.mainstay.xyz)
+- `-apiHost`: host address of Mainstay API (default: https://mainstay.xyz)
 - `-init`: init mode to generate ECDSA pubkey/privkey (default: false)
 - `-ocean`: ocean mode to use recurrent commitment mode (default: false)
 - `-delay`: delay in minutes between sending commitments in ocean mode (default: 60)
