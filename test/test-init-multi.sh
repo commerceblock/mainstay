@@ -26,8 +26,8 @@ sleep 0.5
 btcl generate 103
 sleep 0.5
 
-btcl importaddress "2N74sgEvpJRwBZqjYUEXwPfvuoLZnRaF1xJ"
-btcl importaddress "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b33210325bf82856a8fdcc7a2c08a933343d2c6332c4c252974d6b09b6232ea4080462652ae" "" true true
-btcl sendtoaddress "2N74sgEvpJRwBZqjYUEXwPfvuoLZnRaF1xJ" $(btcl getbalance) "" "" true
+btcl importaddress "2N53Hkuyz8gSM2swdAvt7yqzxH8vVCKxgvK"
+btcl importaddress "522103dfc3e2f3d0a3ebf9265d30a87764206d2ee0198820eee200eee4fb3f18eaac43210375f474311ba6248dc7ea1d4044114ee8e8c9cad3974ce2ae5a44dfaa285f3f372103cf016cd19049437c1cfa241bcf1baac58e22c71cae2dc06cb15259ee2f61bb2b53ae" "" true true
+btcl sendtoaddress "2N53Hkuyz8gSM2swdAvt7yqzxH8vVCKxgvK" $(btcl getbalance) "" "" true
 
 btcl generate 1

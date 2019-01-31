@@ -95,18 +95,25 @@ func GetChainCfgParams(name string, conf []byte) (*chaincfg.Params, error) {
 		return nil, errors.New(fmt.Sprintf("%s: %s", cfgErr, name))
 	}
 
-	chain, valueErr := cfg.getValue(RpcClientChainName)
-	if valueErr != nil {
-		return nil, errors.New(fmt.Sprintf("%s: %s", valueErr, RpcClientChainName))
+	// error if RpcClientChainName not found in main config
+	chainValue, chainValueErr := cfg.getValue(RpcClientChainName)
+	if chainValueErr != nil {
+		return nil, errors.New(fmt.Sprintf("%s: %s", chainValueErr, RpcClientChainName))
 	}
+
+	// try get env or keep current value
+	chain := os.Getenv(chainValue)
+	if chain == "" {
+		chain = chainValue
+	}
+
 	if chain == "regtest" {
 		return &chaincfg.RegressionNetParams, nil
 	} else if chain == "testnet" {
 		return &chaincfg.TestNet3Params, nil
-	} else if chain == "main" {
-		return &chaincfg.MainNetParams, nil
 	}
-	return nil, nil
+	// mainnet returned unless specified otherwise
+	return &chaincfg.MainNetParams, nil
 }
 
 // Get parameter from conf file argument using base name and argument name

@@ -72,5 +72,11 @@ The client signup tool `cmd/clientsignuptool` can be used to sign up new clients
 
 The token generator tool `cmd/tokengeneratortool` can be used to generate unique authorization tokens for client signup.
 
+- Multisig Tool
+
+The multisig tool `cmd/multisigtool` can be used to generate multisig scripts and P2SH addresses for Mainstay configuration.
 
 For more information go to [tool guidelines](/cmd/README.md).
+
+For example use cases go to [docs](/doc/).
+

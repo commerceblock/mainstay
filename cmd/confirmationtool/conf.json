@@ -1,11 +1,13 @@
 {
-    "main": {
+    "main":
+    {
         "rpcurl": "MAINSTAY_CONFIRMATION_URL",
         "rpcuser": "MAINSTAY_CONFIRMATION_USER",
         "rpcpass": "MAINSTAY_CONFIRMATION_PASS",
-        "chain": "testnet"
+        "chain": "MAINSTAY_CONFIRMATION_CHAIN"
     },
-    "clientchain": {
+    "clientchain":
+    {
         "rpcurl": "MAINSTAY_OCEAN_URL",
         "rpcuser": "MAINSTAY_OCEAN_USER",
         "rpcpass": "MAINSTAY_OCEAN_PASS",
