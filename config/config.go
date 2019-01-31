@@ -18,16 +18,18 @@ import (
 
 // config name consts
 const (
-	ConfPath                  = "/src/mainstay/config/conf.json"
-	MainChainName             = "main"
-	StaychainName             = "staychain"
-	StaychainRegtestName      = "regtest"
-	StaychainInitTxName       = "initTx"
-	StaychainInitScriptName   = "initScript"
-	StaychainInitPkName       = "initPK"
-	StaychainTopupAddressName = "topupAddress"
-	StaychainTopupScriptName  = "topupScript"
-	StaychainTopupPkName      = "topupPK"
+	ConfPath                     = "/src/mainstay/config/conf.json"
+	MainChainName                = "main"
+	StaychainName                = "staychain"
+	StaychainRegtestName         = "regtest"
+	StaychainInitTxName          = "initTx"
+	StaychainInitScriptName      = "initScript"
+	StaychainInitPkName          = "initPK"
+	StaychainInitChaincodesName  = "initChaincodes"
+	StaychainTopupAddressName    = "topupAddress"
+	StaychainTopupScriptName     = "topupScript"
+	StaychainTopupPkName         = "topupPK"
+	StayChainTopupChaincodesName = "topupChaincodes"
 )
 
 // Config struct
@@ -39,13 +41,15 @@ type Config struct {
 	mainChainCfg *chaincfg.Params
 
 	// core staychain config parameters
-	regtest      bool
-	initTX       string
-	initPK       string
-	initScript   string
-	topupAddress string
-	topupScript  string
-	topupPK      string
+	regtest         bool
+	initTX          string
+	initPK          string
+	initScript      string
+	initChaincodes  []string
+	topupAddress    string
+	topupScript     string
+	topupPK         string
+	topupChaincodes []string
 
 	// additional parameter categories
 	signerConfig SignerConfig
@@ -139,6 +143,16 @@ func (c *Config) SetInitScript(script string) {
 	c.initScript = script
 }
 
+// Get Init Chaincodes
+func (c *Config) InitChaincodes() []string {
+	return c.initChaincodes
+}
+
+// Set Init Chaincodes
+func (c *Config) SetInitChaincodes(chaincodes []string) {
+	c.initChaincodes = chaincodes
+}
+
 // Get topup Script
 func (c *Config) TopupScript() string {
 	return c.topupScript
@@ -147,6 +161,16 @@ func (c *Config) TopupScript() string {
 // Set topup Script
 func (c *Config) SetTopupScript(script string) {
 	c.topupScript = script
+}
+
+// Get Topup Chaincodes
+func (c *Config) TopupChaincodes() []string {
+	return c.topupChaincodes
+}
+
+// Set Topup Chaincodes
+func (c *Config) SetTopupChaincodes(chaincodes []string) {
+	c.topupChaincodes = chaincodes
 }
 
 // Get topup PK
@@ -208,20 +232,33 @@ func NewConfig(customConf ...[]byte) (*Config, error) {
 	topupScriptStr := TryGetParamFromConf(StaychainName, StaychainTopupScriptName, conf)
 	topupPKStr := TryGetParamFromConf(StaychainName, StaychainTopupPkName, conf)
 
+	initChaincodesStr := TryGetParamFromConf(StaychainName, StaychainInitChaincodesName, conf)
+	initChaincodes := strings.Split(initChaincodesStr, ",") // string to string slice
+	for i := range initChaincodes {                         // trim whitespace
+		initChaincodes[i] = strings.TrimSpace(initChaincodes[i])
+	}
+	topupChaincodesStr := TryGetParamFromConf(StaychainName, StayChainTopupChaincodesName, conf)
+	topupChaincodes := strings.Split(topupChaincodesStr, ",") // string to string slice
+	for i := range topupChaincodes {                          // trim whitespace
+		topupChaincodes[i] = strings.TrimSpace(topupChaincodes[i])
+	}
+
 	return &Config{
-		mainClient:   mainClient,
-		mainChainCfg: mainClientCfg,
-		regtest:      (regtestStr == "1"),
-		initTX:       initTxStr,
-		initPK:       initPKStr,
-		initScript:   initScriptStr,
-		topupAddress: topupAddrStr,
-		topupScript:  topupScriptStr,
-		topupPK:      topupPKStr,
-		signerConfig: signerConfig,
-		dbConfig:     dbConnectivity,
-		feesConfig:   feesConfig,
-		timingConfig: timingConfig,
+		mainClient:      mainClient,
+		mainChainCfg:    mainClientCfg,
+		regtest:         (regtestStr == "1"),
+		initTX:          initTxStr,
+		initPK:          initPKStr,
+		initScript:      initScriptStr,
+		initChaincodes:  initChaincodes,
+		topupAddress:    topupAddrStr,
+		topupScript:     topupScriptStr,
+		topupPK:         topupPKStr,
+		topupChaincodes: topupChaincodes,
+		signerConfig:    signerConfig,
+		dbConfig:        dbConnectivity,
+		feesConfig:      feesConfig,
+		timingConfig:    timingConfig,
 	}, nil
 }
 
@@ -438,7 +475,9 @@ func GetSignerConfig(conf []byte) (SignerConfig, error) {
 		return SignerConfig{}, signersErr
 	}
 	signers := strings.Split(signersStr, ",")
-
+	for i := range signers {
+		signers[i] = strings.TrimSpace(signers[i])
+	}
 	publisher := TryGetParamFromConf(SignerName, SignerPublisherName, conf)
 
 	return SignerConfig{

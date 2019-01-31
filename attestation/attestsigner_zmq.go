@@ -179,22 +179,47 @@ func updateNumOfTxInputs(msgSplit [][]byte, numOfInputs int) int {
 
 // Listen to zmq subscribers to receive tx signatures
 func (z AttestSignerZmq) GetSigs() [][]crypto.Sig {
+
 	var msgs [][][]byte
 	numOfTxInputs := 0
-	sockets, pollErr := poller.Poll(-1)
-	if pollErr != nil {
-		log.Println(pollErr)
-	}
-	for _, socket := range sockets {
-		for _, sub := range z.subscribers {
-			if sub.Socket() == socket.Socket {
-				_, msg := sub.ReadMessage()
-				var msgSplit [][]byte
-				msgSplit = UnserializeBytes(msg)
-				numOfTxInputs = updateNumOfTxInputs(msgSplit, numOfTxInputs)
-				msgs = append(msgs, msgSplit)
+
+	// Iterate through each subscriber to get the latest message sent
+	// If there is more than one message in the subscriber queue the
+	// last is retained by continuously polling the Poller to get that
+	for _, sub := range z.subscribers {
+
+		var subMsg [][]byte // store latest message
+
+		// continously poll to get latest message
+		// or stop if no message has been found
+		for {
+			sockets, pollErr := poller.Poll(-1)
+			if pollErr != nil {
+				log.Println(pollErr)
+			}
+
+			found := false
+			// look for matching subscriber in polling results
+			for _, socket := range sockets {
+				if sub.Socket() == socket.Socket {
+					found = true
+					_, msg := sub.ReadMessage()
+					subMsg = UnserializeBytes(msg)
+				}
+			}
+
+			if !found {
+				break
 			}
 		}
+
+		// update received messages only if a subscriber message has been found
+		// this check is probably unnecessary but better safe than sorry
+		if len(subMsg) > 0 {
+			numOfTxInputs = updateNumOfTxInputs(subMsg, numOfTxInputs)
+			msgs = append(msgs, subMsg)
+		}
 	}
-	return getSigsFromMsgs(msgs, numOfTxInputs)
+
+	return getSigsFromMsgs(msgs, numOfTxInputs) // bring messages into readable format for mainstay
 }

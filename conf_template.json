@@ -1,40 +1,48 @@
 {
-    "staychain": {
+    "staychain":
+    {
         "initTx": "87e56bda501ba6a022f12e178e9f1ac03fb2c07f04e1dfa62ac9e1d83cd840e1",
         "initScript": "51210381324c14a482646e9ad7cf82372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae",
+        "initChaincodes": "0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa,0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa",
         "topupAddress": "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB",
         "topupScript": "512103e52cf15e0a5cf6612314f077bb65cf9a6596b76c0fcb34b682f673a8314c7b332102f3a78a7bd6cf01c56312e7e828bef74134dfb109e59afd088526212d96518e7552ae",
         "regtest": "1"
     },
-    "main": {
+    "main":
+    {
         "rpcurl": "127.0.0.1:18000",
         "rpcuser": "USERNAME",
         "rpcpass": "PASSWORD",
         "chain": "regtest"
     },
-    "clientchain": {
+    "clientchain":
+    {
         "rpcurl": "127.0.0.1:19000",
         "rpcuser": "USERNAME",
         "rpcpass": "PASSWORD",
         "chain": "main"
     },
-    "signer": {
+    "signer":
+    {
         "publisher": "*:5000",
         "signers": "node0:1000,node1:1001"
     },
-    "db": {
-        "user":"user",
-        "password":"pssword",
-        "host":"localhost",
-        "port":"27017",
-        "name":"mainstay"
+    "db":
+    {
+        "user": "user",
+        "password": "pssword",
+        "host": "localhost",
+        "port": "27017",
+        "name": "mainstay"
     },
-    "fees": {
+    "fees":
+    {
         "minFee": "5",
         "maxFee": "50",
         "feeIncrement": "2"
     },
-    "timing": {
+    "timing":
+    {
         "newAttestationMinutes": "60",
         "handleUnconfirmedMinutes": "60"
     }

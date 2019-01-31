@@ -39,6 +39,7 @@ const (
 	ErrorMerkleCommitmentSave = "could not save merkle commitment"
 	ErrorMerkleProofSave      = "could not save merkle proof"
 	ErrorClientDetailsSave    = "could not save client details"
+	ErrorClientCommitmentSave = "could not save client commitment"
 
 	ErrorAttestationGet      = "could not get attestation"
 	ErrorMerkleCommitmentGet = "could not get merkle commitment"
@@ -55,6 +56,7 @@ const (
 	BadDataMerkleCommitmentModel = "bad data in merkle commitment model"
 	BadDataMerkleProofModel      = "bad data in merkle proof model"
 	BadDataClientDetailsModel    = "bad data in client details model"
+	BadDataClientCommitmentModel = "bad data in client commitment model"
 )
 
 // Method to connect to mongo database through config
@@ -265,6 +267,36 @@ func (d *DbMongo) SaveClientDetails(details models.ClientDetails) error {
 	resErr := res.Decode(&t)
 	if resErr != nil && resErr != mongo.ErrNoDocuments {
 		return errors.New(fmt.Sprintf("%s %v", ErrorClientDetailsSave, resErr))
+	}
+	return nil
+}
+
+// Save client commitment to ClientCommitment collection
+func (d *DbMongo) SaveClientCommitment(commitment models.ClientCommitment) error {
+	// get document representation of client details
+	docCommitment, docErr := models.GetDocumentFromModel(commitment)
+	if docErr != nil {
+		return errors.New(fmt.Sprintf("%s %v", BadDataClientCommitmentModel, docErr))
+	}
+
+	newCommitment := bsonx.Doc{
+		{"$set", bsonx.Document(*docCommitment)},
+	}
+
+	// search if client details for position already exists
+	filterClientCommitment := bsonx.Doc{
+		{models.ClientCommitmentClientPositionName,
+			bsonx.Int32(docCommitment.Lookup(models.ClientCommitmentClientPositionName).Int32())},
+	}
+
+	// insert or update client details
+	var t bsonx.Doc
+	opts := &options.FindOneAndUpdateOptions{}
+	opts.SetUpsert(true)
+	res := d.db.Collection(ColNameClientCommitment).FindOneAndUpdate(d.ctx, filterClientCommitment, newCommitment, opts)
+	resErr := res.Decode(&t)
+	if resErr != nil && resErr != mongo.ErrNoDocuments {
+		return errors.New(fmt.Sprintf("%s %v", ErrorClientCommitmentSave, resErr))
 	}
 	return nil
 }

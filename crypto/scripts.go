@@ -95,6 +95,12 @@ func ParseScriptSig(scriptSig []byte) ([]Sig, []byte) {
 	for { // parse script using script size byte
 		scriptSize := scriptSig[it]
 
+		// check for OP_PUSHDATA1 and read next byte if requried
+		if scriptSize == opPushData1 {
+			it += 1
+			scriptSize = scriptSig[it]
+		}
+
 		// check if next size excees the bounds and break
 		// maybe TODO: error handling
 		if (int(scriptSize) + 1 + it) > len(scriptSig) {
@@ -116,6 +122,11 @@ func ParseScriptSig(scriptSig []byte) ([]Sig, []byte) {
 	return sigs, redeemScript
 }
 
+// OP_PUSHDATA1 from bitcoin used when size byte is larger than
+// 75 to signify that the next byte will determine the size and
+// thus dont confuse with bitcoin OPS that are >75
+const opPushData1 = 76
+
 // Create scriptSig from sigs and redeemScript
 func CreateScriptSig(sigs []Sig, script []byte) []byte {
 
@@ -128,6 +139,11 @@ func CreateScriptSig(sigs []Sig, script []byte) []byte {
 	for _, sig := range sigs {
 		scriptSig = append(scriptSig, byte(len(sig)))
 		scriptSig = append(scriptSig, sig...)
+	}
+
+	// add OP_PUSHDATA1 if redeem script too large
+	if len(script) > 75 {
+		scriptSig = append(scriptSig, byte(opPushData1))
 	}
 
 	// append redeemScript
