@@ -13,7 +13,7 @@ State commitments are made to staychain transactions using the homomorphic _pay-
 In order to maintain the property of immutability for sequential commitments in sequential Merkle Trees anchored to the staychain, only one simple additional rule must be followed: each commitment from a particular seqeunce of states must always be be verifiably committed to the _same_ position within the Merkle tree. If the commitment is always validated in the same position, then the sequence is as immutable (as in having only a single possible non-branching history) as the the root commitment into the staychain.
 
 <p align="center">
-<img src="doc/images/fig1_n.png" align="middle" width="820" vspace="20">
+<img src="images/fig1_n.png" align="middle" width="820" vspace="20">
 </p>
 
 <p align="center">
@@ -33,7 +33,7 @@ Proof of the inclusion a commitment (as a leaf of the tree) is then generated fr
 The `slotid` is defined according to the binary _path_ from the leaf through to the Merkle root, which consists of the sequence of `L` and `R` concatenations (see Fig. 2). The `slotid` defined in this way does not change as the tree is extended with more slots and the depth of the tree is increased (increasing the depth of the tree will simply increase the size of the proofs).
 
 <p align="center">
-<img src="doc/images/fig2_n.png" width="780" vspace="20">
+<img src="images/fig2_n.png" width="780" vspace="20">
 </p>
 
 <p align="center">
@@ -73,7 +73,7 @@ To obtain a Proof of Immutable State (PoIS) one or more slot-proofs on same stay
 Individual users (clients) of the connector service will be granted exclusive permission to add a 256 bit commitment to a specific slot for as long as a service agreement remains in force. Upon the commencement of a service agreement with a client, the client will be assigned a free `slotid` (the lowest currently unused). The client will then provide a _validation script_ `PubKeyScript` which contains the policy for verifying a submitted commitment. The policy is determined by the client, and can be a single public key requiring a single commitment signature or an _m-of-n_ multisignature script (or any other policy logic). In addition, the client will be provided with API access details and tokens.
 
 <p align="center">
-<img src="doc/images/fig3_n.png" width="780" vspace="20">
+<img src="images/fig3_n.png" width="780" vspace="20">
 </p>
 
 <p align="center">
@@ -85,7 +85,7 @@ On the initiation of a connection, the `PubKeyScript` is added to the _active sl
 At intervals determined by the staychain attestation frequency, the commitment server then tweaks the base public key `basePK` of the staychain with the current CMR (_CMR<sup>i</sup>_) generating a new address _Addr<sup>i</sup>_ (where _i_ is the staychain height). A Bitcoin transaction _TxID<sup>i</sup>_ paying to address _Addr<sup>i</sup>_ and spending from the staychain tip UTXO (_TxID<sup>i-1</sup>_) is created and submitted to the Bitcoin network.
 
 <p align="center">
-<img src="doc/images/fig4_n.png" width="530" vspace="20">
+<img src="images/fig4_n.png" width="530" vspace="20">
 </p>
 
 <p align="center">
