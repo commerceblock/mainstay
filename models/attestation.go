@@ -11,7 +11,7 @@ import (
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/mongodb/mongo-go-driver/bson"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // error consts

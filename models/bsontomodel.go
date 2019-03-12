@@ -5,8 +5,8 @@
 package models
 
 import (
-	"github.com/mongodb/mongo-go-driver/bson"
-	"github.com/mongodb/mongo-go-driver/x/bsonx"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/x/bsonx"
 )
 
 // Function to get bson Document from model interface that implements MarshalBSON
