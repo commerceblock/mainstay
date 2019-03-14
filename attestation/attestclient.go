@@ -411,8 +411,8 @@ func (w *AttestClient) bumpAttestationFees(msgTx *wire.MsgTx) error {
 // Calculate the size of a signed transaction by summing the unsigned tx size
 // and the redeem script size and estimated signature size of the scriptsig
 func calcSignedTxSize(unsignedTxSize int, scriptSize int, numOfSigs int) int {
-	return unsignedTxSize + /*script size byte*/ 1 + scriptSize
-	+ /*00 scriptsig byte*/ 1 + numOfSigs*( /*sig size byte*/ 1+72)
+	return unsignedTxSize + /*script size byte*/ 1 + scriptSize +
+		/*00 scriptsig byte*/ 1 + numOfSigs*( /*sig size byte*/ 1+72)
 }
 
 // Calculate the actual fee of an unsigned transaction by taking into consideration
@@ -484,16 +484,18 @@ func (w *AttestClient) getTransactionPreImages(hash chainhash.Hash, msgTx *wire.
 	preImageTxs = append(preImageTxs, *preImageTx0)
 
 	// Add topup script to tx pre-image
-	topupScriptSer, topupDecodeErr := hex.DecodeString(w.scriptTopup)
-	if topupDecodeErr != nil {
-		log.Printf("%s %s\n", WarningFailedDecodingTopupMultisig, w.scriptTopup)
-		return preImageTxs, nil
-	}
-	for i := 1; i < len(msgTx.TxIn); i++ {
-		// add topup script bytes to txin script
-		preImageTxi := msgTx.Copy()
-		preImageTxi.TxIn[i].SignatureScript = topupScriptSer
-		preImageTxs = append(preImageTxs, *preImageTxi)
+	if len(msgTx.TxIn) > 1 {
+		topupScriptSer, topupDecodeErr := hex.DecodeString(w.scriptTopup)
+		if topupDecodeErr != nil {
+			log.Printf("%s %s\n", WarningFailedDecodingTopupMultisig, w.scriptTopup)
+			return preImageTxs, nil
+		}
+		for i := 1; i < len(msgTx.TxIn); i++ {
+			// add topup script bytes to txin script
+			preImageTxi := msgTx.Copy()
+			preImageTxi.TxIn[i].SignatureScript = topupScriptSer
+			preImageTxs = append(preImageTxs, *preImageTxi)
+		}
 	}
 
 	return preImageTxs, nil
