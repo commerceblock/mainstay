@@ -366,7 +366,7 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []bt
 	msgTx.TxIn[0].Sequence = uint32(math.Pow(2, float64(32))) - 3
 
 	// return error if txout value is less than maxFee target
-	maxFee := int64(w.Fees.maxFee * msgTx.SerializeSize())
+	maxFee := calcSignedTxFee(w.Fees.maxFee, msgTx.SerializeSize(), len(w.script0)/2, w.numOfSigs)
 	if msgTx.TxOut[0].Value < maxFee {
 		return nil, errors.New(ErrorInsufficientFunds)
 	}
@@ -379,7 +379,6 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []bt
 	// add fees using best fee-per-byte estimate
 	feePerByte := w.Fees.GetFee()
 	fee := calcSignedTxFee(feePerByte, msgTx.SerializeSize(), len(w.script0)/2, w.numOfSigs)
-	log.Println(msgTx.SerializeSize())
 	msgTx.TxOut[0].Value -= fee
 
 	return msgTx, nil
@@ -402,7 +401,6 @@ func (w *AttestClient) bumpAttestationFees(msgTx *wire.MsgTx) error {
 
 	// increase tx fees by fee difference
 	feeIncrement := calcSignedTxFee(feePerByteIncrement, msgTx.SerializeSize(), len(w.script0)/2, w.numOfSigs)
-	log.Println(msgTx.SerializeSize())
 	msgTx.TxOut[0].Value -= feeIncrement
 
 	return nil
