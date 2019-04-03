@@ -6,7 +6,7 @@ package models
 
 import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/mongodb/mongo-go-driver/bson"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // struct for db ClientCommitment

@@ -6,7 +6,6 @@ package server
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"mainstay/models"
@@ -340,33 +339,39 @@ func TestServerGetClientCommitment(t *testing.T) {
 	dbFake.SetClientCommitments(latestCommitments)
 
 	respClientCommitment, err = server.GetClientCommitment()
-	assert.Equal(t, errors.New(fmt.Sprintf("%s %d", ErrorLatestCommitmentMissing, 1)), err)
-	assert.Equal(t, chainhash.Hash{}, respClientCommitment.GetCommitmentHash())
+	assert.Equal(t, nil, err)
+	latestCommitment, err2 := models.NewCommitment([]chainhash.Hash{*hash0, chainhash.Hash{}, *hash2})
+	assert.Equal(t, nil, err2)
+	assert.Equal(t, latestCommitment.GetCommitmentHash(), respClientCommitment.GetCommitmentHash())
 
 	// update server with incorrect latest commitment and test server
 	latestCommitments = []models.ClientCommitment{
-		models.ClientCommitment{*hash0, 1}, models.ClientCommitment{*hash2, 2}}
+		models.ClientCommitment{*hash1, 1}, models.ClientCommitment{*hash2, 2}}
 	dbFake.SetClientCommitments(latestCommitments)
 
 	respClientCommitment, err = server.GetClientCommitment()
-	assert.Equal(t, errors.New(fmt.Sprintf("%s %d", ErrorLatestCommitmentMissing, 0)), err)
-	assert.Equal(t, chainhash.Hash{}, respClientCommitment.GetCommitmentHash())
+	assert.Equal(t, nil, err)
+	latestCommitment, err2 = models.NewCommitment([]chainhash.Hash{chainhash.Hash{}, *hash1, *hash2})
+	assert.Equal(t, nil, err2)
+	assert.Equal(t, latestCommitment.GetCommitmentHash(), respClientCommitment.GetCommitmentHash())
 
 	// update server with incorrect latest commitment and test server
 	latestCommitments = []models.ClientCommitment{models.ClientCommitment{*hash2, 2}}
 	dbFake.SetClientCommitments(latestCommitments)
 
 	respClientCommitment, err = server.GetClientCommitment()
-	assert.Equal(t, errors.New(fmt.Sprintf("%s %d", ErrorLatestCommitmentMissing, 0)), err)
-	assert.Equal(t, chainhash.Hash{}, respClientCommitment.GetCommitmentHash())
+	assert.Equal(t, nil, err)
+	latestCommitment, err2 = models.NewCommitment([]chainhash.Hash{chainhash.Hash{}, chainhash.Hash{}, *hash2})
+	assert.Equal(t, nil, err2)
+	assert.Equal(t, latestCommitment.GetCommitmentHash(), respClientCommitment.GetCommitmentHash())
 
 	// update server with correct latest commitment and test server
 	latestCommitments = []models.ClientCommitment{
 		models.ClientCommitment{*hash0, 0},
 		models.ClientCommitment{*hash1, 1},
 		models.ClientCommitment{*hash2, 2}}
-	latestCommitment, err := models.NewCommitment([]chainhash.Hash{*hash0, *hash1, *hash2})
-	assert.Equal(t, nil, err)
+	latestCommitment, err2 = models.NewCommitment([]chainhash.Hash{*hash0, *hash1, *hash2})
+	assert.Equal(t, nil, err2)
 	dbFake.SetClientCommitments(latestCommitments)
 
 	respClientCommitment, err = server.GetClientCommitment()

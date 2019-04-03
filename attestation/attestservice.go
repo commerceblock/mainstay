@@ -210,6 +210,8 @@ func (s *AttestService) stateInitUnspent(unspent btcjson.ListUnspentResult) {
 		if s.setFailure(errUpdate) {
 			return // will rebound to init
 		}
+
+		s.attester.Fees.ResetFee(s.isRegtest) // reset client fees
 	} else {
 		log.Println("********** found unspent transaction, initiating staychain")
 		s.attestation = models.NewAttestationDefault()
