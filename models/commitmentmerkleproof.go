@@ -8,7 +8,7 @@ import (
 	"log"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/mongodb/mongo-go-driver/bson"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // Build merkle proof for a specific position in the merkle tree

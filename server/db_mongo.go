@@ -14,10 +14,9 @@ import (
 	"mainstay/models"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/mongodb/mongo-go-driver/x/bsonx"
-
-	"github.com/mongodb/mongo-go-driver/mongo"
-	"github.com/mongodb/mongo-go-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/x/bsonx"
 )
 
 const (
@@ -70,7 +69,7 @@ func dbConnect(ctx context.Context, dbConnectivity config.DbConfig) (*mongo.Data
 		dbConnectivity.Name,
 	)
 
-	client, err := mongo.NewClient(uri)
+	client, err := mongo.NewClient(options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("%s %v", ErrorMongoClient, err))
 	}
@@ -342,7 +341,7 @@ func (d *DbMongo) getAttestationCount(confirmed ...bool) (int64, error) {
 	// find latest attestation count
 	opts := options.CountOptions{}
 	opts.SetLimit(1)
-	count, countErr := d.db.Collection(ColNameAttestation).Count(d.ctx, confirmedFilter, &opts)
+	count, countErr := d.db.Collection(ColNameAttestation).CountDocuments(d.ctx, confirmedFilter, &opts)
 	if countErr != nil {
 		return 0, errors.New(fmt.Sprintf("%s %v", ErrorAttestationGet, countErr))
 	}

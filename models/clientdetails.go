@@ -5,7 +5,7 @@
 package models
 
 import (
-	_ "github.com/mongodb/mongo-go-driver/bson"
+	_ "go.mongodb.org/mongo-driver/bson"
 )
 
 // struct for db ClientDetails

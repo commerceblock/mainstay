@@ -7,8 +7,8 @@ package models
 import (
 	"testing"
 
-	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // Test ClientDetails high level interface

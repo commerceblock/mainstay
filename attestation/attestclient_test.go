@@ -457,6 +457,7 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 	topupHash := chainhash.Hash{}
 
 	client.Fees.ResetFee(true) // reset fee to minimum
+	defaultFeeIncrement := client.Fees.feeIncrement
 
 	// Do attestations using attest client
 	for i := 1; i <= iterNum; i++ {
@@ -510,6 +511,14 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		verifyTransactionPreImages(t, client, tx2, script, oceanCommitmentHash, i)
 
 		// test attestation transaction fee bumping
+		if i == topupLevel+1 {
+			// if transaction is already sent and we add a new vin then we
+			// need to increase the fee rate before bumping or it will fail
+			// Edge case not used in attestservice but always a possibility
+			client.Fees.feeIncrement = 20
+		} else {
+			client.Fees.feeIncrement = defaultFeeIncrement
+		}
 		bumpErr := client.bumpAttestationFees(tx2)
 		assert.Equal(t, nil, bumpErr)
 		assert.Equal(t, 1-1*int(math.Min(0, float64((i%(topupLevel+1)-1)))), len(tx2.TxIn))
@@ -518,8 +527,9 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 
 		newFee := client.Fees.GetFee()
 		newValue := tx2.TxOut[0].Value
-		assert.Equal(t, int64(newFee*tx2.SerializeSize()-currentFee*tx.SerializeSize()),
-			(currentValue + topupValue - newValue))
+		newTxFee := calcSignedTxFee(newFee, tx2.SerializeSize(), len(client.script0)/2, client.numOfSigs)
+		currentTxFee := calcSignedTxFee(currentFee, tx.SerializeSize(), len(client.script0)/2, client.numOfSigs)
+		assert.Equal(t, newTxFee-currentTxFee, currentValue+topupValue-newValue)
 		assert.Equal(t, client.Fees.minFee+client.Fees.feeIncrement, newFee)
 
 		// test signing and sending attestation again
@@ -553,4 +563,21 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 
 	assert.Equal(t, len(txs), iterNum+1)
 	verifyTxs(t, client, txs)
+}
+
+// Test fee calculation for an unsigned transaction
+func TestAttestClient_feeCalculation(t *testing.T) {
+	unsignedTxSize := 83
+	feePerByte := 10
+
+	scriptSize := len(testpkg.Script) / 2
+	_, numOfSigs := crypto.ParseRedeemScript(testpkg.Script)
+	assert.Equal(t, 229, calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs))
+	assert.Equal(t, int64(2290), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize, numOfSigs))
+
+	script2 := "52210325bf82856a8fdcc7a2c08a933343d2c6332c4c252974d6b09b6232ea4080462621028ed149d77203c79d7524048689a80cc98f27e3427f2edaec52eae1f630978e08210254a548b59741ba35bfb085744373a8e10b1cf96e71f53356d7d97f807258d38c53ae"
+	scriptSize2 := len(script2) / 2
+	_, numOfSigs2 := crypto.ParseRedeemScript(script2)
+	assert.Equal(t, 336, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2))
+	assert.Equal(t, int64(3360), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2))
 }

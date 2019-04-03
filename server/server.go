@@ -5,17 +5,9 @@
 package server
 
 import (
-	"errors"
-	"fmt"
-
 	"mainstay/models"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-)
-
-// error consts
-const (
-	ErrorLatestCommitmentMissing = "Client commitment missing for position"
 )
 
 // Server structure
@@ -107,14 +99,17 @@ func (s *Server) GetClientCommitment() (models.Commitment, error) {
 	}
 
 	var commitmentHashes []chainhash.Hash
-	// assume latest commitments ordered by position
-	for pos, c := range latestCommitments {
-		if int32(pos) == c.ClientPosition {
-			commitmentHashes = append(commitmentHashes, c.Commitment)
-		} else {
-			return models.Commitment{}, errors.New(fmt.Sprintf("%s %d", ErrorLatestCommitmentMissing, pos))
+	if len(latestCommitments) > 0 {
+		// initialise hash slice with the maximum position returned from the commitment results
+		// asume latestCommitments ordered (ASC) by client position
+		commitmentHashes = make([]chainhash.Hash, latestCommitments[len(latestCommitments)-1].ClientPosition+1)
+		// set commitments in ordered position for resulting slice
+		// missing positions have been initialized to zero hash
+		for _, c := range latestCommitments {
+			commitmentHashes[c.ClientPosition] = c.Commitment
 		}
 	}
+
 	// construct Commitment from MerkleCommitment commitments
 	commitment, errCommitment := models.NewCommitment(commitmentHashes)
 	if errCommitment != nil {
