@@ -12,9 +12,9 @@
 // Make sure mongo db running in auth mode:
 // mongod -auth
 // Run this using:
-// mongo --eval "var db_name='$DB_NAME_MAINSTAY'; var db_user='$DB_USER'; var db_pass ='$DB_PASS'" scripts/db-init.js
+// mongo --eval "var db_host='$DB_HOST'; db_name='$DB_NAME_MAINSTAY'; var db_user='$DB_USER'; var db_pass ='$DB_PASS'" scripts/db-init.js
 
-db = connect(db_user + ":" + db_pass + "@127.0.0.1:27017/admin");
+db = connect(db_user + ":" + db_pass + "@" + db_host + "/admin");
 
 // Connect/create mainstayX database
 db = db.getSiblingDB(db_name)
@@ -54,7 +54,7 @@ db.createRole(
 
 // mainstayService role
 // This allows writing to all collections except
-// ClientCommitment which only API is allowed to write to
+// ClientCommitment/ClientDetails which only API is allowed to write to
 db.createRole(
 {
     role: "mainstayService",
@@ -64,7 +64,7 @@ db.createRole(
         { resource: { db: db_name, collection: "MerkleCommitment" }, actions: ["find", "update", "insert"] },
         { resource: { db: db_name, collection: "MerkleProof" }, actions: ["find", "update", "insert"] },
         { resource: { db: db_name, collection: "ClientCommitment" }, actions: ["find"] },
-        { resource: { db: db_name, collection: "ClientDetails" }, actions: ["find", "update", "insert"] },
+        { resource: { db: db_name, collection: "ClientDetails" }, actions: ["find"] },
     ],
     roles: []
 }
