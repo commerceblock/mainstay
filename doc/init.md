@@ -7,10 +7,10 @@ Alternatively HSM interfaces can be used instead of the transaction signing tool
 ## Initial attestation
 
 ### Generate 2 addresses
-$ bitcoin-cli -datadir=testnetbtc-datadir/ getnewaddress
+$ bitcoin-cli -datadir=testnetbtc-datadir/ getnewaddress "" legacy
 2MwvCUjtecBAFcc7SWhEu8NyT1bLsCRtN6J
 
-$ bitcoin-cli -datadir=testnetbtc-datadir/ getnewaddress
+$ bitcoin-cli -datadir=testnetbtc-datadir/ getnewaddress "" legacy
 2N4FJ6xpbGdUvC8RjfMmQ6bzWXwEfWCFcYF
 
 ### Generate multisig 1 of 2 address
@@ -45,10 +45,10 @@ bitcoin-cli -datadir=testnetbtc-datadir/ sendrawtransaction 02000000000101bbd869
 ## Topup information
 
 ### Generate 2 addresses
-$ bitcoin-cli -datadir=/Users/nikolaos/testnetbtc-datadir2/ getnewaddress
+$ bitcoin-cli -datadir=/Users/nikolaos/testnetbtc-datadir2/ getnewaddress "" legacy
 2MtEZ7J8ZXoieL7iHyUQw91TZpLEcVQTAyK
 
-$ bitcoin-cli -datadir=/Users/nikolaos/testnetbtc-datadir2/ getnewaddress
+$ bitcoin-cli -datadir=/Users/nikolaos/testnetbtc-datadir2/ getnewaddress "" legacy
 2MwvCUjtecBAFcc7SWhEu8NyT1bLsCRtN6J
 
 ### Generate multisig 1 of 2 address
