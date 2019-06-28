@@ -32,7 +32,7 @@ const (
 	WarningFailureImportingTopupAddress = `Could not import topup address`
 	WarningFailedDecodingTopupMultisig  = `Could not decode multisig topup script`
 
-	ErrorInsufficientFunds          = `Insufficient unspent vout value (less than the maxFee target)`
+	ErrorInsufficientFunds          = `Insufficient unspent vout value (less than the 5*maxFee target)`
 	ErrorMissingMultisig            = `No multisig used - Client must be signer and include private key`
 	ErrorFailedDecodingInitMultisig = `Could not decode multisig init script`
 	ErrorMissingAddress             = `Client address missing from multisig script`
@@ -368,7 +368,7 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []bt
 	// return error if txout value is less than maxFee target
 	maxFee := calcSignedTxFee(w.Fees.maxFee, msgTx.SerializeSize(),
 		len(inputs)*len(w.script0)/2, len(inputs)*w.numOfSigs)
-	if msgTx.TxOut[0].Value < maxFee {
+	if msgTx.TxOut[0].Value < 5*maxFee {
 		return nil, errors.New(ErrorInsufficientFunds)
 	}
 
