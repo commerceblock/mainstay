@@ -527,8 +527,10 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 
 		newFee := client.Fees.GetFee()
 		newValue := tx2.TxOut[0].Value
-		newTxFee := calcSignedTxFee(newFee, tx2.SerializeSize(), len(client.script0)/2, client.numOfSigs)
-		currentTxFee := calcSignedTxFee(currentFee, tx.SerializeSize(), len(client.script0)/2, client.numOfSigs)
+		newTxFee := calcSignedTxFee(newFee, tx2.SerializeSize(),
+			len(tx2.TxIn)*len(client.script0)/2, len(tx2.TxIn)*client.numOfSigs)
+		currentTxFee := calcSignedTxFee(currentFee, tx.SerializeSize(),
+			len(tx.TxIn)*len(client.script0)/2, len(tx.TxIn)*client.numOfSigs)
 		assert.Equal(t, newTxFee-currentTxFee, currentValue+topupValue-newValue)
 		assert.Equal(t, client.Fees.minFee+client.Fees.feeIncrement, newFee)
 
