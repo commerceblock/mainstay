@@ -46,7 +46,7 @@ Mainstay is accompanied by a Confirmation tool that can be run in parallel with 
 
 
 - Unit Testing
-    - `/$GOPATH/src/mainstay/run-tests.sh`
+    - `/$GOPATH/src/mainstay/scripts/run-tests.sh`
 
 ## Tools
 
