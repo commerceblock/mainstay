@@ -57,6 +57,9 @@ const (
 	// waiting time for sigs to arrive from multisig nodes
 	ATimeSigs = 1 * time.Minute
 
+	// waiting time to next attestation attempt when skipping already attested commitment
+	ATimeSkip = 1 * time.Minute
+
 	// waiting time between attemps to check if an attestation has been confirmed
 	ATimeConfirmation = 15 * time.Minute
 
@@ -318,8 +321,8 @@ func (s *AttestService) doStateNextCommitment() {
 	log.Printf("********** received commitment hash: %s\n", latestCommitmentHash.String())
 	if latestCommitmentHash == s.attestation.CommitmentHash() {
 		log.Printf("********** Skipping attestation - Client commitment already attested")
-		attestDelay = atimeNewAttestation // sleep
-		return                            // will remain at the same state
+		attestDelay = ATimeSkip // sleep
+		return                  // will remain at the same state
 	}
 
 	// initialise new attestation with commitment

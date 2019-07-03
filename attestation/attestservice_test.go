@@ -243,7 +243,7 @@ func TestAttestService_Multi(t *testing.T) {
 	attestService.doAttestation()
 	assert.Equal(t, AStateNextCommitment, attestService.state)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
-	assert.Equal(t, DefaultATimeNewAttestation, attestDelay)
+	assert.Equal(t, ATimeSkip, attestDelay)
 
 	// Test AStateNextCommitment -> AStateNewAttestation
 	// stuck in next commitment
@@ -325,7 +325,7 @@ func TestAttestService_Regular(t *testing.T) {
 	attestService.doAttestation()
 	assert.Equal(t, AStateNextCommitment, attestService.state)
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
-	assert.Equal(t, DefaultATimeNewAttestation, attestDelay)
+	assert.Equal(t, ATimeSkip, attestDelay)
 
 	// Test AStateNextCommitment -> AStateNewAttestation
 	// stuck in next commitment
