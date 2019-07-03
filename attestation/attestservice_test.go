@@ -804,7 +804,12 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 		assert.Equal(t, prevAttestation.Txid, attestService.attestation.Txid)
 		assert.Equal(t, prevAttestation.Confirmed, attestService.attestation.Confirmed)
 		assert.Equal(t, prevAttestation.Info, attestService.attestation.Info)
-		assert.Equal(t, ATimeFixed, attestDelay)
+		if attestService.attestation.Info.Time == 0 {
+			assert.Equal(t, ATimeFixed, attestDelay)
+		} else {
+			assert.Empty(t, attestDelay < ATimeFixed)
+			assert.Empty(t, atimeNewAttestation < attestDelay)
+		}
 
 		// Test AStateNextCommitment -> AStateNewAttestation
 		// set server commitment before creationg new attestation
@@ -964,7 +969,12 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 		assert.Equal(t, prevAttestation.Txid, attestService.attestation.Txid)
 		assert.Equal(t, prevAttestation.Confirmed, attestService.attestation.Confirmed)
 		assert.Equal(t, prevAttestation.Info, attestService.attestation.Info)
-		assert.Equal(t, ATimeFixed, attestDelay)
+		if attestService.attestation.Info.Time == 0 {
+			assert.Equal(t, ATimeFixed, attestDelay)
+		} else {
+			assert.Empty(t, attestDelay < ATimeFixed)
+			assert.Empty(t, atimeNewAttestation < attestDelay)
+		}
 
 		// Test AStateNextCommitment -> AStateNewAttestation
 		// set server commitment before creationg new attestation
