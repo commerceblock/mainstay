@@ -96,11 +96,128 @@ type AttestClient struct {
 	WalletChainCode []byte
 }
 
+// Parse topup configuration and return private keys related to topup addresses
+func parseTopupKeys(config *confpkg.Config, isSigner bool) *btcutil.WIF {
+	if isSigner {
+		pkTopup := config.TopupPK()
+		if pkTopup != "" {
+			topupWif, errPkWifTopup := crypto.GetWalletPrivKey(pkTopup)
+			if errPkWifTopup != nil {
+				log.Fatalf("%s %s\n%v\n", ErrorInvalidPk, pkTopup, errPkWifTopup)
+			}
+			return topupWif
+		} else {
+			log.Println(WarningTopupPkMissing)
+		}
+	}
+	return nil
+}
+
+// Parse main configuration and return private keys related to main addresses
+func parseMainKeys(config *confpkg.Config, isSigner bool) *btcutil.WIF {
+	if isSigner { // signer case import private key
+		// Get initial private key
+		pk := config.InitPK()
+		pkWif, errPkWif := crypto.GetWalletPrivKey(pk)
+		if errPkWif != nil {
+			log.Fatalf("%s %s\n%v\n", ErrorInvalidPk, pk, errPkWif)
+		}
+		return pkWif
+	} else if config.InitScript() == "" {
+		log.Fatal(ErrorMissingMultisig)
+	}
+	return nil
+}
+
+// Return new AttestClient instance for the non multisig case
+// Any multisig related parameters are irrelevant and set to nil
+func newNonMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcutil.WIF, wifTopup *btcutil.WIF) *AttestClient {
+	return &AttestClient{
+		MainClient:      config.MainClient(),
+		MainChainCfg:    config.MainChainCfg(),
+		Fees:            NewAttestFees(config.FeesConfig()),
+		txid0:           config.InitTx(),
+		script0:         "",
+		pubkeysExtended: nil,
+		pubkeys:         nil,
+		chaincodes:      nil,
+		numOfSigs:       1,
+		addrTopup:       config.TopupAddress(),
+		scriptTopup:     config.TopupScript(),
+		WalletPriv:      wif,
+		WalletPrivTopup: wifTopup,
+		WalletChainCode: []byte{}}
+}
+
+// Return new AttestClient instance for the multisig case
+// Parse all the relevant pubkey and chaincode config required by the multisig
+func newMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcutil.WIF, wifTopup *btcutil.WIF) *AttestClient {
+	multisig := config.InitScript()
+	pubkeys, numOfSigs := crypto.ParseRedeemScript(multisig)
+
+	// get chaincodes of pubkeys from config
+	chaincodesStr := config.InitChaincodes()
+	if len(chaincodesStr) != len(pubkeys) {
+		log.Fatal(fmt.Sprintf("%s %d != %d", ErrorMissingChaincodes, len(chaincodesStr), len(pubkeys)))
+	}
+	chaincodes := make([][]byte, len(pubkeys))
+	for i_c := range chaincodesStr {
+		ccBytes, ccBytesErr := hex.DecodeString(chaincodesStr[i_c])
+		if ccBytesErr != nil || len(ccBytes) != 32 {
+			log.Fatal(fmt.Sprintf("%s %s", ErrorInvalidChaincode, chaincodesStr[i_c]))
+		}
+		chaincodes[i_c] = append(chaincodes[i_c], ccBytes...)
+	}
+
+	// verify our key is one of the multisig keys in signer case
+	var myChaincode []byte
+	if isSigner {
+		myFound := false
+		for i_p, pub := range pubkeys {
+			if wif.PrivKey.PubKey().IsEqual(pub) {
+				myFound = true
+				myChaincode = chaincodes[i_p]
+			}
+		}
+		if !myFound {
+			log.Fatal(ErrorMissingAddress)
+		}
+	}
+
+	// create extended keys from multisig pubs, to be used for tweaking and address generation
+	// using extended keys instead of normal pubkeys in order to perform key tweaking
+	// via bip-32 child derivation as opposed to regular cryptograpic tweaking
+	var pubkeysExtended []*hdkeychain.ExtendedKey
+	for i_p, pub := range pubkeys {
+		// Ignoring any fields except key and chaincode, as these are only used for
+		// child derivation and these two fields are the only required for this
+		// Since any child key will be derived from these, depth limits makes no sense
+		// Xpubs/xprivs are also never exported so full configuration is irrelevant
+		pubkeysExtended = append(pubkeysExtended,
+			hdkeychain.NewExtendedKey([]byte{}, pub.SerializeCompressed(), chaincodes[i_p], []byte{}, 0, 0, false))
+	}
+
+	return &AttestClient{
+		MainClient:      config.MainClient(),
+		MainChainCfg:    config.MainChainCfg(),
+		Fees:            NewAttestFees(config.FeesConfig()),
+		txid0:           config.InitTx(),
+		script0:         multisig,
+		pubkeysExtended: pubkeysExtended,
+		pubkeys:         pubkeys,
+		chaincodes:      chaincodes,
+		numOfSigs:       numOfSigs,
+		addrTopup:       config.TopupAddress(),
+		scriptTopup:     config.TopupScript(),
+		WalletPriv:      wif,
+		WalletPrivTopup: wifTopup,
+		WalletChainCode: myChaincode}
+}
+
 // NewAttestClient returns a pointer to a new AttestClient instance
 // Initially locates the genesis transaction in the main chain wallet
 // and verifies that the corresponding private key is in the wallet
 func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
-
 	// optional flag to set attest client as signer
 	isSigner := false
 	if len(signerFlag) > 0 {
@@ -113,117 +230,23 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 	var pkWifTopup *btcutil.WIF
 	if topupAddrStr != "" && topupScriptStr != "" {
 		log.Printf("*Client* importing top-up addr: %s ...\n", topupAddrStr)
-		importErr := config.MainClient().ImportAddress(topupAddrStr)
+		importErr := config.MainClient().ImportAddressRescan(topupAddrStr, "", false)
 		if importErr != nil {
 			log.Printf("%s (%s)\n%v\n", WarningFailureImportingTopupAddress, topupAddrStr, importErr)
 		}
-		if isSigner {
-			pkTopup := config.TopupPK()
-			if pkTopup != "" {
-				var errPkWifTopup error
-				pkWifTopup, errPkWifTopup = crypto.GetWalletPrivKey(pkTopup)
-				if errPkWifTopup != nil {
-					log.Fatalf("%s %s\n%v\n", ErrorInvalidPk, pkTopup, errPkWifTopup)
-				}
-			} else {
-				log.Println(WarningTopupPkMissing)
-			}
-		}
+		pkWifTopup = parseTopupKeys(config, isSigner)
 	} else {
 		log.Println(WarningTopupInfoMissing)
 	}
 
 	// main config
 	multisig := config.InitScript()
-	var pkWif *btcutil.WIF
-	if isSigner { // signer case import private key
-		// Get initial private key
-		pk := config.InitPK()
-		var errPkWif error
-		pkWif, errPkWif = crypto.GetWalletPrivKey(pk)
-		if errPkWif != nil {
-			log.Fatalf("%s %s\n%v\n", ErrorInvalidPk, pk, errPkWif)
-		}
-	} else if multisig == "" {
-		log.Fatal(ErrorMissingMultisig)
-	}
+	var pkWif = parseMainKeys(config, isSigner)
 
 	if multisig != "" { // if multisig is set, parse pubkeys
-		pubkeys, numOfSigs := crypto.ParseRedeemScript(config.InitScript())
-
-		// get chaincodes of pubkeys from config
-		chaincodesStr := config.InitChaincodes()
-		if len(chaincodesStr) != len(pubkeys) {
-			log.Fatal(fmt.Sprintf("%s %d != %d", ErrorMissingChaincodes, len(chaincodesStr), len(pubkeys)))
-		}
-		chaincodes := make([][]byte, len(pubkeys))
-		for i_c := range chaincodesStr {
-			ccBytes, ccBytesErr := hex.DecodeString(chaincodesStr[i_c])
-			if ccBytesErr != nil || len(ccBytes) != 32 {
-				log.Fatal(fmt.Sprintf("%s %s", ErrorInvalidChaincode, chaincodesStr[i_c]))
-			}
-			chaincodes[i_c] = append(chaincodes[i_c], ccBytes...)
-		}
-
-		// verify our key is one of the multisig keys in signer case
-		var myChaincode []byte
-		if isSigner {
-			myFound := false
-			for i_p, pub := range pubkeys {
-				if pkWif.PrivKey.PubKey().IsEqual(pub) {
-					myFound = true
-					myChaincode = chaincodes[i_p]
-				}
-			}
-			if !myFound {
-				log.Fatal(ErrorMissingAddress)
-			}
-		}
-
-		// create extended keys from multisig pubs, to be used for tweaking and address generation
-		// using extended keys instead of normal pubkeys in order to perform key tweaking
-		// via bip-32 child derivation as opposed to regular cryptograpic tweaking
-		var pubkeysExtended []*hdkeychain.ExtendedKey
-		for i_p, pub := range pubkeys {
-			// Ignoring any fields except key and chaincode, as these are only used for
-			// child derivation and these two fields are the only required for this
-			// Since any child key will be derived from these, depth limits makes no sense
-			// Xpubs/xprivs are also never exported so full configuration is irrelevant
-			pubkeysExtended = append(pubkeysExtended,
-				hdkeychain.NewExtendedKey([]byte{}, pub.SerializeCompressed(), chaincodes[i_p], []byte{}, 0, 0, false))
-		}
-
-		return &AttestClient{
-			MainClient:      config.MainClient(),
-			MainChainCfg:    config.MainChainCfg(),
-			Fees:            NewAttestFees(config.FeesConfig()),
-			txid0:           config.InitTx(),
-			script0:         multisig,
-			pubkeysExtended: pubkeysExtended,
-			pubkeys:         pubkeys,
-			chaincodes:      chaincodes,
-			numOfSigs:       numOfSigs,
-			addrTopup:       topupAddrStr,
-			scriptTopup:     topupScriptStr,
-			WalletPriv:      pkWif,
-			WalletPrivTopup: pkWifTopup,
-			WalletChainCode: myChaincode}
+		return newMultisigAttestClient(config, isSigner, pkWif, pkWifTopup)
 	}
-	return &AttestClient{
-		MainClient:      config.MainClient(),
-		MainChainCfg:    config.MainChainCfg(),
-		Fees:            NewAttestFees(config.FeesConfig()),
-		txid0:           config.InitTx(),
-		script0:         multisig,
-		pubkeysExtended: nil,
-		pubkeys:         nil,
-		chaincodes:      nil,
-		numOfSigs:       1,
-		addrTopup:       topupAddrStr,
-		scriptTopup:     topupScriptStr,
-		WalletPriv:      pkWif,
-		WalletPrivTopup: pkWifTopup,
-		WalletChainCode: []byte{}}
+	return newNonMultisigAttestClient(config, isSigner, pkWif, pkWifTopup)
 }
 
 // Get next attestation key by tweaking with latest commitment hash

@@ -57,6 +57,9 @@ const (
 	// waiting time for sigs to arrive from multisig nodes
 	ATimeSigs = 1 * time.Minute
 
+	// waiting time to next attestation attempt when skipping already attested commitment
+	ATimeSkip = 1 * time.Minute
+
 	// waiting time between attemps to check if an attestation has been confirmed
 	ATimeConfirmation = 15 * time.Minute
 
@@ -184,7 +187,8 @@ func (s *AttestService) stateInitUnconfirmed(unconfirmedTxid chainhash.Hash) {
 	s.attestation.Tx = *rawTx.MsgTx() // set msgTx
 
 	s.state = AStateAwaitConfirmation // update attestation state
-	confirmTime = time.Now()
+	walletTx, _ := s.config.MainClient().GetTransaction(&unconfirmedTxid)
+	confirmTime = time.Unix(walletTx.Time, 0)
 }
 
 // part of AStateInit
@@ -212,6 +216,8 @@ func (s *AttestService) stateInitUnspent(unspent btcjson.ListUnspentResult) {
 		}
 
 		s.attester.Fees.ResetFee(s.isRegtest) // reset client fees
+		// set delay to the difference between atimeNewAttestation and time since last attestation
+		attestDelay = atimeNewAttestation - time.Since(time.Unix(s.attestation.Info.Time, 0))
 	} else {
 		log.Println("********** found unspent transaction, initiating staychain")
 		s.attestation = models.NewAttestationDefault()
@@ -315,8 +321,8 @@ func (s *AttestService) doStateNextCommitment() {
 	log.Printf("********** received commitment hash: %s\n", latestCommitmentHash.String())
 	if latestCommitmentHash == s.attestation.CommitmentHash() {
 		log.Printf("********** Skipping attestation - Client commitment already attested")
-		attestDelay = atimeNewAttestation // sleep
-		return                            // will remain at the same state
+		attestDelay = ATimeSkip // sleep
+		return                  // will remain at the same state
 	}
 
 	// initialise new attestation with commitment
