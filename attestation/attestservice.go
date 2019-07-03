@@ -184,7 +184,8 @@ func (s *AttestService) stateInitUnconfirmed(unconfirmedTxid chainhash.Hash) {
 	s.attestation.Tx = *rawTx.MsgTx() // set msgTx
 
 	s.state = AStateAwaitConfirmation // update attestation state
-	confirmTime = time.Now()
+	walletTx, _ := s.config.MainClient().GetTransaction(&unconfirmedTxid)
+	confirmTime = time.Unix(walletTx.Time, 0)
 }
 
 // part of AStateInit
