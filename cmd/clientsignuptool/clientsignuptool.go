@@ -15,8 +15,8 @@ import (
 	"os"
 
 	"mainstay/config"
+	"mainstay/db"
 	"mainstay/models"
-	"mainstay/server"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/satori/go.uuid"
@@ -26,7 +26,7 @@ const ConfPath = "/src/mainstay/cmd/clientsignuptool/conf.json"
 
 var (
 	mainConfig *config.Config
-	dbMongo    *server.DbMongo
+	dbMongo    *db.DbMongo
 )
 
 // init
@@ -85,7 +85,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dbMongo = server.NewDbMongo(ctx, mainConfig.DbConfig())
+	dbMongo = db.NewDbMongo(ctx, mainConfig.DbConfig())
 
 	fmt.Println()
 	fmt.Println("*********************************************")

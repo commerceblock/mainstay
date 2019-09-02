@@ -2,7 +2,7 @@
 // Use of this source code is governed by an MIT
 // license that can be found in the LICENSE file.
 
-package server
+package db
 
 import (
 	"errors"
@@ -16,10 +16,10 @@ import (
 // Minimizing as much as possible reliance to mongo and testing as much
 // as possible without the need for a proper mongo mock for testing
 type DbFake struct {
-	attestations      []models.Attestation
-	attestationsInfo  []models.AttestationInfo
-	merkleCommitments []models.CommitmentMerkleCommitment
-	merkleProofs      []models.CommitmentMerkleProof
+	Attestations      []models.Attestation
+	AttestationsInfo  []models.AttestationInfo
+	MerkleCommitments []models.CommitmentMerkleCommitment
+	MerkleProofs      []models.CommitmentMerkleProof
 	latestCommitments []models.ClientCommitment
 }
 
@@ -33,39 +33,39 @@ func NewDbFake() *DbFake {
 		[]models.ClientCommitment{}}
 }
 
-// Save latest attestation to attestations
-func (d *DbFake) saveAttestation(attestation models.Attestation) error {
-	for i, a := range d.attestations {
+// Save latest attestation to Attestations
+func (d *DbFake) SaveAttestation(attestation models.Attestation) error {
+	for i, a := range d.Attestations {
 		if a.Txid == attestation.Txid {
-			d.attestations[i] = attestation
+			d.Attestations[i] = attestation
 			return nil
 		}
 	}
-	d.attestations = append(d.attestations, attestation)
+	d.Attestations = append(d.Attestations, attestation)
 	return nil
 }
 
-// Save latest attestation info to attestationsInfo
-func (d *DbFake) saveAttestationInfo(attestationInfo models.AttestationInfo) error {
-	for i, a := range d.attestationsInfo {
+// Save latest attestation info to AttestationsInfo
+func (d *DbFake) SaveAttestationInfo(attestationInfo models.AttestationInfo) error {
+	for i, a := range d.AttestationsInfo {
 		if a.Txid == attestationInfo.Txid {
-			d.attestationsInfo[i] = attestationInfo
+			d.AttestationsInfo[i] = attestationInfo
 			return nil
 		}
 	}
-	d.attestationsInfo = append(d.attestationsInfo, attestationInfo)
+	d.AttestationsInfo = append(d.AttestationsInfo, attestationInfo)
 	return nil
 }
 
 // Save merkle commitments to the MerkleCommitment collection
-func (d *DbFake) saveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error {
+func (d *DbFake) SaveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error {
 	var newCommitments []models.CommitmentMerkleCommitment
 	for _, commitment := range commitments {
 		found := false
-		for i, c := range d.merkleCommitments {
+		for i, c := range d.MerkleCommitments {
 			if c == commitment {
 				found = true
-				d.merkleCommitments[i] = commitment
+				d.MerkleCommitments[i] = commitment
 				break
 			}
 		}
@@ -73,21 +73,21 @@ func (d *DbFake) saveMerkleCommitments(commitments []models.CommitmentMerkleComm
 			newCommitments = append(newCommitments, commitment)
 		}
 	}
-	d.merkleCommitments = append(d.merkleCommitments, newCommitments...)
+	d.MerkleCommitments = append(d.MerkleCommitments, newCommitments...)
 	return nil
 }
 
 // Save merkle proofs to the MerkleProof collection
-func (d *DbFake) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error {
+func (d *DbFake) SaveMerkleProofs(proofs []models.CommitmentMerkleProof) error {
 	var newProofs []models.CommitmentMerkleProof
 	for _, proof := range proofs {
 		found := false
-		for i, p := range d.merkleProofs {
+		for i, p := range d.MerkleProofs {
 			if p.Commitment == proof.Commitment &&
 				p.ClientPosition == proof.ClientPosition &&
 				p.MerkleRoot == proof.MerkleRoot {
 				found = true
-				d.merkleProofs[i] = proof
+				d.MerkleProofs[i] = proof
 				break
 			}
 		}
@@ -95,7 +95,7 @@ func (d *DbFake) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error {
 			newProofs = append(newProofs, proof)
 		}
 	}
-	d.merkleProofs = append(d.merkleProofs, newProofs...)
+	d.MerkleProofs = append(d.MerkleProofs, newProofs...)
 	return nil
 }
 
@@ -103,27 +103,27 @@ func (d *DbFake) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error {
 func (d *DbFake) getAttestationCount(confirmed ...bool) (int64, error) {
 	if len(confirmed) > 0 {
 		count := 0
-		for _, atst := range d.attestations { // calculate count for specific confirmed/unconfirmed
+		for _, atst := range d.Attestations { // calculate count for specific confirmed/unconfirmed
 			if atst.Confirmed == confirmed[0] {
 				count += 1
 			}
 		}
 		return int64(count), nil
 	}
-	return int64(len(d.attestations)), nil
+	return int64(len(d.Attestations)), nil
 }
 
 // Return latest attestation commitment hash
-func (d *DbFake) getLatestAttestationMerkleRoot(confirmed bool) (string, error) {
+func (d *DbFake) GetLatestAttestationMerkleRoot(confirmed bool) (string, error) {
 	count, _ := d.getAttestationCount(confirmed)
 	if count == 0 {
 		return "", nil
 	}
 
-	for i := len(d.attestations) - 1; i >= 0; i-- {
-		latestAttestation := d.attestations[i]
+	for i := len(d.Attestations) - 1; i >= 0; i-- {
+		latestAttestation := d.Attestations[i]
 		if latestAttestation.Confirmed == confirmed {
-			return d.attestations[i].CommitmentHash().String(), nil
+			return d.Attestations[i].CommitmentHash().String(), nil
 		}
 	}
 	return "", errors.New(ErrorAttestationGet)
@@ -137,7 +137,7 @@ func (d *DbFake) getAttestationMerkleRoot(txid chainhash.Hash) (string, error) {
 		return "", nil
 	}
 
-	for _, attestation := range d.attestations {
+	for _, attestation := range d.Attestations {
 		if txid == attestation.Txid {
 			return attestation.CommitmentHash().String(), nil
 		}
@@ -146,7 +146,7 @@ func (d *DbFake) getAttestationMerkleRoot(txid chainhash.Hash) (string, error) {
 }
 
 // Return commitment for attestation with given txid
-func (d *DbFake) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models.CommitmentMerkleCommitment, error) {
+func (d *DbFake) GetAttestationMerkleCommitments(txid chainhash.Hash) ([]models.CommitmentMerkleCommitment, error) {
 	// get merkle root of attestation
 	merkleRoot, rootErr := d.getAttestationMerkleRoot(txid)
 	if rootErr != nil {
@@ -155,14 +155,14 @@ func (d *DbFake) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models.
 		return []models.CommitmentMerkleCommitment{}, nil
 	}
 
-	var merkleCommitments []models.CommitmentMerkleCommitment
-	for _, commitment := range d.merkleCommitments {
+	var MerkleCommitments []models.CommitmentMerkleCommitment
+	for _, commitment := range d.MerkleCommitments {
 		if commitment.MerkleRoot.String() == merkleRoot {
-			merkleCommitments = append(merkleCommitments, commitment)
+			MerkleCommitments = append(MerkleCommitments, commitment)
 		}
 	}
 
-	return merkleCommitments, nil
+	return MerkleCommitments, nil
 }
 
 // Set latest commitments for testing
@@ -171,6 +171,6 @@ func (d *DbFake) SetClientCommitments(latestCommitments []models.ClientCommitmen
 }
 
 // Return latest commitment from fake client commitments
-func (d *DbFake) getClientCommitments() ([]models.ClientCommitment, error) {
+func (d *DbFake) GetClientCommitments() ([]models.ClientCommitment, error) {
 	return d.latestCommitments, nil
 }
