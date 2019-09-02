@@ -1,7 +1,7 @@
 /*
-Package attestation implements the MainStay server
+Package attestation implements the MainStay Db
 
-Implemented using an AttestServer structure that runs a main process AttestServer that handles
-responding to requests from Attestation service and storing latest Attestations / Commitments through a Db interface
+Implemented using a generic Db interface and two implementations;
+DbFake for testing and DbMongo for connectivity to a MongoDb instance
 */
 package db
