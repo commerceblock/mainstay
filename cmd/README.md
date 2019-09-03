@@ -28,15 +28,13 @@ Connectivity to the mainstay db instance is required. Config can be set in `cmd/
 
 The client will need to provide an ECDSA public key. The corresponding private key will be used by the client to sign the commitment send to the mainstay API. The signature is then verified by the API using the public key provided.
 
-The tool assigns a new position to the client in the commitment merkle tree and also provides a unique auth_token for authorizing API POST requests submitted by the client. For random auth-token generation only, token generator tool `cmd/tokengeneratortool` can be used.
+The tool assigns a new position to the client in the commitment merkle tree and also provides a unique auth_token for authorizing API POST requests submitted by the client. For random auth-token generation only, token generator tool can be used.
 
 For examples [check](../doc/signup.md)
 
-## Token Generator Tool
-
 The token generator tool can be used to generate unique authorization tokens for client signup.
 
-`go run $GOPATH/src/mainstay/cmd/tokengeneratortool/tokengeneratortool.go`
+`go run $GOPATH/src/mainstay/cmd/clientsignuptool/tokengeneratortool.go`
 
 ## Client Confirmation Tool
 
@@ -75,6 +73,10 @@ Various command line arguments need to be provided:
 Ocean connectivity details need to be provided in the `cmd/commitmenttool/conf.json` file if Ocean mode is selected.
 
 For examples [check](../doc/commitment.md)
+
+The key extraction tool can be used to calculated tweaked private keys and redeem script from untweaked ones.
+
+`go run $GOPATH/src/mainstay/cmd/commitmenttool/keyextractiontool.go`
 
 ## Multisig Tool
 
