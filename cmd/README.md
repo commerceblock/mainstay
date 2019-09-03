@@ -34,7 +34,7 @@ For examples [check](../doc/signup.md)
 
 The token generator tool can be used to generate unique authorization tokens for client signup.
 
-`go run $GOPATH/src/mainstay/cmd/clientsignuptool/tokengeneratortool.go`
+`go run $GOPATH/src/mainstay/cmd/clientsignuptool/tokengenerator/tokengeneratortool.go`
 
 ## Client Confirmation Tool
 
@@ -49,6 +49,10 @@ To run this tool you need to first fetch the `TX_HASH` from the `attestationhash
 `go run cmd/confirmationtool/confirmationtool.go -tx TX_HASH -script REDEEM_SCRIPT -position CLIENT_POSITION -apiHost https://mainstay.xyz`
 
 This will initially take some time to sync up all the attestations that have been committed so far and then will wait for any new attestations. Logging is displayed for each attestation and for full details the `-detailed` flag can be used.
+
+The key extraction tool can be used to calculated tweaked private keys and redeem script from untweaked ones.
+
+`go run $GOPATH/src/mainstay/cmd/confirmationtool/keyextraction/keyextractiontool.go`
 
 ## Commitment Tool
 
@@ -73,10 +77,6 @@ Various command line arguments need to be provided:
 Ocean connectivity details need to be provided in the `cmd/commitmenttool/conf.json` file if Ocean mode is selected.
 
 For examples [check](../doc/commitment.md)
-
-The key extraction tool can be used to calculated tweaked private keys and redeem script from untweaked ones.
-
-`go run $GOPATH/src/mainstay/cmd/commitmenttool/keyextractiontool.go`
 
 ## Multisig Tool
 
