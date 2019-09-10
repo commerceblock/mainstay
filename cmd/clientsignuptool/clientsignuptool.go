@@ -103,19 +103,23 @@ func main() {
 	fmt.Println("************ Client Pubkey Info *************")
 	fmt.Println("*********************************************")
 	fmt.Println()
-	fmt.Print("Insert pubkey: ")
+	fmt.Print("Insert pubkey (optional): ")
 	var pubKey string
 	fmt.Scanln(&pubKey)
-	pubKeyBytes, pubKeyBytesErr := hex.DecodeString(pubKey)
-	if pubKeyBytesErr != nil {
-		log.Fatal(pubKeyBytesErr)
+	if pubKey == "" {
+		fmt.Println("no pubkey authentication")
+	} else {
+		pubKeyBytes, pubKeyBytesErr := hex.DecodeString(pubKey)
+		if pubKeyBytesErr != nil {
+			log.Fatal(pubKeyBytesErr)
+		}
+		_, errPub := btcec.ParsePubKey(pubKeyBytes, btcec.S256())
+		if errPub != nil {
+			log.Fatal(errPub)
+		}
+		fmt.Println("pubkey verified")
+		fmt.Println()
 	}
-	_, errPub := btcec.ParsePubKey(pubKeyBytes, btcec.S256())
-	if errPub != nil {
-		log.Fatal(errPub)
-	}
-	fmt.Println("pubkey verified")
-	fmt.Println()
 
 	// New auth token ID for client
 	fmt.Println("*********************************************")
