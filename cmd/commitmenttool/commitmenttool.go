@@ -61,7 +61,7 @@ func init() {
 	// commitment variables
 	flag.IntVar(&position, "position", -1, "Client merkle commitment position")
 	flag.StringVar(&authtoken, "authtoken", "", "Client authorization token")
-	flag.StringVar(&privkey, "privkey", "", "Client private key for signing")
+	flag.StringVar(&privkey, "privkey", "", "Client private key for signing (optional)")
 	flag.Parse()
 }
 
@@ -165,7 +165,7 @@ func doOceanMode() {
 
 	// check priv key is set
 	if privkey == "" {
-		log.Fatal("Need to provide -privkey.")
+		fmt.Println("no private key provided")
 	}
 
 	// get conf file
@@ -195,7 +195,10 @@ func doOceanMode() {
 			revBlockHashBytes, _ := hex.DecodeString(blockhash.String())
 
 			// sign commitment
-			sigBytes := sign(revBlockHashBytes)
+			var sigBytes []byte
+			if privkey != "" {
+				sigBytes = sign(revBlockHashBytes)
+			}
 
 			// send signed commitment
 			sendErr := send(sigBytes, hex.EncodeToString(revBlockHashBytes))
@@ -246,24 +249,25 @@ func doStandardMode() {
 		var signature string
 		fmt.Scanln(&signature)
 		if signature == "" {
-			log.Fatal("Empty signature")
-		}
-		var sigBytesErr error
-		sigBytes, sigBytesErr = b64.StdEncoding.DecodeString(signature)
-		if sigBytesErr != nil {
-			log.Fatal(fmt.Sprintf("Signature (%s) decoding error: %v\n", signature, sigBytesErr))
+			fmt.Println("no signature provided")
+		} else {
+			var sigBytesErr error
+			sigBytes, sigBytesErr = b64.StdEncoding.DecodeString(signature)
+			if sigBytesErr != nil {
+				log.Fatal(fmt.Sprintf("Signature (%s) decoding error: %v\n", signature, sigBytesErr))
+			}
 		}
 	} else if strings.ToLower(whatToDo) == "sign" || strings.ToLower(whatToDo) == "both" {
 		fmt.Println()
 		fmt.Print("Insert private key: ")
 		fmt.Scanln(&privkey)
 		if privkey == "" {
-			log.Fatal("Empty private key")
+			fmt.Println("no private key provided")
+		} else {
+			sigBytes = sign(commitmentBytes)
+			fmt.Println()
+			fmt.Println("Signature: " + b64.StdEncoding.EncodeToString(sigBytes))
 		}
-
-		sigBytes = sign(commitmentBytes)
-		fmt.Println()
-		fmt.Println("Signature: " + b64.StdEncoding.EncodeToString(sigBytes))
 	} else {
 		log.Fatal("Invalid option")
 	}

@@ -16,7 +16,7 @@ import (
 
 	"mainstay/attestation"
 	"mainstay/config"
-	"mainstay/server"
+	"mainstay/db"
 	"mainstay/test"
 )
 
@@ -85,8 +85,8 @@ func main() {
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	dbInterface := server.NewDbMongo(ctx, mainConfig.DbConfig())
-	server := server.NewServer(dbInterface)
+	dbInterface := db.NewDbMongo(ctx, mainConfig.DbConfig())
+	server := attestation.NewAttestServer(dbInterface)
 	signer := attestation.NewAttestSignerZmq(mainConfig.SignerConfig())
 	attestService := attestation.NewAttestService(ctx, wg, server, signer, mainConfig)
 

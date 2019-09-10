@@ -11,8 +11,8 @@ import (
 	"time"
 
 	confpkg "mainstay/config"
+	"mainstay/db"
 	"mainstay/models"
-	"mainstay/server"
 	"mainstay/test"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -60,7 +60,7 @@ func verifyStateInitToAwaitConfirmation(t *testing.T, attestService *AttestServi
 }
 
 // verify AStateNextCommitment to AStateNewAttestation
-func verifyStateNextCommitmentToNewAttestation(t *testing.T, attestService *AttestService, dbFake *server.DbFake, hash *chainhash.Hash) *models.Commitment {
+func verifyStateNextCommitmentToNewAttestation(t *testing.T, attestService *AttestService, dbFake *db.DbFake, hash *chainhash.Hash) *models.Commitment {
 	latestCommitment, _ := models.NewCommitment([]chainhash.Hash{*hash})
 	latestCommitments := []models.ClientCommitment{models.ClientCommitment{*hash, 0}}
 	dbFake.SetClientCommitments(latestCommitments)
@@ -170,8 +170,8 @@ func TestAttestService_Multi(t *testing.T) {
 		config.SetTimingConfig(timingConfig)
 	}
 
-	dbFake := server.NewDbFake()
-	server := server.NewServer(dbFake)
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
 	signerSingle := NewAttestSignerFake([]*confpkg.Config{config})
 	attestService := NewAttestService(nil, nil, server, signerSingle, config)
 
@@ -278,8 +278,8 @@ func TestAttestService_Regular(t *testing.T) {
 	timingConfig := confpkg.TimingConfig{-1, -1}
 	config.SetTimingConfig(timingConfig)
 
-	dbFake := server.NewDbFake()
-	server := server.NewServer(dbFake)
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
@@ -359,8 +359,8 @@ func TestAttestService_Unconfirmed(t *testing.T) {
 	timingConfig := confpkg.TimingConfig{customAtimeNewAttestation, customAtimeHandleUnconfirmed}
 	config.SetTimingConfig(timingConfig)
 
-	dbFake := server.NewDbFake()
-	server := server.NewServer(dbFake)
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	attestService.attester.Fees.ResetFee(true)
@@ -475,8 +475,8 @@ func TestAttestService_WithTopup(t *testing.T) {
 	timingConfig := confpkg.TimingConfig{-1, -1}
 	config.SetTimingConfig(timingConfig)
 
-	dbFake := server.NewDbFake()
-	server := server.NewServer(dbFake)
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
@@ -566,8 +566,8 @@ func TestAttestService_FailureInit(t *testing.T) {
 	test := test.NewTest(false, false)
 	config := test.Config
 
-	dbFake := server.NewDbFake()
-	server := server.NewServer(dbFake)
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
@@ -596,8 +596,8 @@ func TestAttestService_FailureNextCommitment(t *testing.T) {
 	test := test.NewTest(false, false)
 	config := test.Config
 
-	dbFake := server.NewDbFake()
-	server := server.NewServer(dbFake)
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
@@ -639,8 +639,8 @@ func TestAttestService_FailureNewAttestation(t *testing.T) {
 	test := test.NewTest(false, false)
 	config := test.Config
 
-	dbFake := server.NewDbFake()
-	server := server.NewServer(dbFake)
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
@@ -684,8 +684,8 @@ func TestAttestService_FailureSignAttestation(t *testing.T) {
 	test := test.NewTest(false, false)
 	config := test.Config
 
-	dbFake := server.NewDbFake()
-	server := server.NewServer(dbFake)
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
@@ -735,8 +735,8 @@ func TestAttestService_FailurePreSendStore(t *testing.T) {
 	test := test.NewTest(false, false)
 	config := test.Config
 
-	dbFake := server.NewDbFake()
-	server := server.NewServer(dbFake)
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
@@ -790,8 +790,8 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 	test := test.NewTest(false, false)
 	config := test.Config
 
-	dbFake := server.NewDbFake()
-	server := server.NewServer(dbFake)
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
 
 	prevAttestation := models.NewAttestationDefault()
 	for i := range []int{1, 2, 3} {
@@ -876,8 +876,8 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 	test := test.NewTest(false, false)
 	config := test.Config
 
-	dbFake := server.NewDbFake()
-	server := server.NewServer(dbFake)
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
 	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
 	// Test initial state of attest service
@@ -953,8 +953,8 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 	test := test.NewTest(false, false)
 	config := test.Config
 
-	dbFake := server.NewDbFake()
-	server := server.NewServer(dbFake)
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
 
 	prevAttestation := models.NewAttestationDefault()
 	for i := range []int{1, 2, 3} {
