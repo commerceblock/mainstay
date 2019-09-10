@@ -2,39 +2,40 @@
 // Use of this source code is governed by an MIT
 // license that can be found in the LICENSE file.
 
-package server
+package attestation
 
 import (
+	"mainstay/db"
 	"mainstay/models"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
-// Server structure
+// AttestServer structure
 // Stores information on the latest attestation and commitment
 // Methods to get latest state by attestation service
-type Server struct {
+type AttestServer struct {
 	// underlying database interface
-	dbInterface Db
+	dbInterface db.Db
 }
 
-// NewServer returns a pointer to an Server instance
-func NewServer(dbInterface Db) *Server {
-	return &Server{dbInterface}
+// NewAttestServer returns a pointer to an AttestServer instance
+func NewAttestServer(dbInterface db.Db) *AttestServer {
+	return &AttestServer{dbInterface}
 }
 
 // Handle saving Commitment underlying components to the database
-func (s *Server) updateAttestationCommitment(commitment models.Commitment) error {
+func (s *AttestServer) updateAttestationCommitment(commitment models.Commitment) error {
 	// store merkle commitments
 	merkleCommitments := commitment.GetMerkleCommitments()
-	errSave := s.dbInterface.saveMerkleCommitments(merkleCommitments)
+	errSave := s.dbInterface.SaveMerkleCommitments(merkleCommitments)
 	if errSave != nil {
 		return errSave
 	}
 
 	// store merkle proofs
 	merkleProofs := commitment.GetMerkleProofs()
-	errSave = s.dbInterface.saveMerkleProofs(merkleProofs)
+	errSave = s.dbInterface.SaveMerkleProofs(merkleProofs)
 	if errSave != nil {
 		return errSave
 	}
@@ -43,8 +44,8 @@ func (s *Server) updateAttestationCommitment(commitment models.Commitment) error
 }
 
 // Update latest Attestation in the server
-func (s *Server) UpdateLatestAttestation(attestation models.Attestation) error {
-	errSave := s.dbInterface.saveAttestation(attestation)
+func (s *AttestServer) UpdateLatestAttestation(attestation models.Attestation) error {
+	errSave := s.dbInterface.SaveAttestation(attestation)
 	if errSave != nil {
 		return errSave
 	}
@@ -58,7 +59,7 @@ func (s *Server) UpdateLatestAttestation(attestation models.Attestation) error {
 	}
 
 	if attestation.Confirmed {
-		errSave = s.dbInterface.saveAttestationInfo(attestation.Info)
+		errSave = s.dbInterface.SaveAttestationInfo(attestation.Info)
 		if errSave != nil {
 			return errSave
 		}
@@ -68,7 +69,7 @@ func (s *Server) UpdateLatestAttestation(attestation models.Attestation) error {
 }
 
 // Return Commitment hash of latest Attestation stored in the server
-func (s *Server) GetLatestAttestationCommitmentHash(confirmed ...bool) (chainhash.Hash, error) {
+func (s *AttestServer) GetLatestAttestationCommitmentHash(confirmed ...bool) (chainhash.Hash, error) {
 	// optional param to set confirmed flag - looks for confirmed only by default
 	confirmedParam := true
 	if len(confirmed) > 0 {
@@ -76,7 +77,7 @@ func (s *Server) GetLatestAttestationCommitmentHash(confirmed ...bool) (chainhas
 	}
 
 	// get attestation merkle root from db
-	merkleRoot, rootErr := s.dbInterface.getLatestAttestationMerkleRoot(confirmedParam)
+	merkleRoot, rootErr := s.dbInterface.GetLatestAttestationMerkleRoot(confirmedParam)
 	if rootErr != nil {
 		return chainhash.Hash{}, rootErr
 	} else if merkleRoot == "" { // no attestations yet
@@ -90,10 +91,10 @@ func (s *Server) GetLatestAttestationCommitmentHash(confirmed ...bool) (chainhas
 }
 
 // Return latest commitment stored in the server
-func (s *Server) GetClientCommitment() (models.Commitment, error) {
+func (s *AttestServer) GetClientCommitment() (models.Commitment, error) {
 
 	// get latest commitments from db
-	latestCommitments, errLatest := s.dbInterface.getClientCommitments()
+	latestCommitments, errLatest := s.dbInterface.GetClientCommitments()
 	if errLatest != nil {
 		return models.Commitment{}, errLatest
 	}
@@ -121,7 +122,7 @@ func (s *Server) GetClientCommitment() (models.Commitment, error) {
 }
 
 // Return Commitment for a particular Attestation transaction id
-func (s *Server) GetAttestationCommitment(attestationTxid chainhash.Hash, confirmed ...bool) (models.Commitment, error) {
+func (s *AttestServer) GetAttestationCommitment(attestationTxid chainhash.Hash, confirmed ...bool) (models.Commitment, error) {
 	// optional param to set confirmed flag - looks for confirmed only by default
 	confirmedParam := true
 	if len(confirmed) > 0 {
@@ -129,7 +130,7 @@ func (s *Server) GetAttestationCommitment(attestationTxid chainhash.Hash, confir
 	}
 
 	// get merkle commitments from db
-	merkleCommitments, merkleCommitmentsErr := s.dbInterface.getAttestationMerkleCommitments(attestationTxid)
+	merkleCommitments, merkleCommitmentsErr := s.dbInterface.GetAttestationMerkleCommitments(attestationTxid)
 	if merkleCommitmentsErr != nil {
 		return models.Commitment{}, merkleCommitmentsErr
 	} else if len(merkleCommitments) == 0 {

@@ -15,8 +15,8 @@ import (
 
 	"mainstay/clients"
 	confpkg "mainstay/config"
+	"mainstay/db"
 	"mainstay/models"
-	"mainstay/server"
 )
 
 // For regtest attestation demonstration
@@ -127,7 +127,7 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 // Work on main client for regtest
 // Do block generation automatically
 // Do auto commitment for position 0
-func DoRegtestWork(dbMongo *server.DbMongo, config *confpkg.Config, wg *sync.WaitGroup, ctx context.Context) {
+func DoRegtestWork(dbMongo *db.DbMongo, config *confpkg.Config, wg *sync.WaitGroup, ctx context.Context) {
 	defer wg.Done()
 	doCommit := false
 	for {

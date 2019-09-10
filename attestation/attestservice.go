@@ -14,7 +14,6 @@ import (
 
 	confpkg "mainstay/config"
 	"mainstay/models"
-	"mainstay/server"
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -73,7 +72,7 @@ const (
 
 // AttestationService structure
 // Encapsulates Attest Client and connectivity
-// to a Server for updates and requests
+// to a AttestServer for updates and requests
 type AttestService struct {
 	// context required for safe service cancellation
 	ctx context.Context
@@ -88,7 +87,7 @@ type AttestService struct {
 	attester *AttestClient
 
 	// server connection for querying and/or storing information
-	server *server.Server
+	server *AttestServer
 
 	// interface to signers to send commitments/transactions and receive signatures
 	signer AttestSigner
@@ -109,8 +108,8 @@ var (
 )
 
 // NewAttestService returns a pointer to an AttestService instance
-// Initiates Attest Client and Attest Server
-func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *server.Server, signer AttestSigner, config *confpkg.Config) *AttestService {
+// Initiates Attest Client and Attest AttestServer
+func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *AttestServer, signer AttestSigner, config *confpkg.Config) *AttestService {
 	// Check init txid validity
 	_, errInitTx := chainhash.NewHashFromStr(config.InitTx())
 	if errInitTx != nil {

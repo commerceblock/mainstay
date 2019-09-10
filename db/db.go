@@ -2,7 +2,7 @@
 // Use of this source code is governed by an MIT
 // license that can be found in the LICENSE file.
 
-package server
+package db
 
 import (
 	"mainstay/models"
@@ -16,17 +16,17 @@ import (
 // as well as fetching information on previous commitments required for signing
 type Db interface {
 	// store methods
-	saveAttestation(models.Attestation) error
-	saveAttestationInfo(models.AttestationInfo) error
-	saveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error
-	saveMerkleProofs(proofs []models.CommitmentMerkleProof) error
+	SaveAttestation(models.Attestation) error
+	SaveAttestationInfo(models.AttestationInfo) error
+	SaveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error
+	SaveMerkleProofs(proofs []models.CommitmentMerkleProof) error
 
 	// util methods
 	getAttestationCount(...bool) (int64, error)
 	getAttestationMerkleRoot(chainhash.Hash) (string, error)
 
 	// get methods required by server
-	getLatestAttestationMerkleRoot(bool) (string, error)
-	getClientCommitments() ([]models.ClientCommitment, error)
-	getAttestationMerkleCommitments(chainhash.Hash) ([]models.CommitmentMerkleCommitment, error)
+	GetLatestAttestationMerkleRoot(bool) (string, error)
+	GetClientCommitments() ([]models.ClientCommitment, error)
+	GetAttestationMerkleCommitments(chainhash.Hash) ([]models.CommitmentMerkleCommitment, error)
 }

@@ -26,17 +26,15 @@ The client signup tool can be used to sign up new clients to the mainstay servic
 
 Connectivity to the mainstay db instance is required. Config can be set in `cmd/clientsignuptool/conf.json`.
 
-The client will need to provide an ECDSA public key. The corresponding private key will be used by the client to sign the commitment send to the mainstay API. The signature is then verified by the API using the public key provided.
+The client will need to provide an ECDSA public key. The corresponding private key will be used by the client to sign the commitment send to the mainstay API. The signature is then verified by the API using the public key provided. (Optional)
 
-The tool assigns a new position to the client in the commitment merkle tree and also provides a unique auth_token for authorizing API POST requests submitted by the client. For random auth-token generation only, token generator tool `cmd/tokengeneratortool` can be used.
+The tool assigns a new position to the client in the commitment merkle tree and also provides a unique auth_token for authorizing API POST requests submitted by the client. For random auth-token generation only, token generator tool can be used.
 
 For examples [check](../doc/signup.md)
 
-## Token Generator Tool
-
 The token generator tool can be used to generate unique authorization tokens for client signup.
 
-`go run $GOPATH/src/mainstay/cmd/tokengeneratortool/tokengeneratortool.go`
+`go run $GOPATH/src/mainstay/cmd/clientsignuptool/tokengenerator/tokengeneratortool.go`
 
 ## Client Confirmation Tool
 
@@ -51,6 +49,10 @@ To run this tool you need to first fetch the `TX_HASH` from the `attestationhash
 `go run cmd/confirmationtool/confirmationtool.go -tx TX_HASH -script REDEEM_SCRIPT -position CLIENT_POSITION -apiHost https://mainstay.xyz`
 
 This will initially take some time to sync up all the attestations that have been committed so far and then will wait for any new attestations. Logging is displayed for each attestation and for full details the `-detailed` flag can be used.
+
+The key extraction tool can be used to calculated tweaked private keys and redeem script from untweaked ones.
+
+`go run $GOPATH/src/mainstay/cmd/confirmationtool/keyextraction/keyextractiontool.go`
 
 ## Commitment Tool
 
@@ -70,7 +72,7 @@ Various command line arguments need to be provided:
 - `-delay`: delay in minutes between sending commitments in ocean mode (default: 60)
 - `-position`: client position on commitment merkle tree
 - `-authtoken`: client authorization token generated on registration
-- `-privkey`: Client private key, if signature has not been generated using a different source
+- `-privkey`: Client private key, if signature has not been generated using a different source (optional)
 
 Ocean connectivity details need to be provided in the `cmd/commitmenttool/conf.json` file if Ocean mode is selected.
 

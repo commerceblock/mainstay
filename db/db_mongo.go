@@ -2,7 +2,7 @@
 // Use of this source code is governed by an MIT
 // license that can be found in the LICENSE file.
 
-package server
+package db
 
 import (
 	"context"
@@ -110,7 +110,7 @@ func NewDbMongo(ctx context.Context, dbConnectivity config.DbConfig) *DbMongo {
 }
 
 // Save latest attestation to the Attestation collection
-func (d *DbMongo) saveAttestation(attestation models.Attestation) error {
+func (d *DbMongo) SaveAttestation(attestation models.Attestation) error {
 
 	// get document representation of Attestation object
 	docAttestation, docErr := models.GetDocumentFromModel(attestation)
@@ -142,7 +142,7 @@ func (d *DbMongo) saveAttestation(attestation models.Attestation) error {
 }
 
 // Save latest attestation info to the Attestation info collection
-func (d *DbMongo) saveAttestationInfo(attestationInfo models.AttestationInfo) error {
+func (d *DbMongo) SaveAttestationInfo(attestationInfo models.AttestationInfo) error {
 
 	// get document representation of AttestationInfo object
 	docAttestationInfo, docErr := models.GetDocumentFromModel(attestationInfo)
@@ -172,7 +172,7 @@ func (d *DbMongo) saveAttestationInfo(attestationInfo models.AttestationInfo) er
 }
 
 // Save merkle commitments to the MerkleCommitment collection
-func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error {
+func (d *DbMongo) SaveMerkleCommitments(commitments []models.CommitmentMerkleCommitment) error {
 	for pos := range commitments {
 		// get document representation of each commitment
 		// get document representation of Attestation object
@@ -207,7 +207,7 @@ func (d *DbMongo) saveMerkleCommitments(commitments []models.CommitmentMerkleCom
 }
 
 // Save merkle proofs to the MerkleProof collection
-func (d *DbMongo) saveMerkleProofs(proofs []models.CommitmentMerkleProof) error {
+func (d *DbMongo) SaveMerkleProofs(proofs []models.CommitmentMerkleProof) error {
 	for pos := range proofs {
 		// get document representation of merkle proof
 		docProof, docErr := models.GetDocumentFromModel(proofs[pos])
@@ -350,7 +350,7 @@ func (d *DbMongo) getAttestationCount(confirmed ...bool) (int64, error) {
 }
 
 // Get Attestation entry from collection and return merkle_root field
-func (d *DbMongo) getLatestAttestationMerkleRoot(confirmed bool) (string, error) {
+func (d *DbMongo) GetLatestAttestationMerkleRoot(confirmed bool) (string, error) {
 	// first check if attestation has any documents
 	count, countErr := d.getAttestationCount(confirmed)
 	if countErr != nil {
@@ -399,7 +399,7 @@ func (d *DbMongo) getAttestationMerkleRoot(txid chainhash.Hash) (string, error) 
 }
 
 // Return Commitment from MerkleCommitment commitments for attestation with given txid hash
-func (d *DbMongo) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models.CommitmentMerkleCommitment, error) {
+func (d *DbMongo) GetAttestationMerkleCommitments(txid chainhash.Hash) ([]models.CommitmentMerkleCommitment, error) {
 	// get merkle root of attestation
 	merkleRoot, rootErr := d.getAttestationMerkleRoot(txid)
 	if rootErr != nil {
@@ -442,7 +442,7 @@ func (d *DbMongo) getAttestationMerkleCommitments(txid chainhash.Hash) ([]models
 }
 
 // Return latest commitments from MerkleCommitment collection
-func (d *DbMongo) getClientCommitments() ([]models.ClientCommitment, error) {
+func (d *DbMongo) GetClientCommitments() ([]models.ClientCommitment, error) {
 
 	// sort by client position to get correct commitment order
 	sortFilter := bsonx.Doc{{models.ClientCommitmentClientPositionName, bsonx.Int32(1)}}
