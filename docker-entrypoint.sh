@@ -1,5 +1,15 @@
 #!/bin/bash
 
+
+if [ -f /run/secrets/ocean_pass ]; then
+    export MAINSTAY_OCEAN_PASS="$(cat /run/secrets/ocean_pass)"
+fi
+
+if [ -f /run/secrets/commitment_priv ]; then
+    export COMMITMENT_PRIV="$(cat /run/secrets/commitment_priv)"
+fi
+
+
 export HOST_1="*:5001"
 export HOST_2="*:5002"
 
