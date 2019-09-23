@@ -216,7 +216,10 @@ func (s *AttestService) stateInitUnspent(unspent btcjson.ListUnspentResult) {
 
 		s.attester.Fees.ResetFee(s.isRegtest) // reset client fees
 		// set delay to the difference between atimeNewAttestation and time since last attestation
-		attestDelay = atimeNewAttestation - time.Since(time.Unix(s.attestation.Info.Time, 0))
+		lastDelay := time.Since(time.Unix(s.attestation.Info.Time, 0))
+		if atimeNewAttestation > lastDelay {
+			attestDelay = atimeNewAttestation - lastDelay
+		}
 	} else {
 		log.Println("********** found unspent transaction, initiating staychain")
 		s.attestation = models.NewAttestationDefault()
