@@ -105,6 +105,8 @@ var (
 
 	attestDelay time.Duration // handle state delay
 	confirmTime time.Time     // handle confirmation timing
+
+	isFeeBumped bool // flag to keep track if the fee has already been bumped
 )
 
 // NewAttestService returns a pointer to an AttestService instance
@@ -118,6 +120,7 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *AttestSer
 
 	// initiate attestation client
 	attester := NewAttestClient(config)
+	isFeeBumped = false
 
 	// initiate timing schedules
 	atimeNewAttestation = DefaultATimeNewAttestation
@@ -476,6 +479,7 @@ func (s *AttestService) doStateSendAttestation() {
 	s.state = AStateAwaitConfirmation // update attestation state
 	attestDelay = ATimeConfirmation   // add confirmation waiting time
 	confirmTime = time.Now()          // set time for awaiting confirmation
+	isFeeBumped = false               // reset fee bumped flag
 }
 
 // AStateAwaitConfirmation
@@ -529,9 +533,12 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 
 	log.Printf("********** bumping fees for attestation txid: %s\n", s.attestation.Tx.TxHash().String())
 	currentTx := &s.attestation.Tx
-	bumpErr := s.attester.bumpAttestationFees(currentTx)
-	if s.setFailure(bumpErr) {
-		return // will rebound to init
+	if !isFeeBumped {
+		bumpErr := s.attester.bumpAttestationFees(currentTx)
+		if s.setFailure(bumpErr) {
+			return // will rebound to init
+		}
+		isFeeBumped = true
 	}
 
 	s.attestation.Tx = *currentTx
