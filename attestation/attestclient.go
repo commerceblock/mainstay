@@ -390,7 +390,7 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []bt
 
 	// return error if txout value is less than maxFee target
 	maxFee := calcSignedTxFee(w.Fees.maxFee, msgTx.SerializeSize(),
-		len(inputs)*len(w.script0)/2, len(inputs)*w.numOfSigs)
+		len(w.script0)/2, w.numOfSigs, len(inputs))
 	if msgTx.TxOut[0].Value < 5*maxFee {
 		return nil, errors.New(ErrorInsufficientFunds)
 	}
@@ -403,7 +403,7 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []bt
 	// add fees using best fee-per-byte estimate
 	feePerByte := w.Fees.GetFee()
 	fee := calcSignedTxFee(feePerByte, msgTx.SerializeSize(),
-		len(inputs)*len(w.script0)/2, len(inputs)*w.numOfSigs)
+		len(w.script0)/2, w.numOfSigs, len(inputs))
 	msgTx.TxOut[0].Value -= fee
 
 	return msgTx, nil
@@ -426,7 +426,7 @@ func (w *AttestClient) bumpAttestationFees(msgTx *wire.MsgTx) error {
 
 	// increase tx fees by fee difference
 	feeIncrement := calcSignedTxFee(feePerByteIncrement, msgTx.SerializeSize(),
-		len(msgTx.TxIn)*len(w.script0)/2, len(msgTx.TxIn)*w.numOfSigs)
+		len(w.script0)/2, w.numOfSigs, len(msgTx.TxIn))
 	msgTx.TxOut[0].Value -= feeIncrement
 
 	return nil
@@ -434,16 +434,16 @@ func (w *AttestClient) bumpAttestationFees(msgTx *wire.MsgTx) error {
 
 // Calculate the size of a signed transaction by summing the unsigned tx size
 // and the redeem script size and estimated signature size of the scriptsig
-func calcSignedTxSize(unsignedTxSize int, scriptSize int, numOfSigs int) int {
-	return unsignedTxSize + /*script size byte*/ 1 + scriptSize +
-		/*00 scriptsig byte*/ 1 + numOfSigs*( /*sig size byte*/ 1+72)
+func calcSignedTxSize(unsignedTxSize int, scriptSize int, numOfSigs int, numOfInputs int) int {
+	return unsignedTxSize + /*script size byte*/ (1+scriptSize+
+		/*00 scriptsig byte*/ 1+numOfSigs*( /*sig size byte*/ 1+72))*numOfInputs
 }
 
 // Calculate the actual fee of an unsigned transaction by taking into consideration
 // the size of the script and the number of signatures required and calculating the
 // aggregated transaction size with the fee per byte provided
-func calcSignedTxFee(feePerByte int, unsignedTxSize int, scriptSize int, numOfSigs int) int64 {
-	return int64(feePerByte * calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs))
+func calcSignedTxFee(feePerByte int, unsignedTxSize int, scriptSize int, numOfSigs int, numOfInputs int) int64 {
+	return int64(feePerByte * calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs, numOfInputs))
 }
 
 // Given a commitment hash return the corresponding client private key tweaked
