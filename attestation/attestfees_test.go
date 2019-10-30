@@ -16,13 +16,16 @@ import (
 func TestAttestFees(t *testing.T) {
 
 	attestFees := NewAttestFees(config.FeesConfig{-1, -1, -1})
+	assert.Equal(t, 0, attestFees.GetPrevFee())
 
 	// test reset to minimum
 	attestFees.ResetFee(true)
+	assert.Equal(t, 0, attestFees.GetPrevFee())
 	assert.Equal(t, attestFees.minFee, attestFees.GetFee())
 
 	// test reset never sets a value smaller than min and larger than max
 	attestFees.ResetFee()
+	assert.Equal(t, 0, attestFees.GetPrevFee())
 	assert.Equal(t, true, attestFees.GetFee() >= attestFees.minFee)
 	assert.Equal(t, true, attestFees.GetFee() <= attestFees.maxFee)
 
@@ -34,10 +37,12 @@ func TestAttestFees(t *testing.T) {
 	fee := attestFees.GetFee()
 	for _, i := range []int{1, 2, 3, 4} {
 		attestFees.BumpFee()
+		assert.Equal(t, fee+(i-1)*attestFees.feeIncrement, attestFees.GetPrevFee())
 		assert.Equal(t, fee+i*attestFees.feeIncrement, attestFees.GetFee())
 	}
 
 	attestFees.BumpFee()
+	assert.Equal(t, 90, attestFees.GetPrevFee())
 	assert.Equal(t, attestFees.maxFee, attestFees.GetFee())
 }
 

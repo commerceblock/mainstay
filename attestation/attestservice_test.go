@@ -1036,6 +1036,9 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 
 		// failure - re init attestation service from inner state failure
 		attestService.state = AStateInit
+		// second time bump fee manually and set is fee bumped flag
+		attestService.attester.Fees.BumpFee()
+		isFeeBumped = true
 		// Test AStateInit -> AStateAwaitConfirmation
 		verifyStateInitToAwaitConfirmation(t, attestService, config, latestCommitment, txid)
 		// set confirm time back to test what happens in handle unconfirmed case
