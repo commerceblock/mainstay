@@ -459,6 +459,8 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 	client.Fees.ResetFee(true) // reset fee to minimum
 	defaultFeeIncrement := client.Fees.feeIncrement
 
+	feeBumpFlag := false
+
 	// Do attestations using attest client
 	for i := 1; i <= iterNum; i++ {
 		// Generate attestation transaction with the unspent vout
@@ -512,14 +514,21 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 
 		// test attestation transaction fee bumping
 		if i == topupLevel+1 {
-			// if transaction is already sent and we add a new vin then we
+			// If transaction is already sent and we add a new vin then we
 			// need to increase the fee rate before bumping or it will fail
-			// Edge case not used in attestservice but always a possibility
+			// This edge case is not implemented in attestservice yet
 			client.Fees.feeIncrement = 20
 		} else {
 			client.Fees.feeIncrement = defaultFeeIncrement
 		}
-		bumpErr := client.bumpAttestationFees(tx2)
+		// When feeBumpFlag is set it means that the fee has already been
+		// bumped by some external source therefore the call to bumpAttestationFees
+		// should not bump it again. We manually do this here for testing
+		if feeBumpFlag {
+			client.Fees.BumpFee()
+		}
+		bumpErr := client.bumpAttestationFees(tx2, feeBumpFlag)
+		feeBumpFlag = !feeBumpFlag
 		assert.Equal(t, nil, bumpErr)
 		assert.Equal(t, 1-1*int(math.Min(0, float64((i%(topupLevel+1)-1)))), len(tx2.TxIn))
 		assert.Equal(t, 1, len(tx2.TxOut))
@@ -528,9 +537,9 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		newFee := client.Fees.GetFee()
 		newValue := tx2.TxOut[0].Value
 		newTxFee := calcSignedTxFee(newFee, tx2.SerializeSize(),
-			len(tx2.TxIn)*len(client.script0)/2, len(tx2.TxIn)*client.numOfSigs)
+			len(client.script0)/2, client.numOfSigs, len(tx2.TxIn))
 		currentTxFee := calcSignedTxFee(currentFee, tx.SerializeSize(),
-			len(tx.TxIn)*len(client.script0)/2, len(tx.TxIn)*client.numOfSigs)
+			len(client.script0)/2, client.numOfSigs, len(tx.TxIn))
 		assert.Equal(t, newTxFee-currentTxFee, currentValue+topupValue-newValue)
 		assert.Equal(t, client.Fees.minFee+client.Fees.feeIncrement, newFee)
 
@@ -574,12 +583,18 @@ func TestAttestClient_feeCalculation(t *testing.T) {
 
 	scriptSize := len(testpkg.Script) / 2
 	_, numOfSigs := crypto.ParseRedeemScript(testpkg.Script)
-	assert.Equal(t, 229, calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs))
-	assert.Equal(t, int64(2290), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize, numOfSigs))
+	assert.Equal(t, 229, calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs, 1))
+	assert.Equal(t, int64(2290), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize, numOfSigs, 1))
+
+	assert.Equal(t, 375, calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs, 2))
+	assert.Equal(t, int64(3750), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize, numOfSigs, 2))
 
 	script2 := "52210325bf82856a8fdcc7a2c08a933343d2c6332c4c252974d6b09b6232ea4080462621028ed149d77203c79d7524048689a80cc98f27e3427f2edaec52eae1f630978e08210254a548b59741ba35bfb085744373a8e10b1cf96e71f53356d7d97f807258d38c53ae"
 	scriptSize2 := len(script2) / 2
 	_, numOfSigs2 := crypto.ParseRedeemScript(script2)
-	assert.Equal(t, 336, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2))
-	assert.Equal(t, int64(3360), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2))
+	assert.Equal(t, 336, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 1))
+	assert.Equal(t, int64(3360), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 1))
+
+	assert.Equal(t, 842, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 3))
+	assert.Equal(t, int64(8420), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 3))
 }
