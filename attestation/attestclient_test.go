@@ -459,6 +459,8 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 	client.Fees.ResetFee(true) // reset fee to minimum
 	defaultFeeIncrement := client.Fees.feeIncrement
 
+	feeBumpFlag := false
+
 	// Do attestations using attest client
 	for i := 1; i <= iterNum; i++ {
 		// Generate attestation transaction with the unspent vout
@@ -512,14 +514,21 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 
 		// test attestation transaction fee bumping
 		if i == topupLevel+1 {
-			// if transaction is already sent and we add a new vin then we
+			// If transaction is already sent and we add a new vin then we
 			// need to increase the fee rate before bumping or it will fail
-			// Edge case not used in attestservice but always a possibility
+			// This edge case is not implemented in attestservice yet
 			client.Fees.feeIncrement = 20
 		} else {
 			client.Fees.feeIncrement = defaultFeeIncrement
 		}
-		bumpErr := client.bumpAttestationFees(tx2)
+		// When feeBumpFlag is set it means that the fee has already been
+		// bumped by some external source therefore the call to bumpAttestationFees
+		// should not bump it again. We manually do this here for testing
+		if feeBumpFlag {
+			client.Fees.BumpFee()
+		}
+		bumpErr := client.bumpAttestationFees(tx2, feeBumpFlag)
+		feeBumpFlag = !feeBumpFlag
 		assert.Equal(t, nil, bumpErr)
 		assert.Equal(t, 1-1*int(math.Min(0, float64((i%(topupLevel+1)-1)))), len(tx2.TxIn))
 		assert.Equal(t, 1, len(tx2.TxOut))

@@ -533,13 +533,11 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 
 	log.Printf("********** bumping fees for attestation txid: %s\n", s.attestation.Tx.TxHash().String())
 	currentTx := &s.attestation.Tx
-	if !isFeeBumped {
-		bumpErr := s.attester.bumpAttestationFees(currentTx)
-		if s.setFailure(bumpErr) {
-			return // will rebound to init
-		}
-		isFeeBumped = true
+	bumpErr := s.attester.bumpAttestationFees(currentTx, isFeeBumped)
+	if s.setFailure(bumpErr) {
+		return // will rebound to init
 	}
+	isFeeBumped = true
 
 	s.attestation.Tx = *currentTx
 	log.Printf("********** new pre-sign txid: %s\n", s.attestation.Tx.TxHash().String())

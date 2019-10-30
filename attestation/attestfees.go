@@ -54,6 +54,9 @@ type AttestFees struct {
 
 	// current fee used for attestation transactions
 	currentFee int
+
+	// previous fee used for attestation transactions
+	prevFee int
 }
 
 // New AttestFees instance
@@ -91,7 +94,8 @@ func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 	attestFees := AttestFees{
 		minFee:       minFee,
 		maxFee:       maxFee,
-		feeIncrement: feeIncrement}
+		feeIncrement: feeIncrement,
+		prevFee:      0}
 
 	attestFees.ResetFee()
 	return attestFees
@@ -101,6 +105,12 @@ func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 func (a AttestFees) GetFee() int {
 	log.Printf("*Fees* Current fee value: %d\n", a.currentFee)
 	return a.currentFee
+}
+
+// Get previous fee
+func (a AttestFees) GetPrevFee() int {
+	log.Printf("*Fees* Previous fee value: %d\n", a.prevFee)
+	return a.prevFee
 }
 
 // Reset current fee, getting latest best value from API
@@ -118,11 +128,13 @@ func (a *AttestFees) ResetFee(useMinimum ...bool) {
 		}
 	}
 	a.currentFee = fee
+	a.prevFee = 0
 	log.Printf("*Fees* Current fee set to value: %d\n", a.currentFee)
 }
 
 // Bump fee upon request using increment value and not allowing values higher than max configured fee
 func (a *AttestFees) BumpFee() {
+	a.prevFee = a.currentFee
 	a.currentFee += a.feeIncrement
 	log.Printf("*Fees* Bumping fee value to: %d\n", a.currentFee)
 	if a.currentFee > a.maxFee {

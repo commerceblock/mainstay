@@ -413,15 +413,20 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []bt
 // bumping fee of existing transaction with incremented fee
 // The latest fee is fetched from the AttestFees API, which
 // has fixed uppwer/lower fee limit and fee increment
-func (w *AttestClient) bumpAttestationFees(msgTx *wire.MsgTx) error {
+func (w *AttestClient) bumpAttestationFees(msgTx *wire.MsgTx, isFeeBumped bool) error {
 	// first remove any sigs
 	for i := 0; i < len(msgTx.TxIn); i++ {
 		msgTx.TxIn[i].SignatureScript = []byte{}
 	}
 
 	// bump fees and calculate fee increment
-	prevFeePerByte := w.Fees.GetFee()
-	w.Fees.BumpFee()
+	var prevFeePerByte int
+	if isFeeBumped {
+		prevFeePerByte = w.Fees.GetPrevFee()
+	} else {
+		prevFeePerByte = w.Fees.GetFee()
+		w.Fees.BumpFee()
+	}
 	feePerByteIncrement := w.Fees.GetFee() - prevFeePerByte
 
 	// increase tx fees by fee difference
