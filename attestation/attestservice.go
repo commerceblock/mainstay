@@ -51,7 +51,7 @@ const (
 // waiting time schedules
 const (
 	// fixed waiting time between states
-	ATimeFixed = 100 * time.Millisecond
+	ATimeFixed = 5 * time.Second
 
 	// waiting time for sigs to arrive from multisig nodes
 	ATimeSigs = 1 * time.Minute
