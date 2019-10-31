@@ -61,7 +61,7 @@ const (
 // Method to connect to mongo database through config
 func dbConnect(ctx context.Context, dbConnectivity config.DbConfig) (*mongo.Database, error) {
 	// get this from config
-	uri := fmt.Sprintf(`mongodb://%s:%s@%s:%s/%s`,
+	uri := fmt.Sprintf(`mongodb://%s:%s@%s:%s/%s?connect=direct`,
 		dbConnectivity.User,
 		dbConnectivity.Password,
 		dbConnectivity.Host,
