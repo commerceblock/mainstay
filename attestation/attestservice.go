@@ -51,7 +51,7 @@ const (
 // waiting time schedules
 const (
 	// fixed waiting time between states
-	ATimeFixed = 5 * time.Second
+	ATimeFixed = 1 * time.Second
 
 	// waiting time for sigs to arrive from multisig nodes
 	ATimeSigs = 1 * time.Minute
@@ -187,6 +187,9 @@ func (s *AttestService) stateInitUnconfirmed(unconfirmedTxid chainhash.Hash) {
 	s.attestation = models.NewAttestation(unconfirmedTxid, &commitment) // initialise attestation
 	rawTx, _ := s.config.MainClient().GetRawTransaction(&unconfirmedTxid)
 	s.attestation.Tx = *rawTx.MsgTx() // set msgTx
+
+	confirmedHash := s.attestation.CommitmentHash()
+	s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
 
 	s.state = AStateAwaitConfirmation // update attestation state
 	walletTx, _ := s.config.MainClient().GetTransaction(&unconfirmedTxid)
