@@ -592,9 +592,9 @@ func TestAttestClient_feeCalculation(t *testing.T) {
 	script2 := "52210325bf82856a8fdcc7a2c08a933343d2c6332c4c252974d6b09b6232ea4080462621028ed149d77203c79d7524048689a80cc98f27e3427f2edaec52eae1f630978e08210254a548b59741ba35bfb085744373a8e10b1cf96e71f53356d7d97f807258d38c53ae"
 	scriptSize2 := len(script2) / 2
 	_, numOfSigs2 := crypto.ParseRedeemScript(script2)
-	assert.Equal(t, 337, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 1))
-	assert.Equal(t, int64(3370), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 1))
+	assert.Equal(t, 339, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 1))
+	assert.Equal(t, int64(3390), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 1))
 
-	assert.Equal(t, 845, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 3))
-	assert.Equal(t, int64(8450), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 3))
+	assert.Equal(t, 851, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 3))
+	assert.Equal(t, int64(8510), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 3))
 }

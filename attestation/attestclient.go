@@ -444,8 +444,9 @@ func calcSignedTxSize(unsignedTxSize int, scriptSize int, numOfSigs int, numOfIn
 	if pushDataSize = 0; scriptSize > 75 {
 		pushDataSize = 1
 	}
-	return unsignedTxSize + /*script size byte*/ (pushDataSize+1+scriptSize+
-		/*00 scriptsig byte*/ 1+numOfSigs*( /*sig size byte*/ 1+72))*numOfInputs
+	scriptSigSize := /*size byte*/ 1 + pushDataSize + scriptSize + /*00 byte*/ 1 + numOfSigs*( /*size byte*/ 1+72)
+	scriptSigSizeSize := wire.VarIntSerializeSize(uint64(scriptSigSize)) - 1 // unsignedTxSize includes 1 byte already
+	return unsignedTxSize + (scriptSigSize+scriptSigSizeSize)*numOfInputs
 }
 
 // Calculate the actual fee of an unsigned transaction by taking into consideration
