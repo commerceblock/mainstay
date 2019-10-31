@@ -51,7 +51,7 @@ const (
 // waiting time schedules
 const (
 	// fixed waiting time between states
-	ATimeFixed = 5 * time.Second
+	ATimeFixed = 100 * time.Millisecond
 
 	// waiting time for sigs to arrive from multisig nodes
 	ATimeSigs = 1 * time.Minute
@@ -159,7 +159,7 @@ func (s *AttestService) Run() {
 
 			// for testing - overwrite delay
 			if s.isRegtest {
-				attestDelay = 10 * time.Second
+				attestDelay = 5 * time.Second
 			}
 
 			log.Printf("********** sleeping for: %s ...\n", attestDelay.String())
@@ -406,6 +406,7 @@ func (s *AttestService) doStateNewAttestation() {
 			txPreImageBytes = append(txPreImageBytes, txBytesBuffer.Bytes())
 		}
 		s.signer.SendTxPreImages(txPreImageBytes)
+		s.signer.ReSubscribe()
 
 		s.state = AStateSignAttestation // update attestation state
 		attestDelay = ATimeSigs         // add sigs waiting time
@@ -561,6 +562,7 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 		txPreImageBytes = append(txPreImageBytes, txBytesBuffer.Bytes())
 	}
 	s.signer.SendTxPreImages(txPreImageBytes)
+	s.signer.ReSubscribe()
 
 	s.state = AStateSignAttestation // update attestation state
 	attestDelay = ATimeSigs         // add sigs waiting time
