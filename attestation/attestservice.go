@@ -188,8 +188,12 @@ func (s *AttestService) stateInitUnconfirmed(unconfirmedTxid chainhash.Hash) {
 	rawTx, _ := s.config.MainClient().GetRawTransaction(&unconfirmedTxid)
 	s.attestation.Tx = *rawTx.MsgTx() // set msgTx
 
-	confirmedHash := s.attestation.CommitmentHash()
-	s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
+	// get last confirmed commitment from server
+	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()
+	if s.setFailure(latestErr) {
+		return // will rebound to init
+	}
+	s.signer.SendConfirmedHash((&lastCommitmentHash).CloneBytes()) // update clients
 
 	s.state = AStateAwaitConfirmation // update attestation state
 	walletTx, _ := s.config.MainClient().GetTransaction(&unconfirmedTxid)
