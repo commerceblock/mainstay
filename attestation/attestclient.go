@@ -440,7 +440,11 @@ func (w *AttestClient) bumpAttestationFees(msgTx *wire.MsgTx, isFeeBumped bool) 
 // Calculate the size of a signed transaction by summing the unsigned tx size
 // and the redeem script size and estimated signature size of the scriptsig
 func calcSignedTxSize(unsignedTxSize int, scriptSize int, numOfSigs int, numOfInputs int) int {
-	return unsignedTxSize + /*script size byte*/ (1+scriptSize+
+	var pushDataSize int
+	if pushDataSize = 0; scriptSize > 75 {
+		pushDataSize = 1
+	}
+	return unsignedTxSize + /*script size byte*/ (pushDataSize+1+scriptSize+
 		/*00 scriptsig byte*/ 1+numOfSigs*( /*sig size byte*/ 1+72))*numOfInputs
 }
 
