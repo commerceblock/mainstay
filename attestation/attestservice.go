@@ -406,6 +406,7 @@ func (s *AttestService) doStateNewAttestation() {
 			txPreImageBytes = append(txPreImageBytes, txBytesBuffer.Bytes())
 		}
 		s.signer.SendTxPreImages(txPreImageBytes)
+		s.signer.ReSubscribe()
 
 		s.state = AStateSignAttestation // update attestation state
 		attestDelay = ATimeSigs         // add sigs waiting time
@@ -561,6 +562,7 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 		txPreImageBytes = append(txPreImageBytes, txBytesBuffer.Bytes())
 	}
 	s.signer.SendTxPreImages(txPreImageBytes)
+	s.signer.ReSubscribe()
 
 	s.state = AStateSignAttestation // update attestation state
 	attestDelay = ATimeSigs         // add sigs waiting time
