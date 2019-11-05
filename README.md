@@ -1,5 +1,5 @@
 # Mainstay
-The mainstay repository is an application that implements the [Mainstay protocol](https://www.commerceblock.com/wp-content/uploads/2018/03/commerceblock-mainstay-whitepaper.pdf) designed by [CommerceBlock](https://www.commerceblock.com). It consists of a Go daemon that performs attestations of the [Ocean](https://github.com/commerceblock/ocean) network along with client commitments to Bitcoin in the form of a commitment merkle tree.
+The mainstay repository is an application that implements the [Mainstay protocol](https://cloudflare-ipfs.com/ipns/ipfs.commerceblock.com/commerceblock-whitepaper-mainstay.pdf) designed by [CommerceBlock](https://www.commerceblock.com). It consists of a Go daemon that performs attestations of the [Ocean](https://github.com/commerceblock/ocean) network along with client commitments to Bitcoin in the form of a commitment merkle tree.
 
 Mainstay is accompanied by a Confirmation tool that can be run in parallel with the Bitcoin network to confirm attestations and prove the commitment inclusion in Mainstay attestations.
 
@@ -75,4 +75,3 @@ The multisig tool `cmd/multisigtool` can be used to generate multisig scripts an
 For more information go to [tool guidelines](/cmd/README.md).
 
 For example use cases go to [docs](/doc/).
-
