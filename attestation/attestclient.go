@@ -43,6 +43,7 @@ const (
 	ErrorInputMissingForTx          = `Missing input for transaction`
 	ErrorInvalidChaincode           = `Invalid chaincode provided`
 	ErrorMissingChaincodes          = `Missing chaincodes for pubkeys`
+	ErrorTopUpScriptNumSigs			= `Top up script has invalid number of signatures`
 )
 
 // coin in satoshis
@@ -154,6 +155,11 @@ func newNonMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcu
 func newMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcutil.WIF, wifTopup *btcutil.WIF) *AttestClient {
 	multisig := config.InitScript()
 	pubkeys, numOfSigs := crypto.ParseRedeemScript(multisig)
+
+	// Verify same amount of sigs in topupscript and init script
+	if _, topUpnumOfSigs := crypto.ParseRedeemScript(config.TopupScript()); topUpnumOfSigs == topUpnumOfSigs {
+		log.Fatal(ErrorTopUpScriptNumSigs)
+	}
 
 	// get chaincodes of pubkeys from config
 	chaincodesStr := config.InitChaincodes()
