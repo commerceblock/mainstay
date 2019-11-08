@@ -48,7 +48,7 @@ func init() {
 
 	if tx == "" || script == "" || position == -1 || chaincodes == "" {
 		flag.PrintDefaults()
-		log.Errorf("Need to provide all -tx, -script, -chaincodes and -position argument.")
+		log.Error("Need to provide all -tx, -script, -chaincodes and -position argument.")
 	}
 
 	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + ConfPath)

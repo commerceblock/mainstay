@@ -70,13 +70,9 @@ func init() {
 // when signing new commitments and sending to Mainstay API
 func doInitMode() {
 	log.Infoln("****************************")
-	log.Infoln("****************************")
 	log.Infoln("****** Init mode ***********")
-	log.Infoln("****** Init mode ***********")
-	log.Infoln("****************************")
 	log.Infoln("****************************")
 
-	log.Infof("Generating new key...\n")
 	log.Infof("Generating new key...\n")
 	newPriv, newPrivErr := btcec.NewPrivateKey(btcec.S256())
 	if newPrivErr != nil {
@@ -85,14 +81,10 @@ func doInitMode() {
 
 	newPrivBytesStr := hex.EncodeToString(newPriv.Serialize())
 	log.Infof("generated priv: %s\n", newPrivBytesStr)
-	log.Infof("generated priv: %s\n", newPrivBytesStr)
 	newPubBytesStr := hex.EncodeToString(newPriv.PubKey().SerializeCompressed())
-	log.Infof("generated pub: %s\n", newPubBytesStr)
 	log.Infof("generated pub: %s\n", newPubBytesStr)
 
 	log.Infof("The private key should be used for signing future client commitments\n")
-	log.Infof("The private key should be used for signing future client commitments\n")
-	log.Infof("The public key should be provided when posting these to Mainstay API\n")
 	log.Infof("The public key should be provided when posting these to Mainstay API\n")
 }
 

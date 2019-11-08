@@ -134,10 +134,10 @@ func main() {
 	log.Infoln()
 
 	// Create new client details
-	log.Info("*********************************************")
-	log.Info("*********** Inserting New Client ************")
-	log.Info("*********************************************")
-	log.Info()
+	log.Infoln("*********************************************")
+	log.Infoln("*********** Inserting New Client ************")
+	log.Infoln("*********************************************")
+	log.Infoln()
 	log.Info("Insert client name: ")
 
 	// scan input client name

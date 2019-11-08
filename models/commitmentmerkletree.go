@@ -7,6 +7,7 @@ package models
 import (
 	_ "errors"
 	"math"
+	"fmt"
 
 	"mainstay/log"
 
@@ -21,12 +22,12 @@ func printMerkleTree(tree []*chainhash.Hash) {
 		if i == num {
 			i = 0
 			num = num / 2
-			log.Infof("\n")
+			fmt.Println("")
 		}
 		i += 1
 		log.Infof("%v ", hash)
 	}
-	log.Infof("\n")
+	fmt.Println("")
 }
 
 // Build merkle tree store from a list of commitments

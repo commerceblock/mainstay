@@ -73,7 +73,7 @@ func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 	}
 	log.Infof("*Fees* Min fee set to: %d\n", minFee)
 
-	// Infox fee with lower limit min_fee && 0 and max fee default
+	// max fee with lower limit min_fee && 0 and max fee default
 	maxFee := DefaultMaxFee
 	if feesConfig.MaxFee > 0 && feesConfig.MaxFee > minFee && feesConfig.MaxFee < DefaultMaxFee {
 		maxFee = feesConfig.MaxFee
