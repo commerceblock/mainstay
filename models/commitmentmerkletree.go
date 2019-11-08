@@ -6,8 +6,9 @@ package models
 
 import (
 	_ "errors"
-	"fmt"
 	"math"
+
+	"mainstay/log"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
@@ -20,12 +21,12 @@ func printMerkleTree(tree []*chainhash.Hash) {
 		if i == num {
 			i = 0
 			num = num / 2
-			fmt.Printf("\n")
+			log.Infof("\n")
 		}
 		i += 1
-		fmt.Printf("%v ", hash)
+		log.Infof("%v ", hash)
 	}
-	fmt.Printf("\n")
+	log.Infof("\n")
 }
 
 // Build merkle tree store from a list of commitments

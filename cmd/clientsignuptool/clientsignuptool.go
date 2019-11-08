@@ -10,13 +10,13 @@ import (
 	"bufio"
 	"context"
 	"encoding/hex"
-	"fmt"
-	"log"
 	"os"
+	"fmt"
 
 	"mainstay/config"
 	"mainstay/db"
 	"mainstay/models"
+	"mainstay/log"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/satori/go.uuid"
@@ -33,32 +33,32 @@ var (
 func init() {
 	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + ConfPath)
 	if confErr != nil {
-		log.Fatal(confErr)
+		log.Error(confErr)
 	}
 	var mainConfigErr error
 	mainConfig, mainConfigErr = config.NewConfig(confFile)
 	if mainConfigErr != nil {
-		log.Fatal(mainConfigErr)
+		log.Error(mainConfigErr)
 	}
 }
 
 // print client details
 func printClientDetails() {
 	// Read existing clients and get next available client position
-	fmt.Println("existing clients")
+	log.Infoln("existing clients")
 	details, errDb := dbMongo.GetClientDetails()
 	if errDb != nil {
-		log.Fatal(errDb)
+		log.Error(errDb)
 	}
 	if len(details) == 0 {
-		fmt.Println("no existing client positions")
+		log.Infoln("no existing client positions")
 		return
 	}
 	for _, client := range details {
-		fmt.Printf("client_position: %d pubkey: %s name: %s\n",
+		log.Infof("client_position: %d pubkey: %s name: %s\n",
 			client.ClientPosition, client.Pubkey, client.ClientName)
 	}
-	fmt.Println()
+	log.Infoln()
 }
 
 // read client details and get client position
@@ -66,7 +66,7 @@ func clientPosition() int32 {
 	// Read existing clients and get next available client position
 	details, errDb := dbMongo.GetClientDetails()
 	if errDb != nil {
-		log.Fatal(errDb)
+		log.Error(errDb)
 	}
 	var maxClientPosition int32
 	if len(details) == 0 {
@@ -87,58 +87,58 @@ func main() {
 
 	dbMongo = db.NewDbMongo(ctx, mainConfig.DbConfig())
 
-	fmt.Println()
-	fmt.Println("*********************************************")
-	fmt.Println("************ Client Signup Tool *************")
-	fmt.Println("*********************************************")
-	fmt.Println()
+	log.Infoln()
+	log.Infoln("*********************************************")
+	log.Infoln("************ Client Signup Tool *************")
+	log.Infoln("*********************************************")
+	log.Infoln()
 	printClientDetails()
 
 	nextClientPosition := clientPosition()
-	fmt.Printf("next available position: %d\n", nextClientPosition)
-	fmt.Println()
+	log.Infof("next available position: %d\n", nextClientPosition)
+	log.Infoln()
 
 	// Insert client pubkey details and verify
-	fmt.Println("*********************************************")
-	fmt.Println("************ Client Pubkey Info *************")
-	fmt.Println("*********************************************")
-	fmt.Println()
-	fmt.Print("Insert pubkey (optional): ")
+	log.Infoln("*********************************************")
+	log.Infoln("************ Client Pubkey Info *************")
+	log.Infoln("*********************************************")
+	log.Infoln()
+	log.Info("Insert pubkey (optional): ")
 	var pubKey string
 	fmt.Scanln(&pubKey)
 	if pubKey == "" {
-		fmt.Println("no pubkey authentication")
+		log.Infoln("no pubkey authentication")
 	} else {
 		pubKeyBytes, pubKeyBytesErr := hex.DecodeString(pubKey)
 		if pubKeyBytesErr != nil {
-			log.Fatal(pubKeyBytesErr)
+			log.Error(pubKeyBytesErr)
 		}
 		_, errPub := btcec.ParsePubKey(pubKeyBytes, btcec.S256())
 		if errPub != nil {
-			log.Fatal(errPub)
+			log.Error(errPub)
 		}
-		fmt.Println("pubkey verified")
-		fmt.Println()
+		log.Infoln("pubkey verified")
+		log.Infoln()
 	}
 
 	// New auth token ID for client
-	fmt.Println("*********************************************")
-	fmt.Println("***** Client Auth Token identification ******")
-	fmt.Println("*********************************************")
-	fmt.Println()
+	log.Infoln("*********************************************")
+	log.Infoln("***** Client Auth Token identification ******")
+	log.Infoln("*********************************************")
+	log.Infoln()
 	uuid, err := uuid.NewV4()
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
 	}
-	fmt.Printf("new-uuid: %s\n", uuid.String())
-	fmt.Println()
+	log.Infof("new-uuid: %s\n", uuid.String())
+	log.Infoln()
 
 	// Create new client details
-	fmt.Println("*********************************************")
-	fmt.Println("*********** Inserting New Client ************")
-	fmt.Println("*********************************************")
-	fmt.Println()
-	fmt.Print("Insert client name: ")
+	log.Info("*********************************************")
+	log.Info("*********** Inserting New Client ************")
+	log.Info("*********************************************")
+	log.Info()
+	log.Info("Insert client name: ")
 
 	// scan input client name
 	scanner := bufio.NewScanner(os.Stdin)
@@ -152,12 +152,12 @@ func main() {
 		ClientName:     clientName}
 	saveErr := dbMongo.SaveClientDetails(newClientDetails)
 	if saveErr != nil {
-		log.Fatal(saveErr)
+		log.Error(saveErr)
 	}
-	fmt.Println("NEW CLIENT DETAILS")
-	fmt.Printf("client_position: %d\n", newClientDetails.ClientPosition)
-	fmt.Printf("auth_token: %s\n", newClientDetails.AuthToken)
-	fmt.Printf("pubkey: %s\n", newClientDetails.Pubkey)
-	fmt.Println()
+	log.Infoln("NEW CLIENT DETAILS")
+	log.Infof("client_position: %d\n", newClientDetails.ClientPosition)
+	log.Infof("auth_token: %s\n", newClientDetails.AuthToken)
+	log.Infof("pubkey: %s\n", newClientDetails.Pubkey)
+	log.Infoln()
 	printClientDetails()
 }

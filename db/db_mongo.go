@@ -8,10 +8,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 
 	"mainstay/config"
 	"mainstay/models"
+	"mainstay/log"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -103,7 +103,7 @@ type DbMongo struct {
 func NewDbMongo(ctx context.Context, dbConnectivity config.DbConfig) *DbMongo {
 	db, errConnect := dbConnect(ctx, dbConnectivity)
 	if errConnect != nil {
-		log.Fatal(errConnect)
+		log.Error(errConnect)
 	}
 
 	return &DbMongo{ctx, dbConnectivity, db}
@@ -422,14 +422,14 @@ func (d *DbMongo) GetAttestationMerkleCommitments(txid chainhash.Hash) ([]models
 	for res.Next(d.ctx) {
 		var commitmentDoc bsonx.Doc
 		if err := res.Decode(&commitmentDoc); err != nil {
-			fmt.Printf("%s\n", BadDataMerkleCommitmentCol)
+			log.Infof("%s\n", BadDataMerkleCommitmentCol)
 			return []models.CommitmentMerkleCommitment{}, err
 		}
 		// decode document result to Commitment model and get hash
 		commitmentModel := &models.CommitmentMerkleCommitment{}
 		modelErr := models.GetModelFromDocument(&commitmentDoc, commitmentModel)
 		if modelErr != nil {
-			fmt.Printf("%s\n", BadDataMerkleCommitmentCol)
+			log.Infof("%s\n", BadDataMerkleCommitmentCol)
 			return []models.CommitmentMerkleCommitment{}, modelErr
 		}
 		merkleCommitments = append(merkleCommitments, *commitmentModel)

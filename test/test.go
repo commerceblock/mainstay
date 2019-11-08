@@ -6,7 +6,6 @@ package test
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	confpkg "mainstay/config"
 	"mainstay/db"
 	"mainstay/models"
+	"mainstay/log"
 )
 
 // For regtest attestation demonstration
@@ -85,23 +85,23 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	cmd := exec.Command("/bin/sh", initPath)
 	output, err := cmd.Output()
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
 	}
 	if logOutput {
-		log.Println(string(output))
+		log.Infoln(string(output))
 	}
 
 	// if not a regtest, then unittest
 	config, configErr := confpkg.NewConfig(testConf)
 	if configErr != nil {
-		log.Fatal(configErr)
+		log.Error(configErr)
 	}
 	oceanClient := confpkg.NewClientFromConfig("ocean", true, testConf)
 
 	// Get transaction for Address as initial TX for attestation chain
 	unspent, errUnspent := config.MainClient().ListTransactions("*")
 	if errUnspent != nil {
-		log.Fatal(errUnspent)
+		log.Error(errUnspent)
 	}
 	var txid string
 	for _, vout := range unspent {
@@ -139,7 +139,7 @@ func DoRegtestWork(dbMongo *db.DbMongo, config *confpkg.Config, wg *sync.WaitGro
 			// generate and get hash
 			hash, genErr := config.MainClient().Generate(1)
 			if genErr != nil {
-				log.Println(genErr)
+				log.Infoln(genErr)
 			}
 
 			// every other block generation commit
@@ -152,7 +152,7 @@ func DoRegtestWork(dbMongo *db.DbMongo, config *confpkg.Config, wg *sync.WaitGro
 
 				saveErr := dbMongo.SaveClientCommitment(newClientCommitment)
 				if saveErr != nil {
-					log.Println(saveErr)
+					log.Infoln(saveErr)
 				}
 				doCommit = false
 			} else {
@@ -186,19 +186,19 @@ func NewTestMulti() *TestMulti {
 	cmd := exec.Command("/bin/sh", initPath)
 	_, err := cmd.Output()
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
 	}
 
 	// get config
 	config, configErr := confpkg.NewConfig(testConf)
 	if configErr != nil {
-		log.Fatal(configErr)
+		log.Error(configErr)
 	}
 
 	// Get transaction for Address as initial TX for attestation chain
 	unspent, errUnspent := config.MainClient().ListTransactions("*")
 	if errUnspent != nil {
-		log.Fatal(errUnspent)
+		log.Error(errUnspent)
 	}
 	var txid string
 	for _, vout := range unspent {
@@ -216,7 +216,7 @@ func NewTestMulti() *TestMulti {
 		// get config
 		config, configErr := confpkg.NewConfig(testConf)
 		if configErr != nil {
-			log.Fatal(configErr)
+			log.Error(configErr)
 		}
 
 		config.SetInitTx(txid)

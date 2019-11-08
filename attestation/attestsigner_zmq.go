@@ -6,11 +6,11 @@ package attestation
 
 import (
 	"fmt"
-	"log"
 
 	confpkg "mainstay/config"
 	"mainstay/crypto"
 	"mainstay/messengers"
+	"mainstay/log"
 
 	zmq "github.com/pebbe/zmq4"
 )
@@ -195,7 +195,7 @@ func (z AttestSignerZmq) GetSigs() [][]crypto.Sig {
 		for {
 			sockets, pollErr := poller.Poll(-1)
 			if pollErr != nil {
-				log.Println(pollErr)
+				log.Infoln(pollErr)
 			}
 
 			found := false

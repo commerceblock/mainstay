@@ -5,7 +5,7 @@
 package models
 
 import (
-	"log"
+	"mainstay/log"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"go.mongodb.org/mongo-driver/bson"
@@ -64,20 +64,20 @@ func buildMerkleProof(position int, tree []*chainhash.Hash) CommitmentMerkleProo
 // Prove a commitment using the merkle proof provided
 func ProveMerkleProof(proof CommitmentMerkleProof) bool {
 	hash := proof.Commitment
-	log.Printf("client position: %d\n", proof.ClientPosition)
-	log.Printf("client commitment: %s\n", hash.String())
+	log.Infof("client position: %d\n", proof.ClientPosition)
+	log.Infof("client commitment: %s\n", hash.String())
 	for i := range proof.Ops {
 		if proof.Ops[i].Append {
-			log.Printf("append: %s\n", proof.Ops[i].Commitment.String())
+			log.Infof("append: %s\n", proof.Ops[i].Commitment.String())
 			hash = *hashLeaves(hash, proof.Ops[i].Commitment)
-			log.Printf("result: %s\n", hash.String())
+			log.Infof("result: %s\n", hash.String())
 		} else {
-			log.Printf("prepend: %s\n", proof.Ops[i].Commitment.String())
+			log.Infof("prepend: %s\n", proof.Ops[i].Commitment.String())
 			hash = *hashLeaves(proof.Ops[i].Commitment, hash)
-			log.Printf("result: %s\n", hash.String())
+			log.Infof("result: %s\n", hash.String())
 		}
 	}
-	log.Printf("merkle root: %s\n", proof.MerkleRoot.String())
+	log.Infof("merkle root: %s\n", proof.MerkleRoot.String())
 	return hash == proof.MerkleRoot
 }
 

@@ -3,9 +3,9 @@ package main
 
 import (
 	"encoding/hex"
-	"fmt"
 
 	"mainstay/crypto"
+	"mainstay/log"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -31,7 +31,7 @@ func main() {
 	tweakedExtndKey, _ := crypto.TweakExtendedKey(extndKey, tweakHash.CloneBytes())
 	tweakedExtndPriv, _ := tweakedExtndKey.ECPrivKey()
 	tweakedWif, _ := btcutil.NewWIF(tweakedExtndPriv, &chaincfg.MainNetParams, wif.CompressPubKey)
-	fmt.Println(tweakedWif.String())
+	log.Infoln(tweakedWif.String())
 
 	redeemScript := "xxx-redeemscript-xxx"
 	chaincodes := []string{"ffdf7ece79e83f0f479a37832d770294014edc6884b0c8bfa2e0aaf51fb00229", "ffdf7ece79e83f0f479a37832d770294014edc6884b0c8bfa2e0aaf51fb00229"}
@@ -55,6 +55,6 @@ func main() {
 		tweakedPubkeys = append(tweakedPubkeys, tweakedPub)
 	}
 	multisigAddr, redeemScript := crypto.CreateMultisig(tweakedPubkeys, numOfSigs, &chaincfg.MainNetParams)
-	fmt.Println(multisigAddr)
-	fmt.Println(redeemScript)
+	log.Infoln(multisigAddr)
+	log.Infoln(redeemScript)
 }

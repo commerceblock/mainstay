@@ -14,13 +14,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"mainstay/config"
+	"mainstay/log"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -69,23 +69,31 @@ func init() {
 // Generate new ECDSA priv-pub key pair for the client to use
 // when signing new commitments and sending to Mainstay API
 func doInitMode() {
-	fmt.Println("****************************")
-	fmt.Println("****** Init mode ***********")
-	fmt.Println("****************************")
+	log.Infoln("****************************")
+	log.Infoln("****************************")
+	log.Infoln("****** Init mode ***********")
+	log.Infoln("****** Init mode ***********")
+	log.Infoln("****************************")
+	log.Infoln("****************************")
 
-	fmt.Printf("Generating new key...\n")
+	log.Infof("Generating new key...\n")
+	log.Infof("Generating new key...\n")
 	newPriv, newPrivErr := btcec.NewPrivateKey(btcec.S256())
 	if newPrivErr != nil {
-		log.Fatal(newPrivErr)
+		log.Error(newPrivErr)
 	}
 
 	newPrivBytesStr := hex.EncodeToString(newPriv.Serialize())
-	fmt.Printf("generated priv: %s\n", newPrivBytesStr)
+	log.Infof("generated priv: %s\n", newPrivBytesStr)
+	log.Infof("generated priv: %s\n", newPrivBytesStr)
 	newPubBytesStr := hex.EncodeToString(newPriv.PubKey().SerializeCompressed())
-	fmt.Printf("generated pub: %s\n", newPubBytesStr)
+	log.Infof("generated pub: %s\n", newPubBytesStr)
+	log.Infof("generated pub: %s\n", newPubBytesStr)
 
-	fmt.Printf("The private key should be used for signing future client commitments\n")
-	fmt.Printf("The public key should be provided when posting these to Mainstay API\n")
+	log.Infof("The private key should be used for signing future client commitments\n")
+	log.Infof("The private key should be used for signing future client commitments\n")
+	log.Infof("The public key should be provided when posting these to Mainstay API\n")
+	log.Infof("The public key should be provided when posting these to Mainstay API\n")
 }
 
 // Send commitment and signature to Mainstay API
@@ -117,7 +125,7 @@ func send(sig []byte, msg string) error {
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("response Status:", resp.Status)
+	log.Infof("Response status: %s", resp.Status)
 
 	// check status response
 	if resp.StatusCode == 200 {
@@ -143,14 +151,14 @@ func sign(msg []byte) []byte {
 	// try key decoding
 	privkeyBytes, decodeErr := hex.DecodeString(privkey)
 	if decodeErr != nil {
-		log.Fatal(fmt.Sprintf("Key ('%s') decode error: %v\n", privkey, decodeErr))
+		log.Error(fmt.Sprintf("Key ('%s') decode error: %v\n", privkey, decodeErr))
 	}
 	privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privkeyBytes)
 
 	// sign message
 	sig, signErr := privKey.Sign(msg)
 	if signErr != nil {
-		log.Fatal(fmt.Sprintf("Signing error: %v\n", signErr))
+		log.Error(fmt.Sprintf("Signing error: %v\n", signErr))
 	}
 	return sig.Serialize()
 }
@@ -159,19 +167,19 @@ func sign(msg []byte) []byte {
 // Recurrent commitments of Ocean blockhash to Mainstay API
 // At regular intervals, fetch commitment, sign and send
 func doOceanMode() {
-	fmt.Println("****************************")
-	fmt.Println("****** Ocean mode **********")
-	fmt.Println("****************************")
+	log.Infoln("****************************")
+	log.Infoln("****** Ocean mode **********")
+	log.Infoln("****************************")
 
 	// check priv key is set
 	if privkey == "" {
-		fmt.Println("no private key provided")
+		log.Infoln("no private key provided")
 	}
 
 	// get conf file
 	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + ConfPath)
 	if confErr != nil {
-		log.Fatal(confErr)
+		log.Error(confErr)
 	}
 
 	// get ocean sidechain client from config
@@ -182,14 +190,14 @@ func doOceanMode() {
 		timer := time.NewTimer(sleepTime)
 		select {
 		case <-timer.C:
-			fmt.Println("Fetching next blockhash commitment...")
+			log.Infoln("Fetching next blockhash commitment...")
 
 			// get next blockhash
 			blockhash, blockhashErr := client.GetBestBlockHash()
 			if blockhashErr != nil {
-				log.Fatal(fmt.Sprintf("Client fetching error: %v\n", blockhashErr))
+				log.Error(fmt.Sprintf("Client fetching error: %v\n", blockhashErr))
 			}
-			fmt.Println("Commitment: ", blockhash.String())
+			log.Infoln("Commitment: ", blockhash.String())
 
 			// get reverse blockhash bytes as this is how blockhashes are displayed
 			revBlockHashBytes, _ := hex.DecodeString(blockhash.String())
@@ -203,13 +211,13 @@ func doOceanMode() {
 			// send signed commitment
 			sendErr := send(sigBytes, hex.EncodeToString(revBlockHashBytes))
 			if sendErr != nil {
-				log.Fatal(fmt.Sprintf("Commitment send error: %v\n", sendErr))
+				log.Error(fmt.Sprintf("Commitment send error: %v\n", sendErr))
 			} else {
-				fmt.Println("Success!")
+				log.Infoln("Success!")
 			}
 
 			sleepTime = time.Duration(delay) * time.Minute
-			fmt.Printf("********** sleeping for: %s ...\n", sleepTime.String())
+			log.Infof("********** sleeping for: %s ...\n", sleepTime.String())
 		}
 	}
 }
@@ -218,76 +226,76 @@ func doOceanMode() {
 // One time commitment to the Mainstay API
 // Sign the commitment provided and POST to API
 func doStandardMode() {
-	fmt.Println("****************************")
-	fmt.Println("****** Commitment mode *****")
-	fmt.Println("****************************")
+	log.Infoln("****************************")
+	log.Infoln("****** Commitment mode *****")
+	log.Infoln("****************************")
 
-	fmt.Println()
-	fmt.Print("Insert commitment: ")
+	log.Infoln()
+	log.Info("Insert commitment: ")
 	var commitment string
 	fmt.Scanln(&commitment)
 
 	// try commitment decoding
 	commitmentBytes, decodeErr := hex.DecodeString(commitment)
 	if decodeErr != nil {
-		log.Fatal(fmt.Sprintf("Commitment ('%s') decode error: %v\n", commitment, decodeErr))
+		log.Error(fmt.Sprintf("Commitment ('%s') decode error: %v\n", commitment, decodeErr))
 	}
 	_, hashErr := chainhash.NewHash(commitmentBytes)
 	if hashErr != nil {
-		log.Fatal(fmt.Sprintf("Commitment ('%s') to hash error: %v\n", commitment, hashErr))
+		log.Error(fmt.Sprintf("Commitment ('%s') to hash error: %v\n", commitment, hashErr))
 	}
 
-	fmt.Println()
-	fmt.Print("Sign commitment, send commitment or both? ")
+	log.Infoln()
+	log.Info("Sign commitment, send commitment or both? ")
 	var whatToDo string
 	fmt.Scanln(&whatToDo)
 
 	var sigBytes []byte
 	if strings.ToLower(whatToDo) == "send" {
-		fmt.Println()
-		fmt.Print("Insert signature: ")
+		log.Infoln()
+		log.Info("Insert signature: ")
 		var signature string
 		fmt.Scanln(&signature)
 		if signature == "" {
-			fmt.Println("no signature provided")
+			log.Infoln("no signature provided")
 		} else {
 			var sigBytesErr error
 			sigBytes, sigBytesErr = b64.StdEncoding.DecodeString(signature)
 			if sigBytesErr != nil {
-				log.Fatal(fmt.Sprintf("Signature (%s) decoding error: %v\n", signature, sigBytesErr))
+				log.Error(fmt.Sprintf("Signature (%s) decoding error: %v\n", signature, sigBytesErr))
 			}
 		}
 	} else if strings.ToLower(whatToDo) == "sign" || strings.ToLower(whatToDo) == "both" {
-		fmt.Println()
-		fmt.Print("Insert private key: ")
+		log.Infoln()
+		log.Info("Insert private key: ")
 		fmt.Scanln(&privkey)
 		if privkey == "" {
-			fmt.Println("no private key provided")
+			log.Infoln("no private key provided")
 		} else {
 			sigBytes = sign(commitmentBytes)
-			fmt.Println()
-			fmt.Println("Signature: " + b64.StdEncoding.EncodeToString(sigBytes))
+			log.Infoln()
+			log.Infoln("Signature: " + b64.StdEncoding.EncodeToString(sigBytes))
 		}
 	} else {
-		log.Fatal("Invalid option")
+		log.Error("Invalid option")
 	}
 
 	if strings.ToLower(whatToDo) == "send" || strings.ToLower(whatToDo) == "both" {
 		// ask for position and auth token
-		fmt.Println()
-		fmt.Print("Insert position: ")
+		log.Infoln()
+		log.Info("Insert position: ")
 		fmt.Scan(&position)
 
-		fmt.Println()
-		fmt.Print("Insert auth token: ")
+		log.Infoln()
+		log.Info("Insert auth token: ")
 		fmt.Scan(&authtoken)
 
 		// send signed commitment
 		sendErr := send(sigBytes, commitment)
 		if sendErr != nil {
-			log.Fatal(fmt.Sprintf("Commitment send error: %v\n", sendErr))
+			log.Error(fmt.Sprintf("Commitment send error: %v\n", sendErr))
 		}
-		fmt.Println("Success!")
+		log.Infoln("Success!")
 	}
 }
 

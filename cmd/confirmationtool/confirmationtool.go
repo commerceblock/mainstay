@@ -8,13 +8,13 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 	"strings"
 
 	"mainstay/clients"
 	"mainstay/config"
 	"mainstay/staychain"
+	"mainstay/log"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
@@ -48,17 +48,17 @@ func init() {
 
 	if tx == "" || script == "" || position == -1 || chaincodes == "" {
 		flag.PrintDefaults()
-		log.Fatalf("Need to provide all -tx, -script, -chaincodes and -position argument.")
+		log.Errorf("Need to provide all -tx, -script, -chaincodes and -position argument.")
 	}
 
 	confFile, confErr := config.GetConfFile(os.Getenv("GOPATH") + ConfPath)
 	if confErr != nil {
-		log.Fatal(confErr)
+		log.Error(confErr)
 	}
 	var mainConfigErr error
 	mainConfig, mainConfigErr = config.NewConfig(confFile)
 	if mainConfigErr != nil {
-		log.Fatal(mainConfigErr)
+		log.Error(mainConfigErr)
 	}
 	client = config.NewClientFromConfig(ClientChainName, false, confFile)
 }
@@ -76,11 +76,11 @@ func main() {
 
 	// await new attestations and verify
 	for transaction := range chain.Updates() {
-		log.Println("Verifying attestation")
-		log.Printf("txid: %s\n", transaction.Txid)
+		log.Infoln("Verifying attestation")
+		log.Infof("txid: %s\n", transaction.Txid)
 		info, err := verifier.Verify(transaction)
 		if err != nil {
-			log.Fatal(err)
+			log.Error(err)
 		} else {
 			printAttestation(transaction, info)
 		}
@@ -91,30 +91,30 @@ func main() {
 func getRawTxFromHash(hashstr string) staychain.Tx {
 	txhash, errHash := chainhash.NewHashFromStr(hashstr)
 	if errHash != nil {
-		log.Println("Invalid tx id provided")
-		log.Fatal(errHash)
+		log.Warnln("Invalid tx id provided")
+		log.Error(errHash)
 	}
 	txraw, errGet := mainConfig.MainClient().GetRawTransactionVerbose(txhash)
 	if errGet != nil {
-		log.Println("Inititial transcaction does not exist")
-		log.Fatal(errGet)
+		log.Warnln("Inititial transaction does not exist")
+		log.Error(errGet)
 	}
 	return staychain.Tx(*txraw)
 }
 
 // print attestation information
 func printAttestation(tx staychain.Tx, info staychain.ChainVerifierInfo) {
-	log.Println("Attestation Verified")
+	log.Infoln("Attestation Verified")
 	if showDetails {
-		log.Printf("%+v\n", tx)
+		log.Infof("%+v\n", tx)
 	} else {
-		log.Printf("Bitcoin blockhash: %s\n", tx.BlockHash)
+		log.Infof("Bitcoin blockhash: %s\n", tx.BlockHash)
 	}
 	if info != (staychain.ChainVerifierInfo{}) {
-		log.Printf("CLIENT blockhash: %s\n", info.Hash().String())
-		log.Printf("CLIENT blockheight: %d\n", info.Height())
+		log.Infof("CLIENT blockhash: %s\n", info.Hash().String())
+		log.Infof("CLIENT blockheight: %d\n", info.Height())
 	}
-	log.Printf("\n")
-	log.Printf("\n")
-	log.Printf("\n")
+	log.Infof("\n")
+	log.Infof("\n")
+	log.Infof("\n")
 }
