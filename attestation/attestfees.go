@@ -25,9 +25,9 @@ const (
 
 // warnings for arguments
 const (
-	WarningInvalidMinFeeArg       = "Warning - Invalid min fee config value"
-	WarningInvalidMaxFeeArg       = "Warning - Invalid max fee config value"
-	WarningInvalidFeeIncrementArg = "Warning - Invalid fee increment config value"
+	WarningInvalidMinFeeArg       = "Invalid min fee config value"
+	WarningInvalidMaxFeeArg       = "Invalid max fee config value"
+	WarningInvalidFeeIncrementArg = "Invalid fee increment config value"
 )
 
 // fee api config
@@ -69,7 +69,7 @@ func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 	if feesConfig.MinFee > 0 && feesConfig.MinFee < DefaultMaxFee {
 		minFee = feesConfig.MinFee
 	} else {
-		log.Infof("%s (%d)\n", WarningInvalidMinFeeArg, feesConfig.MinFee)
+		log.Warnf("%s (%d)\n", WarningInvalidMinFeeArg, feesConfig.MinFee)
 	}
 	log.Infof("*Fees* Min fee set to: %d\n", minFee)
 
@@ -78,7 +78,7 @@ func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 	if feesConfig.MaxFee > 0 && feesConfig.MaxFee > minFee && feesConfig.MaxFee < DefaultMaxFee {
 		maxFee = feesConfig.MaxFee
 	} else {
-		log.Infof("%s (%d)\n", WarningInvalidMaxFeeArg, feesConfig.MaxFee)
+		log.Warnf("%s (%d)\n", WarningInvalidMaxFeeArg, feesConfig.MaxFee)
 	}
 	log.Infof("*Fees* Max fee set to: %d\n", maxFee)
 
@@ -87,7 +87,7 @@ func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 	if feesConfig.FeeIncrement > 0 {
 		feeIncrement = feesConfig.FeeIncrement
 	} else {
-		log.Infof("%s (%d)\n", WarningInvalidFeeIncrementArg, feesConfig.FeeIncrement)
+		log.Warnf("%s (%d)\n", WarningInvalidFeeIncrementArg, feesConfig.FeeIncrement)
 	}
 	log.Infof("*Fees* Fee increment set to: %d\n", feeIncrement)
 

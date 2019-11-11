@@ -44,8 +44,8 @@ const (
 const (
 	ErroUnspentNotFound = "No valid unspent found"
 
-	WarningInvalidATimeNewAttestationArg    = "Warning - Invalid new attestation time config value"
-	WarningInvalidATimeHandleUnconfirmedArg = "Warning - Invalid handle unconfirmed time config value"
+	WarningInvalidATimeNewAttestationArg    = "Invalid new attestation time config value"
+	WarningInvalidATimeHandleUnconfirmedArg = "Invalid handle unconfirmed time config value"
 )
 
 // waiting time schedules
@@ -127,14 +127,14 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *AttestSer
 	if config.TimingConfig().NewAttestationMinutes > 0 {
 		atimeNewAttestation = time.Duration(config.TimingConfig().NewAttestationMinutes) * time.Minute
 	} else {
-		log.Infof("%s (%v)\n", WarningInvalidATimeNewAttestationArg, config.TimingConfig().NewAttestationMinutes)
+		log.Warnf("%s (%v)\n", WarningInvalidATimeNewAttestationArg, config.TimingConfig().NewAttestationMinutes)
 	}
 	log.Infof("Time new attestation set to: %v\n", atimeNewAttestation)
 	atimeHandleUnconfirmed = DefaultATimeHandleUnconfirmed
 	if config.TimingConfig().HandleUnconfirmedMinutes > 0 {
 		atimeHandleUnconfirmed = time.Duration(config.TimingConfig().HandleUnconfirmedMinutes) * time.Minute
 	} else {
-		log.Infof("%s (%v)\n", WarningInvalidATimeHandleUnconfirmedArg, config.TimingConfig().HandleUnconfirmedMinutes)
+		log.Warnf("%s (%v)\n", WarningInvalidATimeHandleUnconfirmedArg, config.TimingConfig().HandleUnconfirmedMinutes)
 	}
 	log.Infof("Time handle unconfirmed set to: %v\n", atimeHandleUnconfirmed)
 
@@ -170,8 +170,8 @@ func (s *AttestService) Run() {
 // AStateError
 // - Print error state and re-initiate attestation
 func (s *AttestService) doStateError() {
-	log.Infoln("*AttestService* ATTESTATION SERVICE FAILURE")
-	log.Infoln(s.errorState)
+	log.Warnln("*AttestService* ATTESTATION SERVICE FAILURE")
+	log.Warnln(s.errorState)
 	s.state = AStateInit // update attestation state
 }
 
@@ -183,7 +183,7 @@ func (s *AttestService) stateInitUnconfirmed(unconfirmedTxid chainhash.Hash) {
 	if s.setFailure(commitmentErr) {
 		return // will rebound to init
 	}
-	log.Infof("********** found unconfirmed attestation: %s\n", unconfirmedTxid.String())
+	log.Warnf("********** found unconfirmed attestation: %s\n", unconfirmedTxid.String())
 	s.attestation = models.NewAttestation(unconfirmedTxid, &commitment) // initialise attestation
 	rawTx, _ := s.config.MainClient().GetRawTransaction(&unconfirmedTxid)
 	s.attestation.Tx = *rawTx.MsgTx() // set msgTx
@@ -246,7 +246,7 @@ func (s *AttestService) stateInitUnspent(unspent btcjson.ListUnspentResult) {
 // both latest unconfirmed and confirmed attestation addresses to wallet
 func (s *AttestService) stateInitWalletFailure() {
 
-	log.Infoln("********** wallet failure")
+	log.Warnln("********** wallet failure")
 
 	// get last confirmed commitment from server
 	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()
@@ -526,8 +526,10 @@ func (s *AttestService) doStateAwaitConfirmation() {
 		confirmedHash := s.attestation.CommitmentHash()
 		s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
 
-		s.state = AStateNextCommitment                              // update attestation state
-		attestDelay = atimeNewAttestation - time.Since(confirmTime) // add new attestation waiting time - subtract waiting time
+		s.state = AStateNextCommitment                        	// update attestation state
+		// add new attestation waiting time with confimation time and signature
+		// waiting time subtracted so that attestations are ~1 hour apart
+		attestDelay = atimeNewAttestation - time.Since(confirmTime) - ATimeSigs
 	} else {
 		attestDelay = ATimeConfirmation // add confirmation waiting time
 	}

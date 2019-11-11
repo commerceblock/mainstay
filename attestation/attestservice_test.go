@@ -124,7 +124,7 @@ func verifyStateAwaitConfirmationToNextCommitment(t *testing.T, attestService *A
 	assert.Equal(t, true, attestService.attestation.Confirmed)
 	assert.Equal(t, txid, attestService.attestation.Txid)
 	assert.Equal(t, true, attestDelay < timeNew)
-	assert.Equal(t, true, attestDelay > (timeNew-time.Since(confirmTime)))
+	assert.Equal(t, true, attestDelay + ATimeSigs > (timeNew-time.Since(confirmTime)))
 	assert.Equal(t, models.AttestationInfo{
 		Txid:      txid.String(),
 		Blockhash: walletTx.BlockHash,
