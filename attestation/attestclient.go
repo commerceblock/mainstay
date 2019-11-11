@@ -158,19 +158,19 @@ func newMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcutil
 
 	// Verify same amount of sigs in topupscript and init script
 	if _, topUpnumOfSigs := crypto.ParseRedeemScript(config.TopupScript()); topUpnumOfSigs != topUpnumOfSigs {
-		log.Errorf(fmt.Sprintf("%s. %d != %d", ErrorTopUpScriptNumSigs, numOfSigs, topUpnumOfSigs))
+		log.Errorf("%s. %d != %d", ErrorTopUpScriptNumSigs, numOfSigs, topUpnumOfSigs)
 	}
 
 	// get chaincodes of pubkeys from config
 	chaincodesStr := config.InitChaincodes()
 	if len(chaincodesStr) != len(pubkeys) {
-		log.Error(fmt.Sprintf("%s %d != %d", ErrorMissingChaincodes, len(chaincodesStr), len(pubkeys)))
+		log.Errorf("%s %d != %d", ErrorMissingChaincodes, len(chaincodesStr), len(pubkeys))
 	}
 	chaincodes := make([][]byte, len(pubkeys))
 	for i_c := range chaincodesStr {
 		ccBytes, ccBytesErr := hex.DecodeString(chaincodesStr[i_c])
 		if ccBytesErr != nil || len(ccBytes) != 32 {
-			log.Error(fmt.Sprintf("%s %s", ErrorInvalidChaincode, chaincodesStr[i_c]))
+			log.Errorf("%s %s", ErrorInvalidChaincode, chaincodesStr[i_c])
 		}
 		chaincodes[i_c] = append(chaincodes[i_c], ccBytes...)
 	}

@@ -143,14 +143,14 @@ func sign(msg []byte) []byte {
 	// try key decoding
 	privkeyBytes, decodeErr := hex.DecodeString(privkey)
 	if decodeErr != nil {
-		log.Error(fmt.Sprintf("Key ('%s') decode error: %v\n", privkey, decodeErr))
+		log.Errorf("Key ('%s') decode error: %v\n", privkey, decodeErr)
 	}
 	privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privkeyBytes)
 
 	// sign message
 	sig, signErr := privKey.Sign(msg)
 	if signErr != nil {
-		log.Error(fmt.Sprintf("Signing error: %v\n", signErr))
+		log.Errorf("Signing error: %v\n", signErr)
 	}
 	return sig.Serialize()
 }
@@ -187,7 +187,7 @@ func doOceanMode() {
 			// get next blockhash
 			blockhash, blockhashErr := client.GetBestBlockHash()
 			if blockhashErr != nil {
-				log.Error(fmt.Sprintf("Client fetching error: %v\n", blockhashErr))
+				log.Errorf("Client fetching error: %v\n", blockhashErr)
 			}
 			log.Infoln("Commitment: ", blockhash.String())
 
@@ -203,7 +203,7 @@ func doOceanMode() {
 			// send signed commitment
 			sendErr := send(sigBytes, hex.EncodeToString(revBlockHashBytes))
 			if sendErr != nil {
-				log.Error(fmt.Sprintf("Commitment send error: %v\n", sendErr))
+				log.Errorf("Commitment send error: %v\n", sendErr)
 			} else {
 				log.Infoln("Success!")
 			}
@@ -230,11 +230,11 @@ func doStandardMode() {
 	// try commitment decoding
 	commitmentBytes, decodeErr := hex.DecodeString(commitment)
 	if decodeErr != nil {
-		log.Error(fmt.Sprintf("Commitment ('%s') decode error: %v\n", commitment, decodeErr))
+		log.Errorf("Commitment ('%s') decode error: %v\n", commitment, decodeErr)
 	}
 	_, hashErr := chainhash.NewHash(commitmentBytes)
 	if hashErr != nil {
-		log.Error(fmt.Sprintf("Commitment ('%s') to hash error: %v\n", commitment, hashErr))
+		log.Errorf("Commitment ('%s') to hash error: %v\n", commitment, hashErr)
 	}
 
 	log.Infoln()
@@ -254,7 +254,7 @@ func doStandardMode() {
 			var sigBytesErr error
 			sigBytes, sigBytesErr = b64.StdEncoding.DecodeString(signature)
 			if sigBytesErr != nil {
-				log.Error(fmt.Sprintf("Signature (%s) decoding error: %v\n", signature, sigBytesErr))
+				log.Errorf("Signature (%s) decoding error: %v\n", signature, sigBytesErr)
 			}
 		}
 	} else if strings.ToLower(whatToDo) == "sign" || strings.ToLower(whatToDo) == "both" {
@@ -285,7 +285,7 @@ func doStandardMode() {
 		// send signed commitment
 		sendErr := send(sigBytes, commitment)
 		if sendErr != nil {
-			log.Error(fmt.Sprintf("Commitment send error: %v\n", sendErr))
+			log.Errorf("Commitment send error: %v\n", sendErr)
 		}
 		log.Infoln("Success!")
 	}
