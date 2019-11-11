@@ -27,7 +27,7 @@ func printMerkleTree(tree []*chainhash.Hash) {
 		i += 1
 		log.Infof("%v ", hash)
 	}
-	fmt.Println("")
+	log.Infoln("")
 }
 
 // Build merkle tree store from a list of commitments

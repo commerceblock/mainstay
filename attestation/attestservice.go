@@ -138,6 +138,12 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *AttestSer
 	}
 	log.Infof("Time handle unconfirmed set to: %v\n", atimeHandleUnconfirmed)
 
+	// If current unconfirmed tx exists set fee to unconfirmed tx's fee (mainstay restart)
+	if unconfirmed, unconfirmedTxid, _ := attester.getUnconfirmedTx(); unconfirmed {
+		fee, _ := config.MainClient().GetTransaction(&unconfirmedTxid)
+		attester.Fees.setCurrentFee(int(fee.Fee))
+	}
+
 	return &AttestService{ctx, wg, config, attester, server, signer, AStateInit, models.NewAttestationDefault(), nil, config.Regtest()}
 }
 

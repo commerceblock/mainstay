@@ -143,6 +143,11 @@ func (a *AttestFees) BumpFee() {
 	}
 }
 
+// Manually set current fee
+func (a *AttestFees) setCurrentFee(fee int) {
+	a.currentFee = fee
+}
+
 // getBestFee returns the best fee for the type requested from the API
 func getBestFee(customFeeType ...string) int {
 	var feeType = DefaultBestFeeType
