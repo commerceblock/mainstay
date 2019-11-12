@@ -147,8 +147,6 @@ func verifyStateHandleUnconfirmedToSignAttestation(t *testing.T, attestService *
 	assert.Equal(t, 1, len(attestService.attestation.Tx.TxOut))
 	assert.Equal(t, 0, len(attestService.attestation.Tx.TxIn[0].SignatureScript))
 	assert.Equal(t, ATimeSigs, attestDelay)
-	assert.Equal(t, attestService.attester.Fees.minFee+attestService.attester.Fees.feeIncrement,
-		attestService.attester.Fees.GetFee())
 }
 
 // Test Attest Service states
@@ -1031,8 +1029,6 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 		verifyStateAwaitConfirmationToHandleUnconfirmed(t, attestService)
 		// Test AStateHandleUnconfirmed -> AStateSignAttestation
 		verifyStateHandleUnconfirmedToSignAttestation(t, attestService)
-		assert.Equal(t, attestService.attester.Fees.minFee+attestService.attester.Fees.feeIncrement,
-			attestService.attester.Fees.GetFee())
 
 		// Test AStateSignAttestation -> AStatePreSendStore
 		verifyStateSignAttestationToPreSendStore(t, attestService)
@@ -1059,8 +1055,6 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 		verifyStateAwaitConfirmationToHandleUnconfirmed(t, attestService)
 		// Test AStateHandleUnconfirmed -> AStateSignAttestation
 		verifyStateHandleUnconfirmedToSignAttestation(t, attestService)
-		assert.Equal(t, attestService.attester.Fees.minFee+attestService.attester.Fees.feeIncrement,
-			attestService.attester.Fees.GetFee())
 
 		// Test AStateSignAttestation -> AStatePreSendStore
 		verifyStateSignAttestationToPreSendStore(t, attestService)

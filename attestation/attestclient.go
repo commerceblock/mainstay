@@ -527,7 +527,7 @@ func (w *AttestClient) getTransactionPreImages(hash chainhash.Hash, msgTx *wire.
 	if len(msgTx.TxIn) > 1 {
 		topupScriptSer, topupDecodeErr := hex.DecodeString(w.scriptTopup)
 		if topupDecodeErr != nil {
-			log.warnf("%s %s\n", WarningFailedDecodingTopupMultisig, w.scriptTopup)
+			log.Warnf("%s %s\n", WarningFailedDecodingTopupMultisig, w.scriptTopup)
 			return preImageTxs, nil
 		}
 		for i := 1; i < len(msgTx.TxIn); i++ {
