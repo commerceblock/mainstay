@@ -422,14 +422,14 @@ func (d *DbMongo) GetAttestationMerkleCommitments(txid chainhash.Hash) ([]models
 	for res.Next(d.ctx) {
 		var commitmentDoc bsonx.Doc
 		if err := res.Decode(&commitmentDoc); err != nil {
-			log.Infof("%s\n", BadDataMerkleCommitmentCol)
+			log.Warnf("%s\n", BadDataMerkleCommitmentCol)
 			return []models.CommitmentMerkleCommitment{}, err
 		}
 		// decode document result to Commitment model and get hash
 		commitmentModel := &models.CommitmentMerkleCommitment{}
 		modelErr := models.GetModelFromDocument(&commitmentDoc, commitmentModel)
 		if modelErr != nil {
-			log.Infof("%s\n", BadDataMerkleCommitmentCol)
+			log.Warnf("%s\n", BadDataMerkleCommitmentCol)
 			return []models.CommitmentMerkleCommitment{}, modelErr
 		}
 		merkleCommitments = append(merkleCommitments, *commitmentModel)

@@ -108,7 +108,7 @@ func parseTopupKeys(config *confpkg.Config, isSigner bool) *btcutil.WIF {
 			}
 			return topupWif
 		} else {
-			log.Infoln(WarningTopupPkMissing)
+			log.Warnln(WarningTopupPkMissing)
 		}
 	}
 	return nil
@@ -157,7 +157,7 @@ func newMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcutil
 	pubkeys, numOfSigs := crypto.ParseRedeemScript(multisig)
 
 	// Verify same amount of sigs in topupscript and init script
-	if _, topUpnumOfSigs := crypto.ParseRedeemScript(config.TopupScript()); topUpnumOfSigs != topUpnumOfSigs {
+	if _, topUpnumOfSigs := crypto.ParseRedeemScript(config.TopupScript()); numOfSigs != topUpnumOfSigs {
 		log.Errorf("%s. %d != %d", ErrorTopUpScriptNumSigs, numOfSigs, topUpnumOfSigs)
 	}
 
@@ -238,11 +238,11 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 		log.Infof("*Client* importing top-up addr: %s ...\n", topupAddrStr)
 		importErr := config.MainClient().ImportAddressRescan(topupAddrStr, "", false)
 		if importErr != nil {
-			log.Infof("%s (%s)\n%v\n", WarningFailureImportingTopupAddress, topupAddrStr, importErr)
+			log.Warnf("%s (%s)\n%v\n", WarningFailureImportingTopupAddress, topupAddrStr, importErr)
 		}
 		pkWifTopup = parseTopupKeys(config, isSigner)
 	} else {
-		log.Infoln(WarningTopupInfoMissing)
+		log.Warnln(WarningTopupInfoMissing)
 	}
 
 	// main config
@@ -403,7 +403,7 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []bt
 
 	// print warning if txout value less than 100*maxfee target
 	if msgTx.TxOut[0].Value < 100*maxFee {
-		log.Infoln(WarningInsufficientFunds)
+		log.Warnln(WarningInsufficientFunds)
 	}
 
 	// add fees using best fee-per-byte estimate
@@ -527,7 +527,7 @@ func (w *AttestClient) getTransactionPreImages(hash chainhash.Hash, msgTx *wire.
 	if len(msgTx.TxIn) > 1 {
 		topupScriptSer, topupDecodeErr := hex.DecodeString(w.scriptTopup)
 		if topupDecodeErr != nil {
-			log.Infof("%s %s\n", WarningFailedDecodingTopupMultisig, w.scriptTopup)
+			log.warnf("%s %s\n", WarningFailedDecodingTopupMultisig, w.scriptTopup)
 			return preImageTxs, nil
 		}
 		for i := 1; i < len(msgTx.TxIn); i++ {

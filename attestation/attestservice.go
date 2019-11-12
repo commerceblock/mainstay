@@ -138,12 +138,6 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *AttestSer
 	}
 	log.Infof("Time handle unconfirmed set to: %v\n", atimeHandleUnconfirmed)
 
-	// If current unconfirmed tx exists set fee to unconfirmed tx's fee (mainstay restart)
-	if unconfirmed, unconfirmedTxid, _ := attester.getUnconfirmedTx(); unconfirmed {
-		tx, _ := config.MainClient().GetMempoolEntry(unconfirmedTxid.String())
-		attester.Fees.setCurrentFee(int(tx.Fee*100000000))
-	}
-
 	return &AttestService{ctx, wg, config, attester, server, signer, AStateInit, models.NewAttestationDefault(), nil, config.Regtest()}
 }
 
@@ -202,8 +196,10 @@ func (s *AttestService) stateInitUnconfirmed(unconfirmedTxid chainhash.Hash) {
 	s.signer.SendConfirmedHash((&lastCommitmentHash).CloneBytes()) // update clients
 
 	s.state = AStateAwaitConfirmation // update attestation state
-	walletTx, _ := s.config.MainClient().GetTransaction(&unconfirmedTxid)
+	walletTx, _ := s.config.MainClient().GetMempoolEntry(unconfirmedTxid.String())
 	confirmTime = time.Unix(walletTx.Time, 0)
+
+	s.attester.Fees.setCurrentFee(int(walletTx.Fee*100000000)) // Set fee to unconfirmed tx's fee
 }
 
 // part of AStateInit

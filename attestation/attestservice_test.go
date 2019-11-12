@@ -836,13 +836,13 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 		// failure - re init attestation service
 		attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
 
+		// Test AStateInit -> AStateAwaitConfirmation
+		verifyStateInitToAwaitConfirmation(t, attestService, config, latestCommitment, txid)
+
 		// Test new fee set to unconfirmed tx's fee after restart
 		_, unconfirmedTxid, _ := attestService.attester.getUnconfirmedTx()
 		tx, _ := config.MainClient().GetMempoolEntry(unconfirmedTxid.String())
 		assert.Equal(t, attestService.attester.Fees.GetFee(), int(tx.Fee*100000000))
-
-		// Test AStateInit -> AStateAwaitConfirmation
-		verifyStateInitToAwaitConfirmation(t, attestService, config, latestCommitment, txid)
 
 		// generate new block to confirm attestation
 		config.MainClient().Generate(1)

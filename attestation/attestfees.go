@@ -145,8 +145,8 @@ func (a *AttestFees) BumpFee() {
 
 // Manually force set current fee regardless of max, min values
 func (a *AttestFees) setCurrentFee(fee int) {
-	log.Infof("*Fees* Current value set to: %d\n", a.currentFee)
 	a.currentFee = fee
+	log.Infof("*Fees* Current value set to: %d\n", a.currentFee)
 }
 
 // getBestFee returns the best fee for the type requested from the API
