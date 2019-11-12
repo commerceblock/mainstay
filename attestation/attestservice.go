@@ -140,8 +140,8 @@ func NewAttestService(ctx context.Context, wg *sync.WaitGroup, server *AttestSer
 
 	// If current unconfirmed tx exists set fee to unconfirmed tx's fee (mainstay restart)
 	if unconfirmed, unconfirmedTxid, _ := attester.getUnconfirmedTx(); unconfirmed {
-		fee, _ := config.MainClient().GetTransaction(&unconfirmedTxid)
-		attester.Fees.setCurrentFee(int(fee.Fee))
+		tx, _ := config.MainClient().GetMempoolEntry(unconfirmedTxid.String())
+		attester.Fees.setCurrentFee(int(tx.Fee*100000000))
 	}
 
 	return &AttestService{ctx, wg, config, attester, server, signer, AStateInit, models.NewAttestationDefault(), nil, config.Regtest()}

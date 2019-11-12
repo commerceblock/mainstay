@@ -143,8 +143,9 @@ func (a *AttestFees) BumpFee() {
 	}
 }
 
-// Manually set current fee
+// Manually force set current fee regardless of max, min values
 func (a *AttestFees) setCurrentFee(fee int) {
+	log.Infof("*Fees* Current value set to: %d\n", a.currentFee)
 	a.currentFee = fee
 }
 
