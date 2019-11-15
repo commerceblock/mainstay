@@ -462,6 +462,11 @@ func calcSignedTxFee(feePerByte int, unsignedTxSize int, scriptSize int, numOfSi
 	return int64(feePerByte * calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs, numOfInputs))
 }
 
+// Calculate feePerByte value for a signed transaction
+func calcSignedTxFeePerByte(SignedTxFee int, signedTxSize int) int {
+	return SignedTxFee / signedTxSize
+}
+
 // Given a commitment hash return the corresponding client private key tweaked
 // This method should only be used in the attestation client signer case
 // Error handling excluded here as method is only for testing purposes
