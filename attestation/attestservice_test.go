@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"testing"
 	"time"
-	"math"
 
 	confpkg "mainstay/config"
 	"mainstay/db"
@@ -126,14 +125,14 @@ func verifyStateAwaitConfirmationToNextCommitment(t *testing.T, attestService *A
 	assert.Equal(t, txid, attestService.attestation.Txid)
 	assert.Equal(t, true, attestDelay < timeNew)
 	assert.Equal(t, true, attestDelay + ATimeSigs > (timeNew-time.Since(confirmTime)))
-	assert.True(t, EqualAttestationInfoTest(
+	assert.Equal(t,
 		models.AttestationInfo{
 			Txid:      txid.String(),
 			Blockhash: walletTx.BlockHash,
 			Amount:    rawTx.MsgTx().TxOut[0].Value,
 			Time:      walletTx.Time},
 		attestService.attestation.Info,
-		))
+		)
 }
 
 // verify AStateAwaitConfirmation to AStateHandleUnconfirmed
@@ -153,18 +152,6 @@ func verifyStateHandleUnconfirmedToSignAttestation(t *testing.T, attestService *
 	assert.Equal(t, ATimeSigs, attestDelay)
 	assert.Equal(t, attestService.attester.Fees.minFee+attestService.attester.Fees.feeIncrement,
 		attestService.attester.Fees.GetFee())
-}
-
-// Test two AttestationInfo models are equal allowing for Amount precision down
-// to 6 decimal places only
-func EqualAttestationInfoTest(first models.AttestationInfo,second models.AttestationInfo) bool {
-	// Truncate Amount to account for fee calulation uncertainty
-	first.Amount = int64(math.Floor(float64(first.Amount)/math.Pow(10,5)))
-	second.Amount = int64(math.Floor(float64(second.Amount)/math.Pow(10,5)))
-	if first == second {
-		return true
-	}
-	return false
 }
 
 // Test Attest Service states
@@ -821,7 +808,7 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 		assert.Equal(t, prevAttestation.CommitmentHash(), attestService.attestation.CommitmentHash())
 		assert.Equal(t, prevAttestation.Txid, attestService.attestation.Txid)
 		assert.Equal(t, prevAttestation.Confirmed, attestService.attestation.Confirmed)
-		assert.True(t, EqualAttestationInfoTest(prevAttestation.Info, attestService.attestation.Info))
+		assert.Equal(t, prevAttestation.Info, attestService.attestation.Info)
 		if attestService.attestation.Info.Time == 0 {
 			assert.Equal(t, ATimeFixed, attestDelay)
 		} else {
@@ -858,14 +845,14 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 		assert.Equal(t, AStateNextCommitment, attestService.state)
 		assert.Equal(t, true, attestService.attestation.Confirmed)
 		assert.Equal(t, txid, attestService.attestation.Txid)
-		assert.True(t, EqualAttestationInfoTest(
+		assert.Equal(t,
 			models.AttestationInfo{
 				Txid:      txid.String(),
 				Blockhash: walletTx.BlockHash,
 				Amount:    rawTx.MsgTx().TxOut[0].Value,
 				Time:      walletTx.Time},
 			attestService.attestation.Info,
-			))
+			)
 
 		// failure - re init attestation service from inner state failure
 		attestService.state = AStateInit
@@ -876,14 +863,14 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 		assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
 		assert.Equal(t, txid, attestService.attestation.Txid)
 		assert.Equal(t, true, attestService.attestation.Confirmed)
-		assert.True(t, EqualAttestationInfoTest(
+		assert.Equal(t,
 			models.AttestationInfo{
 				Txid:      txid.String(),
 				Blockhash: walletTx.BlockHash,
 				Amount:    rawTx.MsgTx().TxOut[0].Value,
 				Time:      walletTx.Time},
 			attestService.attestation.Info,
-			))
+			)
 
 		prevAttestation = attestService.attestation
 	}
@@ -931,14 +918,14 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 	assert.Equal(t, AStateNextCommitment, attestService.state)
 	assert.Equal(t, true, attestService.attestation.Confirmed)
 	assert.Equal(t, txid, attestService.attestation.Txid)
-	assert.True(t, EqualAttestationInfoTest(
+	assert.Equal(t,
 		models.AttestationInfo{
 			Txid:      txid.String(),
 			Blockhash: walletTx.BlockHash,
 			Amount:    rawTx.MsgTx().TxOut[0].Value,
 			Time:      walletTx.Time},
 		attestService.attestation.Info,
-		))
+		)
 
 	// failure - re init attestation service
 	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
@@ -948,14 +935,14 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
 	assert.Equal(t, txid, attestService.attestation.Txid)
 	assert.Equal(t, true, attestService.attestation.Confirmed)
-	assert.True(t, EqualAttestationInfoTest(
+	assert.Equal(t,
 		models.AttestationInfo{
 			Txid:      txid.String(),
 			Blockhash: walletTx.BlockHash,
 			Amount:    rawTx.MsgTx().TxOut[0].Value,
 			Time:      walletTx.Time},
 		attestService.attestation.Info,
-		))
+		)
 
 	// failure - re init attestation service from inner state
 	attestService.state = AStateInit
@@ -965,14 +952,14 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
 	assert.Equal(t, txid, attestService.attestation.Txid)
 	assert.Equal(t, true, attestService.attestation.Confirmed)
-	assert.True(t, EqualAttestationInfoTest(
+	assert.Equal(t,
 		models.AttestationInfo{
 			Txid:      txid.String(),
 			Blockhash: walletTx.BlockHash,
 			Amount:    rawTx.MsgTx().TxOut[0].Value,
 			Time:      walletTx.Time},
 		attestService.attestation.Info,
-		))
+		)
 }
 
 // Test Attest Service states
@@ -1001,7 +988,7 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 		assert.Equal(t, prevAttestation.CommitmentHash(), attestService.attestation.CommitmentHash())
 		assert.Equal(t, prevAttestation.Txid, attestService.attestation.Txid)
 		assert.Equal(t, prevAttestation.Confirmed, attestService.attestation.Confirmed)
-		assert.True(t, EqualAttestationInfoTest(prevAttestation.Info, attestService.attestation.Info))
+		assert.Equal(t, prevAttestation.Info, attestService.attestation.Info)
 		if attestService.attestation.Info.Time == 0 {
 			assert.Equal(t, ATimeFixed, attestDelay)
 		} else {
@@ -1108,14 +1095,14 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 		assert.Equal(t, AStateNextCommitment, attestService.state)
 		assert.Equal(t, true, attestService.attestation.Confirmed)
 		assert.Equal(t, txid, attestService.attestation.Txid)
-		assert.True(t, EqualAttestationInfoTest(
+		assert.Equal(t,
 			models.AttestationInfo{
 				Txid:      txid.String(),
 				Blockhash: walletTx.BlockHash,
 				Amount:    rawTx.MsgTx().TxOut[0].Value,
 				Time:      walletTx.Time},
 			attestService.attestation.Info,
-			))
+			)
 
 		prevAttestation = attestService.attestation
 	}
@@ -1161,9 +1148,11 @@ func TestAttestService_FailurePickUpUnconfirmedTxFee(t *testing.T) {
 	// Test AStateInit -> AStateAwaitConfirmation
 	verifyStateInitToAwaitConfirmation(t, attestService, config, latestCommitment, txid)
 
-	// Test new fee set to unconfirmed tx's feePerByte value (23) after restart
-	assert.Equal(t, attestService.attester.Fees.GetFee(), 23)	// In AttestFees
+	// Test new fee set to unconfirmed tx's feePerByte value (~23) after restart
+	assert.GreaterOrEqual(t, attestService.attester.Fees.GetFee(), 18)	// In AttestFees
+	assert.LessOrEqual(t, attestService.attester.Fees.GetFee(), 28)	// In AttestFees
 	_, unconfirmedTxid, _ := attestService.attester.getUnconfirmedTx()
 	tx, _ := config.MainClient().GetMempoolEntry(unconfirmedTxid.String())
-	assert.Equal(t, calcSignedTxFeePerByte(int(tx.Fee*Coin), attestService.attestation.Tx.SerializeSize()), 23) // In attestation tx
+	assert.GreaterOrEqual(t, int(tx.Fee*Coin) / attestService.attestation.Tx.SerializeSize(), 18) // In attestation tx
+	assert.LessOrEqual(t, int(tx.Fee*Coin) / attestService.attestation.Tx.SerializeSize(), 28) // In attestation tx
 }

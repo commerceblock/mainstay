@@ -200,10 +200,8 @@ func (s *AttestService) stateInitUnconfirmed(unconfirmedTxid chainhash.Hash) {
 	confirmTime = time.Unix(walletTx.Time, 0)
 
 	//set fee to unconfirmed tx's fee
-	feePerByte := calcSignedTxFeePerByte(int(walletTx.Fee*float64(Coin)), s.attestation.Tx.SerializeSize())
+	feePerByte := int(walletTx.Fee*float64(Coin)) / s.attestation.Tx.SerializeSize() // fee in satoshis / tx size
 	s.attester.Fees.setCurrentFee(feePerByte)
-	s.attestation.Tx.TxOut[0].Value -= calcSignedTxFee(feePerByte, s.attestation.Tx.SerializeSize(),
-		len(s.attester.script0)/2, s.attester.numOfSigs, len(s.attestation.Tx.TxIn))
 }
 
 // part of AStateInit
