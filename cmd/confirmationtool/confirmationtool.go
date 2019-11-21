@@ -13,8 +13,8 @@ import (
 
 	"mainstay/clients"
 	"mainstay/config"
-	"mainstay/staychain"
 	"mainstay/log"
+	"mainstay/staychain"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )

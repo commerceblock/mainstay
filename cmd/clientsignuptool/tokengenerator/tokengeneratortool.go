@@ -7,8 +7,8 @@ package main
 // Token generator
 
 import (
-	"mainstay/log"
 	"github.com/satori/go.uuid"
+	"mainstay/log"
 )
 
 // main

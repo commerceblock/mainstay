@@ -16,9 +16,9 @@ import (
 	"mainstay/attestation"
 	confpkg "mainstay/config"
 	_ "mainstay/crypto"
+	"mainstay/log"
 	"mainstay/messengers"
 	"mainstay/test"
-	"mainstay/log"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"

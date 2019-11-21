@@ -10,13 +10,13 @@ import (
 	"bufio"
 	"context"
 	"encoding/hex"
-	"os"
 	"fmt"
+	"os"
 
 	"mainstay/config"
 	"mainstay/db"
-	"mainstay/models"
 	"mainstay/log"
+	"mainstay/models"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/satori/go.uuid"

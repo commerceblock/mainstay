@@ -12,8 +12,8 @@ import (
 	"time"
 
 	confpkg "mainstay/config"
-	"mainstay/models"
 	"mainstay/log"
+	"mainstay/models"
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -196,7 +196,11 @@ func (s *AttestService) stateInitUnconfirmed(unconfirmedTxid chainhash.Hash) {
 	s.signer.SendConfirmedHash((&lastCommitmentHash).CloneBytes()) // update clients
 
 	s.state = AStateAwaitConfirmation // update attestation state
-	walletTx, _ := s.config.MainClient().GetMempoolEntry(unconfirmedTxid.String())
+	walletTx, getTxError := s.config.MainClient().GetMempoolEntry(unconfirmedTxid.String())
+	if s.setFailure(getTxError) {
+		log.Info("********** failed to find unconfirmed transaction in mempool, re-initialising attestation")
+		return // will rebound to init
+	}
 	confirmTime = time.Unix(walletTx.Time, 0)
 
 	//set fee to unconfirmed tx's fee
@@ -530,7 +534,7 @@ func (s *AttestService) doStateAwaitConfirmation() {
 		confirmedHash := s.attestation.CommitmentHash()
 		s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
 
-		s.state = AStateNextCommitment                        	// update attestation state
+		s.state = AStateNextCommitment // update attestation state
 		// add new attestation waiting time with confimation time and signature
 		// waiting time subtracted so that attestations are ~1 hour apart
 		attestDelay = atimeNewAttestation - time.Since(confirmTime) - ATimeSigs

@@ -10,8 +10,8 @@ import (
 	"fmt"
 
 	"mainstay/config"
-	"mainstay/models"
 	"mainstay/log"
+	"mainstay/models"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"go.mongodb.org/mongo-driver/mongo"

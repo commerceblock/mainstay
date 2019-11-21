@@ -47,9 +47,9 @@ func TestAttestFees(t *testing.T) {
 
 	// test setCurrentFee()
 	new_current := 7
-	assert.NotEqual(t,new_current, attestFees.currentFee)
+	assert.NotEqual(t, new_current, attestFees.currentFee)
 	attestFees.setCurrentFee(new_current)
-	assert.Equal(t,new_current, attestFees.currentFee)
+	assert.Equal(t, new_current, attestFees.currentFee)
 }
 
 // Attest Fees test with custom feesConfig

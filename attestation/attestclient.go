@@ -7,8 +7,8 @@ package attestation
 import (
 	"encoding/hex"
 	"errors"
-	"math"
 	"fmt"
+	"math"
 
 	confpkg "mainstay/config"
 	"mainstay/crypto"
@@ -43,7 +43,7 @@ const (
 	ErrorInputMissingForTx          = `Missing input for transaction`
 	ErrorInvalidChaincode           = `Invalid chaincode provided`
 	ErrorMissingChaincodes          = `Missing chaincodes for pubkeys`
-	ErrorTopUpScriptNumSigs			= `Different number of signatures in Init script to top-up script`
+	ErrorTopUpScriptNumSigs         = `Different number of signatures in Init script to top-up script`
 )
 
 // coin in satoshis

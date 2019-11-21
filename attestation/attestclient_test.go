@@ -596,7 +596,7 @@ func TestAttestClient_feeCalculation(t *testing.T) {
 	_, numOfSigs2 := crypto.ParseRedeemScript(script2)
 	assert.Equal(t, 339, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 1))
 	assert.Equal(t, int64(3390), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 1))
-	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 1))/ calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 1))
+	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 1))/calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 1))
 
 	assert.Equal(t, 851, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 3))
 	assert.Equal(t, int64(8510), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 3))

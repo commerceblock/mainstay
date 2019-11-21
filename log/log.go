@@ -5,9 +5,9 @@
 package log
 
 import (
-    "log"
-    "os"
-    "fmt"
+	"fmt"
+	"log"
+	"os"
 )
 
 /*
@@ -26,30 +26,34 @@ var errorLogger = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfi
 // Info log entries print a message only, use for standard message output
 // standard INFO print
 func Info(v ...interface{}) {
-    infoLogger.Output(2, fmt.Sprint(v...))
+	infoLogger.Output(2, fmt.Sprint(v...))
 }
+
 // INFO print with formatting
 func Infof(format string, v ...interface{}) {
-    infoLogger.Output(2, fmt.Sprintf(format, v...))
+	infoLogger.Output(2, fmt.Sprintf(format, v...))
 }
+
 // standard INFO print with new line
 func Infoln(v ...interface{}) {
-    infoLogger.Output(2, fmt.Sprintln(v...))
+	infoLogger.Output(2, fmt.Sprintln(v...))
 }
 
 // Warn log entries print a message only but wiht WARN marker, use for non-fatal
 // errors
 // standard WARN print
 func Warn(v ...interface{}) {
-    warnLogger.Output(2, fmt.Sprint(v...))
+	warnLogger.Output(2, fmt.Sprint(v...))
 }
+
 // WARN print with formatting
 func Warnf(format string, v ...interface{}) {
-    warnLogger.Output(2, fmt.Sprintf(format, v...))
+	warnLogger.Output(2, fmt.Sprintf(format, v...))
 }
+
 // standard WARN print with new line
 func Warnln(v ...interface{}) {
-    warnLogger.Output(2, fmt.Sprintln(v...))
+	warnLogger.Output(2, fmt.Sprintln(v...))
 }
 
 // Error log entries print a message then halt execution
@@ -58,8 +62,9 @@ func Error(v ...interface{}) {
 	errorLogger.Output(2, fmt.Sprint(v...))
 	os.Exit(1)
 }
+
 // ERROR print with formatting
 func Errorf(format string, v ...interface{}) {
-    errorLogger.Output(2, fmt.Sprintf(format, v...))
-    os.Exit(1)
+	errorLogger.Output(2, fmt.Sprintf(format, v...))
+	os.Exit(1)
 }

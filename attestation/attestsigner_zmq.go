@@ -9,8 +9,8 @@ import (
 
 	confpkg "mainstay/config"
 	"mainstay/crypto"
-	"mainstay/messengers"
 	"mainstay/log"
+	"mainstay/messengers"
 
 	zmq "github.com/pebbe/zmq4"
 )

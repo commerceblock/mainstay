@@ -124,7 +124,7 @@ func verifyStateAwaitConfirmationToNextCommitment(t *testing.T, attestService *A
 	assert.Equal(t, true, attestService.attestation.Confirmed)
 	assert.Equal(t, txid, attestService.attestation.Txid)
 	assert.Equal(t, true, attestDelay < timeNew)
-	assert.Equal(t, true, attestDelay + ATimeSigs > (timeNew-time.Since(confirmTime)))
+	assert.Equal(t, true, attestDelay+ATimeSigs > (timeNew-time.Since(confirmTime)))
 	assert.Equal(t,
 		models.AttestationInfo{
 			Txid:      txid.String(),
@@ -132,7 +132,7 @@ func verifyStateAwaitConfirmationToNextCommitment(t *testing.T, attestService *A
 			Amount:    rawTx.MsgTx().TxOut[0].Value,
 			Time:      walletTx.Time},
 		attestService.attestation.Info,
-		)
+	)
 }
 
 // verify AStateAwaitConfirmation to AStateHandleUnconfirmed
@@ -797,8 +797,13 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 	server := NewAttestServer(dbFake)
 
 	prevAttestation := models.NewAttestationDefault()
-	for i := range []int{1,2,3} {
+	for i := range []int{1, 2, 3} {
 		attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
+
+		// manually set fee to test pick up of unconfirmedtx fee after restart
+		if i == 0 {
+			attestService.attester.Fees.setCurrentFee(23)
+		}
 
 		// Test initial state of attest service
 		verifyStateInit(t, attestService)
@@ -836,6 +841,16 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 		// Test AStateInit -> AStateAwaitConfirmation
 		verifyStateInitToAwaitConfirmation(t, attestService, config, latestCommitment, txid)
 
+		// Test new fee set to unconfirmed tx's feePerByte value (~23) after restart
+		if i == 0 {
+			assert.GreaterOrEqual(t, attestService.attester.Fees.GetFee(), 22) // In AttestFees
+			assert.LessOrEqual(t, attestService.attester.Fees.GetFee(), 24)    // In AttestFees
+			_, unconfirmedTxid, _ := attestService.attester.getUnconfirmedTx()
+			tx, _ := config.MainClient().GetMempoolEntry(unconfirmedTxid.String())
+			assert.GreaterOrEqual(t, int(tx.Fee*Coin)/attestService.attestation.Tx.SerializeSize(), 22) // In attestation tx
+			assert.LessOrEqual(t, int(tx.Fee*Coin)/attestService.attestation.Tx.SerializeSize(), 24)
+		}
+
 		// generate new block to confirm attestation
 		config.MainClient().Generate(1)
 		rawTx, _ := config.MainClient().GetRawTransaction(&txid)
@@ -852,7 +867,7 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 				Amount:    rawTx.MsgTx().TxOut[0].Value,
 				Time:      walletTx.Time},
 			attestService.attestation.Info,
-			)
+		)
 
 		// failure - re init attestation service from inner state failure
 		attestService.state = AStateInit
@@ -870,7 +885,7 @@ func TestAttestService_FailureSendAttestation(t *testing.T) {
 				Amount:    rawTx.MsgTx().TxOut[0].Value,
 				Time:      walletTx.Time},
 			attestService.attestation.Info,
-			)
+		)
 
 		prevAttestation = attestService.attestation
 	}
@@ -925,7 +940,7 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 			Amount:    rawTx.MsgTx().TxOut[0].Value,
 			Time:      walletTx.Time},
 		attestService.attestation.Info,
-		)
+	)
 
 	// failure - re init attestation service
 	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
@@ -942,7 +957,7 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 			Amount:    rawTx.MsgTx().TxOut[0].Value,
 			Time:      walletTx.Time},
 		attestService.attestation.Info,
-		)
+	)
 
 	// failure - re init attestation service from inner state
 	attestService.state = AStateInit
@@ -959,7 +974,7 @@ func TestAttestService_FailureAwaitConfirmation(t *testing.T) {
 			Amount:    rawTx.MsgTx().TxOut[0].Value,
 			Time:      walletTx.Time},
 		attestService.attestation.Info,
-		)
+	)
 }
 
 // Test Attest Service states
@@ -1102,57 +1117,8 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 				Amount:    rawTx.MsgTx().TxOut[0].Value,
 				Time:      walletTx.Time},
 			attestService.attestation.Info,
-			)
+		)
 
 		prevAttestation = attestService.attestation
 	}
-}
-
-// Test Attest Service failre
-// Test unconfirmed tx fee picked up after failure
-func TestAttestService_FailurePickUpUnconfirmedTxFee(t *testing.T) {
-	// Test INIT
-	test := test.NewTest(false, false)
-	config := test.Config
-
-	dbFake := db.NewDbFake()
-	server := NewAttestServer(dbFake)
-
-	attestService := NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
-
-	// Manually set fee
-	attestService.attester.Fees.setCurrentFee(23)
-
-	// Test initial state of attest service
-	verifyStateInit(t, attestService)
-	// Test AStateInit -> AStateNextCommitment
-	attestService.doAttestation()
-
-	// Test AStateNextCommitment -> AStateNewAttestation
-	// set server commitment before creating new attestation
-	hashX, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b3")
-	latestCommitment := verifyStateNextCommitmentToNewAttestation(t, attestService, dbFake, hashX)
-
-	// Test AStateNewAttestation -> AStateSignAttestation
-	verifyStateNewAttestationToSignAttestation(t, attestService)
-	// Test AStateSignAttestation -> AStatePreSendStore
-	verifyStateSignAttestationToPreSendStore(t, attestService)
-	// Test AStatePreSendStore -> AStateSendAttestation
-	verifyStatePreSendStoreToSendAttestation(t, attestService)
-	// Test AStateSendAttestation -> AStateAwaitConfirmation
-	txid := verifyStateSendAttestationToAwaitConfirmation(t, attestService)
-
-	// failure - re init attestation service
-	attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
-
-	// Test AStateInit -> AStateAwaitConfirmation
-	verifyStateInitToAwaitConfirmation(t, attestService, config, latestCommitment, txid)
-
-	// Test new fee set to unconfirmed tx's feePerByte value (~23) after restart
-	assert.GreaterOrEqual(t, attestService.attester.Fees.GetFee(), 18)	// In AttestFees
-	assert.LessOrEqual(t, attestService.attester.Fees.GetFee(), 28)	// In AttestFees
-	_, unconfirmedTxid, _ := attestService.attester.getUnconfirmedTx()
-	tx, _ := config.MainClient().GetMempoolEntry(unconfirmedTxid.String())
-	assert.GreaterOrEqual(t, int(tx.Fee*Coin) / attestService.attestation.Tx.SerializeSize(), 18) // In attestation tx
-	assert.LessOrEqual(t, int(tx.Fee*Coin) / attestService.attestation.Tx.SerializeSize(), 28) // In attestation tx
 }

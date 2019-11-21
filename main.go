@@ -16,8 +16,8 @@ import (
 	"mainstay/attestation"
 	"mainstay/config"
 	"mainstay/db"
-	"mainstay/test"
 	"mainstay/log"
+	"mainstay/test"
 )
 
 var (
