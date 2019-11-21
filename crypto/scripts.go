@@ -7,8 +7,9 @@ package crypto
 import (
 	"encoding/hex"
 	"fmt"
-	"log"
 	"strconv"
+
+	"mainstay/log"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -27,12 +28,12 @@ func ParseRedeemScript(script string) ([]*btcec.PublicKey, int) {
 	op := script[0]
 	op1 := script[lscript-4]
 	if !(string(op) == string(op1)) && (string(op1) == "5") {
-		log.Fatal("Incorrect opcode in redeem script")
+		log.Error("Incorrect opcode in redeem script")
 	}
 
 	// check multisig
 	if script[lscript-2:] != "ae" {
-		log.Fatal("Checkmultisig missing from redeem script")
+		log.Error("Checkmultisig missing from redeem script")
 	}
 
 	numOfSigs, _ := strconv.Atoi(string(script[1]))
@@ -43,13 +44,13 @@ func ParseRedeemScript(script string) ([]*btcec.PublicKey, int) {
 	for i := 0; i < numOfKeys; i++ {
 		keysize, _ := strconv.ParseInt(string(script[startIndex:startIndex+2]), 16, 16)
 		if !(keysize == 65 || keysize == 33) {
-			log.Fatal("Incorrect pubkey size")
+			log.Error("Incorrect pubkey size")
 		}
 		keystr := script[startIndex+2 : startIndex+2+2*keysize]
 		keybytes, _ := hex.DecodeString(keystr)
 		pubkey, err := btcec.ParsePubKey(keybytes, btcec.S256())
 		if err != nil {
-			log.Fatal(err)
+			log.Error(err)
 		}
 		startIndex += 2 + 2*keysize
 		keys = append(keys, pubkey)

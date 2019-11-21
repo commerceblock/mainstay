@@ -5,12 +5,12 @@
 package config
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"strings"
 
 	"mainstay/clients"
+	"mainstay/log"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/rpcclient"
@@ -276,14 +276,14 @@ func NewClientFromConfig(chainName string, isTest bool, customConf ...[]byte) cl
 		var confErr error
 		conf, confErr = GetConfFile(os.Getenv("GOPATH") + ConfPath)
 		if confErr != nil {
-			log.Fatal(confErr)
+			log.Error(confErr)
 		}
 	}
 
 	// get side client rpc
 	sideClient, rpcErr := GetRPC(chainName, conf)
 	if rpcErr != nil {
-		log.Fatal(rpcErr)
+		log.Error(rpcErr)
 	}
 	return clients.NewSidechainClientOcean(sideClient)
 }

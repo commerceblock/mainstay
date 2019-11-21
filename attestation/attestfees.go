@@ -6,10 +6,10 @@ package attestation
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"mainstay/config"
+	"mainstay/log"
 )
 
 // Utility functions to get best bitcoin fees from a remote API
@@ -25,9 +25,9 @@ const (
 
 // warnings for arguments
 const (
-	WarningInvalidMinFeeArg       = "Warning - Invalid min fee config value"
-	WarningInvalidMaxFeeArg       = "Warning - Invalid max fee config value"
-	WarningInvalidFeeIncrementArg = "Warning - Invalid fee increment config value"
+	WarningInvalidMinFeeArg       = "Invalid min fee config value"
+	WarningInvalidMaxFeeArg       = "Invalid max fee config value"
+	WarningInvalidFeeIncrementArg = "Invalid fee increment config value"
 )
 
 // fee api config
@@ -69,27 +69,27 @@ func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 	if feesConfig.MinFee > 0 && feesConfig.MinFee < DefaultMaxFee {
 		minFee = feesConfig.MinFee
 	} else {
-		log.Printf("%s (%d)\n", WarningInvalidMinFeeArg, feesConfig.MinFee)
+		log.Warnf("%s (%d)\n", WarningInvalidMinFeeArg, feesConfig.MinFee)
 	}
-	log.Printf("*Fees* Min fee set to: %d\n", minFee)
+	log.Infof("*Fees* Min fee set to: %d\n", minFee)
 
 	// max fee with lower limit min_fee && 0 and max fee default
 	maxFee := DefaultMaxFee
 	if feesConfig.MaxFee > 0 && feesConfig.MaxFee > minFee && feesConfig.MaxFee < DefaultMaxFee {
 		maxFee = feesConfig.MaxFee
 	} else {
-		log.Printf("%s (%d)\n", WarningInvalidMaxFeeArg, feesConfig.MaxFee)
+		log.Warnf("%s (%d)\n", WarningInvalidMaxFeeArg, feesConfig.MaxFee)
 	}
-	log.Printf("*Fees* Max fee set to: %d\n", maxFee)
+	log.Infof("*Fees* Max fee set to: %d\n", maxFee)
 
 	// fee increment with lower limit 0
 	feeIncrement := DefaultFeeIncrement
 	if feesConfig.FeeIncrement > 0 {
 		feeIncrement = feesConfig.FeeIncrement
 	} else {
-		log.Printf("%s (%d)\n", WarningInvalidFeeIncrementArg, feesConfig.FeeIncrement)
+		log.Warnf("%s (%d)\n", WarningInvalidFeeIncrementArg, feesConfig.FeeIncrement)
 	}
-	log.Printf("*Fees* Fee increment set to: %d\n", feeIncrement)
+	log.Infof("*Fees* Fee increment set to: %d\n", feeIncrement)
 
 	attestFees := AttestFees{
 		minFee:       minFee,
@@ -103,13 +103,13 @@ func NewAttestFees(feesConfig config.FeesConfig) AttestFees {
 
 // Get current fee
 func (a AttestFees) GetFee() int {
-	log.Printf("*Fees* Current fee value: %d\n", a.currentFee)
+	log.Infof("*Fees* Current fee value: %d\n", a.currentFee)
 	return a.currentFee
 }
 
 // Get previous fee
 func (a AttestFees) GetPrevFee() int {
-	log.Printf("*Fees* Previous fee value: %d\n", a.prevFee)
+	log.Infof("*Fees* Previous fee value: %d\n", a.prevFee)
 	return a.prevFee
 }
 
@@ -129,18 +129,24 @@ func (a *AttestFees) ResetFee(useMinimum ...bool) {
 	}
 	a.currentFee = fee
 	a.prevFee = 0
-	log.Printf("*Fees* Current fee set to value: %d\n", a.currentFee)
+	log.Infof("*Fees* Current fee set to value: %d\n", a.currentFee)
 }
 
 // Bump fee upon request using increment value and not allowing values higher than max configured fee
 func (a *AttestFees) BumpFee() {
 	a.prevFee = a.currentFee
 	a.currentFee += a.feeIncrement
-	log.Printf("*Fees* Bumping fee value to: %d\n", a.currentFee)
+	log.Infof("*Fees* Bumping fee value to: %d\n", a.currentFee)
 	if a.currentFee > a.maxFee {
-		log.Printf("*Fees* Max allowed fee value reached: %d\n", a.currentFee)
+		log.Infof("*Fees* Max allowed fee value reached: %d\n", a.currentFee)
 		a.currentFee = a.maxFee
 	}
+}
+
+// Manually force set current fee regardless of max, min values
+func (a *AttestFees) setCurrentFee(fee int) {
+	a.currentFee = fee
+	log.Infof("*Fees* Current value set to: %d\n", a.currentFee)
 }
 
 // getBestFee returns the best fee for the type requested from the API
@@ -158,7 +164,7 @@ func getBestFee(customFeeType ...string) int {
 func getFeeFromAPI(feeType string) int {
 	resp, getErr := http.Get(FeeApiUrl)
 	if getErr != nil {
-		log.Println("*Fees* API request failed")
+		log.Infoln("*Fees* API request failed")
 		return -1
 	}
 
@@ -167,13 +173,13 @@ func getFeeFromAPI(feeType string) int {
 	var respJson map[string]float64
 	decErr := dec.Decode(&respJson)
 	if decErr != nil {
-		log.Println("*Fees* API response decoding failed")
+		log.Infoln("*Fees* API response decoding failed")
 		return -1
 	}
 
 	fee, ok := respJson[feeType]
 	if !ok {
-		log.Println("*Fees* API response incorrect format")
+		log.Infoln("*Fees* API response incorrect format")
 		return -1
 	}
 

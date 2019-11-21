@@ -8,11 +8,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 
 	confpkg "mainstay/config"
 	"mainstay/crypto"
+	"mainstay/log"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
@@ -43,6 +43,7 @@ const (
 	ErrorInputMissingForTx          = `Missing input for transaction`
 	ErrorInvalidChaincode           = `Invalid chaincode provided`
 	ErrorMissingChaincodes          = `Missing chaincodes for pubkeys`
+	ErrorTopUpScriptNumSigs         = `Different number of signatures in Init script to top-up script`
 )
 
 // coin in satoshis
@@ -103,11 +104,11 @@ func parseTopupKeys(config *confpkg.Config, isSigner bool) *btcutil.WIF {
 		if pkTopup != "" {
 			topupWif, errPkWifTopup := crypto.GetWalletPrivKey(pkTopup)
 			if errPkWifTopup != nil {
-				log.Fatalf("%s %s\n%v\n", ErrorInvalidPk, pkTopup, errPkWifTopup)
+				log.Errorf("%s %s\n%v\n", ErrorInvalidPk, pkTopup, errPkWifTopup)
 			}
 			return topupWif
 		} else {
-			log.Println(WarningTopupPkMissing)
+			log.Warnln(WarningTopupPkMissing)
 		}
 	}
 	return nil
@@ -120,11 +121,11 @@ func parseMainKeys(config *confpkg.Config, isSigner bool) *btcutil.WIF {
 		pk := config.InitPK()
 		pkWif, errPkWif := crypto.GetWalletPrivKey(pk)
 		if errPkWif != nil {
-			log.Fatalf("%s %s\n%v\n", ErrorInvalidPk, pk, errPkWif)
+			log.Errorf("%s %s\n%v\n", ErrorInvalidPk, pk, errPkWif)
 		}
 		return pkWif
 	} else if config.InitScript() == "" {
-		log.Fatal(ErrorMissingMultisig)
+		log.Error(ErrorMissingMultisig)
 	}
 	return nil
 }
@@ -155,16 +156,21 @@ func newMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcutil
 	multisig := config.InitScript()
 	pubkeys, numOfSigs := crypto.ParseRedeemScript(multisig)
 
+	// Verify same amount of sigs in topupscript and init script
+	if _, topUpnumOfSigs := crypto.ParseRedeemScript(config.TopupScript()); numOfSigs != topUpnumOfSigs {
+		log.Errorf("%s. %d != %d", ErrorTopUpScriptNumSigs, numOfSigs, topUpnumOfSigs)
+	}
+
 	// get chaincodes of pubkeys from config
 	chaincodesStr := config.InitChaincodes()
 	if len(chaincodesStr) != len(pubkeys) {
-		log.Fatal(fmt.Sprintf("%s %d != %d", ErrorMissingChaincodes, len(chaincodesStr), len(pubkeys)))
+		log.Errorf("%s %d != %d", ErrorMissingChaincodes, len(chaincodesStr), len(pubkeys))
 	}
 	chaincodes := make([][]byte, len(pubkeys))
 	for i_c := range chaincodesStr {
 		ccBytes, ccBytesErr := hex.DecodeString(chaincodesStr[i_c])
 		if ccBytesErr != nil || len(ccBytes) != 32 {
-			log.Fatal(fmt.Sprintf("%s %s", ErrorInvalidChaincode, chaincodesStr[i_c]))
+			log.Errorf("%s %s", ErrorInvalidChaincode, chaincodesStr[i_c])
 		}
 		chaincodes[i_c] = append(chaincodes[i_c], ccBytes...)
 	}
@@ -180,7 +186,7 @@ func newMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcutil
 			}
 		}
 		if !myFound {
-			log.Fatal(ErrorMissingAddress)
+			log.Error(ErrorMissingAddress)
 		}
 	}
 
@@ -229,14 +235,14 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 	topupScriptStr := config.TopupScript()
 	var pkWifTopup *btcutil.WIF
 	if topupAddrStr != "" && topupScriptStr != "" {
-		log.Printf("*Client* importing top-up addr: %s ...\n", topupAddrStr)
+		log.Infof("*Client* importing top-up addr: %s ...\n", topupAddrStr)
 		importErr := config.MainClient().ImportAddressRescan(topupAddrStr, "", false)
 		if importErr != nil {
-			log.Printf("%s (%s)\n%v\n", WarningFailureImportingTopupAddress, topupAddrStr, importErr)
+			log.Warnf("%s (%s)\n%v\n", WarningFailureImportingTopupAddress, topupAddrStr, importErr)
 		}
 		pkWifTopup = parseTopupKeys(config, isSigner)
 	} else {
-		log.Println(WarningTopupInfoMissing)
+		log.Warnln(WarningTopupInfoMissing)
 	}
 
 	// main config
@@ -397,7 +403,7 @@ func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []bt
 
 	// print warning if txout value less than 100*maxfee target
 	if msgTx.TxOut[0].Value < 100*maxFee {
-		log.Println(WarningInsufficientFunds)
+		log.Warnln(WarningInsufficientFunds)
 	}
 
 	// add fees using best fee-per-byte estimate
@@ -521,7 +527,7 @@ func (w *AttestClient) getTransactionPreImages(hash chainhash.Hash, msgTx *wire.
 	if len(msgTx.TxIn) > 1 {
 		topupScriptSer, topupDecodeErr := hex.DecodeString(w.scriptTopup)
 		if topupDecodeErr != nil {
-			log.Printf("%s %s\n", WarningFailedDecodingTopupMultisig, w.scriptTopup)
+			log.Warnf("%s %s\n", WarningFailedDecodingTopupMultisig, w.scriptTopup)
 			return preImageTxs, nil
 		}
 		for i := 1; i < len(msgTx.TxIn); i++ {
