@@ -100,7 +100,7 @@ func NewChainVerifier(cfgMain *chaincfg.Params, side clients.SidechainClient, po
 
 	// get chaincodes of pubkeys from config
 	if len(chaincodesStr) != len(pubkeys) {
-		log.Fatal(fmt.Sprintf("Missing chaincodes for pubkeys %d != %d", len(chaincodesStr), len(pubkeys)))
+		log.Fatalf("Missing chaincodes for pubkeys %d != %d", len(chaincodesStr), len(pubkeys))
 	}
 
 	// get chaincode bytes
@@ -108,7 +108,7 @@ func NewChainVerifier(cfgMain *chaincfg.Params, side clients.SidechainClient, po
 	for i_c := range chaincodesStr {
 		ccBytes, ccBytesErr := hex.DecodeString(chaincodesStr[i_c])
 		if ccBytesErr != nil || len(ccBytes) != 32 {
-			log.Fatal(fmt.Sprintf("Invalid chaincode provided %s", chaincodesStr[i_c]))
+			log.Fatalf("Invalid chaincode provided %s", chaincodesStr[i_c])
 		}
 		chaincodes[i_c] = append(chaincodes[i_c], ccBytes...)
 	}

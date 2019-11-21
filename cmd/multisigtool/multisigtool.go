@@ -9,11 +9,11 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"log"
 	"math/big"
 	"strings"
 
 	"mainstay/crypto"
+	"mainstay/log"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -51,15 +51,15 @@ func init() {
 // main
 func main() {
 	if chain == "regtest" {
-		fmt.Println("REGTEST")
+		log.Infoln("REGTEST")
 		chainCfg = chaincfg.RegressionNetParams
 		doRegtest()
 	} else {
 		if chain == "testnet" {
-			fmt.Println("TESTNET")
+			log.Infoln("TESTNET")
 			chainCfg = chaincfg.TestNet3Params
 		} else {
-			fmt.Println("MAINNET")
+			log.Infoln("MAINNET")
 			chainCfg = chaincfg.MainNetParams
 		}
 		doMain()
@@ -76,38 +76,38 @@ func infoFromPubs(pubs []string, nKeys int, nSigs int) {
 	for _, pub := range pubs {
 		pubBytes, pubBytesErr := hex.DecodeString(pub)
 		if pubBytesErr != nil {
-			log.Fatal(fmt.Sprintf("failed decoding pub %s %v", pub, pubBytesErr))
+			log.Errorf("failed decoding pub %s %v", pub, pubBytesErr)
 		}
 		pubP2pkh, pubP2pkhErr := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pubBytes), &chainCfg)
 		if pubP2pkhErr != nil {
-			log.Fatal(fmt.Sprintf("failed generating addr from pub %s %v", pub, pubP2pkhErr))
+			log.Errorf("failed generating addr from pub %s %v", pub, pubP2pkhErr)
 		}
-		fmt.Printf("pub P2PKH:\t%s\n", pubP2pkh)
+		log.Infof("pub P2PKH:\t%s\n", pubP2pkh)
 
 		pubmultistr += "21" + pub
 	}
 
 	pubmultistr += fmt.Sprintf("5%d", nKeys)
 	pubmultistr += "ae"
-	fmt.Printf("%d-of-%d MULTISIG script: %s\n", nSigs, nKeys, pubmultistr)
+	log.Infof("%d-of-%d MULTISIG script: %s\n", nSigs, nKeys, pubmultistr)
 
 	// generate P2SH address
 	pubmultibytes, _ := hex.DecodeString(pubmultistr)
 	addr, err := btcutil.NewAddressScriptHash(pubmultibytes, &chainCfg)
 	if err != nil {
-		fmt.Println(err)
+		log.Infoln(err)
 	}
-	fmt.Printf("%d-of-%d P2SH address: %s\n", nSigs, nKeys, addr.String())
+	log.Infof("%d-of-%d P2SH address: %s\n", nSigs, nKeys, addr.String())
 }
 
 // Generate multisig script and p2sh address for mainstay
 // from a list of pubkeys or pubX/pubY coordinates
 func doMain() {
 	if nKeys <= 0 || nKeys > 15 || nSigs <= 0 || nSigs > 15 || nSigs > nKeys {
-		log.Fatal(fmt.Sprintf("invalid nSigs(%d) or nKeys(%d)", nSigs, nKeys))
+		log.Errorf("invalid nSigs(%d) or nKeys(%d)", nSigs, nKeys)
 	}
 	if keys == "" && keysX == "" && keysY == "" {
-		log.Fatal("Keys missing. Either provide -keys or -keysX and -keysY.")
+		log.Error("Keys missing. Either provide -keys or -keysX and -keysY.")
 	}
 
 	if keys == "" {
@@ -115,8 +115,8 @@ func doMain() {
 		keysYSplit := strings.Split(keysY, ",")
 
 		if len(keysXSplit) != nKeys && len(keysYSplit) != nKeys {
-			log.Fatal(fmt.Sprintf("nKeys(%d) but %d keysX and %d keysY provided",
-				nKeys, len(keysXSplit), len(keysYSplit)))
+			log.Errorf("nKeys(%d) but %d keysX and %d keysY provided",
+				nKeys, len(keysXSplit), len(keysYSplit))
 		}
 
 		pubs := make([]string, nKeys)
@@ -128,7 +128,7 @@ func doMain() {
 	} else {
 		keysSplit := strings.Split(keys, ",")
 		if len(keysSplit) != nKeys {
-			log.Fatal(fmt.Sprintf("nKeys(%d) but %d keys provided", nKeys, len(keysSplit)))
+			log.Errorf("nKeys(%d) but %d keys provided", nKeys, len(keysSplit))
 		}
 		infoFromPubs(keysSplit, nKeys, nSigs)
 	}
@@ -140,11 +140,11 @@ func pubFromCoordinates(xStr string, yStr string) *btcec.PublicKey {
 	y := new(big.Int)
 	_, errX := fmt.Sscan(xStr, x)
 	if errX != nil {
-		fmt.Println("fail-x")
+		log.Warnln("Get btcec PublicKey fail-x")
 	}
 	_, errY := fmt.Sscan(yStr, y)
 	if errY != nil {
-		fmt.Println("fail-y")
+		log.Warnln("Get btcec PublicKey fail-y")
 	}
 
 	return (*btcec.PublicKey)(&ecdsa.PublicKey{btcec.S256(), x, y})
@@ -162,15 +162,15 @@ func doRegtest() {
 	// hsm pubkey
 	pub := pubFromCoordinates(hsmPubX, hsmPubY)
 	pubEnc := hex.EncodeToString(pub.SerializeCompressed())
-	fmt.Printf("pub:\t\t%s\n", pubEnc)
+	log.Infof("pub:\t\t%s\n", pubEnc)
 	p2pkh, _ := crypto.GetAddressFromPubKey(pub, &chainCfg)
-	fmt.Printf("pub P2PKH:\t%s\n\n", p2pkh)
+	log.Infof("pub P2PKH:\t%s\n\n", p2pkh)
 
 	// main pubkey
-	fmt.Printf("pubMain:\t%s\n", mainPub)
+	log.Infof("pubMain:\t%s\n", mainPub)
 	pubmainbytes, _ := hex.DecodeString(mainPub)
 	pubMainp2pkh, _ := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pubmainbytes), &chainCfg)
-	fmt.Printf("pubMain P2PKH:\t%s\n\n", pubMainp2pkh)
+	log.Infof("pubMain P2PKH:\t%s\n\n", pubMainp2pkh)
 
 	infoFromPubs([]string{mainPub, pubEnc}, 2, 1)
 }

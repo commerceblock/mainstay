@@ -8,7 +8,6 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"mainstay/attestation"
 	"mainstay/config"
 	"mainstay/db"
+	"mainstay/log"
 	"mainstay/test"
 )
 
@@ -46,19 +46,19 @@ func init() {
 	if isRegtest {
 		test := test.NewTest(true, true)
 		mainConfig = test.Config
-		log.Printf("Running regtest mode with -tx=%s\n", mainConfig.InitTx())
+		log.Infof("Running regtest mode with -tx=%s\n", mainConfig.InitTx())
 	} else {
 		var mainConfigErr error
 		mainConfig, mainConfigErr = config.NewConfig()
 		if mainConfigErr != nil {
-			log.Fatal(mainConfigErr)
+			log.Error(mainConfigErr)
 		}
 
 		// if either tx or script not set throw error
 		if tx0 == "" || script0 == "" || chaincodes == "" {
 			if mainConfig.InitTx() == "" || mainConfig.InitScript() == "" || len(mainConfig.InitChaincodes()) == 0 {
 				flag.PrintDefaults()
-				log.Fatalf(`Need to provide all -tx, -script and -chaincode arguments.
+				log.Error(`Need to provide all -tx, -script and -chaincode arguments.
                     To use test configuration set the -regtest flag.`)
 			}
 		} else {
@@ -99,7 +99,7 @@ func main() {
 		defer wg.Done()
 		select {
 		case sig := <-c:
-			log.Printf("Got %s signal. Aborting...\n", sig)
+			log.Warnf("Got %s signal. Aborting...\n", sig)
 		case <-ctx.Done():
 			signal.Stop(c)
 		}

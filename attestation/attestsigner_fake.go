@@ -5,10 +5,9 @@
 package attestation
 
 import (
-	"log"
-
 	confpkg "mainstay/config"
 	"mainstay/crypto"
+	"mainstay/log"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -58,7 +57,7 @@ func (f AttestSignerFake) GetSigs() [][]crypto.Sig {
 	// get confirmed hash from received confirmed hash bytes
 	hash, hashErr := chainhash.NewHash(signerConfirmedHashBytes)
 	if hashErr != nil {
-		log.Printf("%v\n", hashErr)
+		log.Infof("%v\n", hashErr)
 		return nil
 	}
 
@@ -86,7 +85,7 @@ func (f AttestSignerFake) GetSigs() [][]crypto.Sig {
 				sig, signErr = client.WalletPrivTopup.PrivKey.Sign(txPreImageHash.CloneBytes())
 			}
 			if signErr != nil {
-				log.Printf("%v\n", signErr)
+				log.Infof("%v\n", signErr)
 				return nil
 			}
 

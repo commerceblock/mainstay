@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"mainstay/attestation"
 	confpkg "mainstay/config"
 	_ "mainstay/crypto"
+	"mainstay/log"
 	"mainstay/messengers"
 	"mainstay/test"
 
@@ -77,7 +77,7 @@ func parseFlags() {
 
 	if pk0 == "" && !isRegtest {
 		flag.PrintDefaults()
-		log.Fatalf("Need to provide -pk argument. To use test configuration set the -regtest flag.")
+		log.Errorf("Need to provide -pk argument. To use test configuration set the -regtest flag.")
 	}
 }
 
@@ -92,17 +92,17 @@ func init() {
 		cmd := exec.Command("/bin/sh", os.Getenv("GOPATH")+DemoInitPath)
 		_, err := cmd.Output()
 		if err != nil {
-			log.Fatal(err)
+			log.Error(err)
 		}
 
 		confFile, confErr := confpkg.GetConfFile(os.Getenv("GOPATH") + DemoConfPath)
 		if confErr != nil {
-			log.Fatal(confErr)
+			log.Error(confErr)
 		}
 		var configErr error
 		config, configErr = confpkg.NewConfig(confFile)
 		if configErr != nil {
-			log.Fatal(configErr)
+			log.Error(configErr)
 		}
 		pk0 = test.PrivMain
 		script0 = test.Script
@@ -115,18 +115,18 @@ func init() {
 		// use conf file to setup config
 		confFile, confErr := confpkg.GetConfFile(os.Getenv("GOPATH") + ConfPath)
 		if confErr != nil {
-			log.Fatal(confErr)
+			log.Error(confErr)
 		}
 		var configErr error
 		config, configErr = confpkg.NewConfig(confFile)
 		if configErr != nil {
-			log.Fatal(configErr)
+			log.Error(configErr)
 		}
 
 		// if init script is not set throw error
 		if script0 == "" && config.InitScript() == "" {
 			flag.PrintDefaults()
-			log.Fatalf(`Need to provide -script argument.
+			log.Error(`Need to provide -script argument.
                 To use test configuration set the -regtest flag.`)
 		}
 	}
@@ -168,7 +168,7 @@ func main() {
 	for {
 		select {
 		case <-timer.C:
-			log.Println("resubscribing to mainstay...")
+			log.Infoln("resubscribing to mainstay...")
 			// remove socket and close
 			sub.Close(poller)
 			// re-assign subscriber socket
@@ -185,7 +185,7 @@ func main() {
 						processTx(msg)
 					case attestation.TopicConfirmedHash:
 						attestedHash = processHash(msg)
-						log.Printf("attestedhash %s\n", attestedHash.String())
+						log.Infof("attestedhash %s\n", attestedHash.String())
 					}
 				}
 			}
@@ -198,7 +198,7 @@ func main() {
 func processHash(msg []byte) chainhash.Hash {
 	hash, hashErr := chainhash.NewHash(msg)
 	if hashErr != nil {
-		log.Fatal(hashErr)
+		log.Error(hashErr)
 	}
 	return *hash
 }
@@ -228,13 +228,13 @@ func processTx(msg []byte) {
 			sig, signErr = client.WalletPrivTopup.PrivKey.Sign(txPreImageHash.CloneBytes())
 		}
 		if signErr != nil {
-			log.Fatalf("%v\n", signErr)
+			log.Error(signErr)
 		}
 
 		// add hash type to signature as well
 		sigBytes := append(sig.Serialize(), []byte{byte(1)}...)
 
-		log.Printf("sending sig(%d) %s\n", txIt, hex.EncodeToString(sigBytes))
+		log.Infof("sending sig(%d) %s\n", txIt, hex.EncodeToString(sigBytes))
 
 		sigs = append(sigs, sigBytes)
 	}
