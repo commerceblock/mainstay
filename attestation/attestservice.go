@@ -206,6 +206,7 @@ func (s *AttestService) stateInitUnconfirmed(unconfirmedTxid chainhash.Hash) {
 	//set fee to unconfirmed tx's fee
 	feePerByte := int(walletTx.Fee*float64(Coin)) / s.attestation.Tx.SerializeSize() // fee in satoshis / tx size
 	s.attester.Fees.setCurrentFee(feePerByte)
+	isFeeBumped = false // in case we bumped fees but then attestation creation/signing/sending failed
 }
 
 // part of AStateInit
@@ -420,8 +421,8 @@ func (s *AttestService) doStateNewAttestation() {
 			txPreImage.Serialize(&txBytesBuffer)
 			txPreImageBytes = append(txPreImageBytes, txBytesBuffer.Bytes())
 		}
-		s.signer.SendTxPreImages(txPreImageBytes)
 		s.signer.ReSubscribe()
+		s.signer.SendTxPreImages(txPreImageBytes)
 
 		s.state = AStateSignAttestation // update attestation state
 		attestDelay = ATimeSigs         // add sigs waiting time
@@ -578,8 +579,8 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 		txPreImage.Serialize(&txBytesBuffer)
 		txPreImageBytes = append(txPreImageBytes, txBytesBuffer.Bytes())
 	}
-	s.signer.SendTxPreImages(txPreImageBytes)
 	s.signer.ReSubscribe()
+	s.signer.SendTxPreImages(txPreImageBytes)
 
 	s.state = AStateSignAttestation // update attestation state
 	attestDelay = ATimeSigs         // add sigs waiting time

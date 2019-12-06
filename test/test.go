@@ -15,8 +15,8 @@ import (
 	"mainstay/clients"
 	confpkg "mainstay/config"
 	"mainstay/db"
-	"mainstay/models"
 	"mainstay/log"
+	"mainstay/models"
 )
 
 // For regtest attestation demonstration
