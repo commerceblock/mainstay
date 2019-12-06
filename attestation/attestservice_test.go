@@ -1034,16 +1034,20 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 		// Test AStateHandleUnconfirmed -> AStateSignAttestation
 		verifyStateHandleUnconfirmedToSignAttestation(t, attestService)
 
-		// failure - re init attestation service with restart
-		attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
-		attestService.attester.Fees.ResetFee(true)
-		// Test AStateInit -> AStateAwaitConfirmation
-		verifyStateInitToAwaitConfirmation(t, attestService, config, latestCommitment, txid)
+		// test multiple ways for this to fail; either through restart or inner state failure
+		if i != 2 {
+			// failure - re init attestation service from inner state failure
+			attestService.state = AStateInit
+			// Test AStateInit -> AStateAwaitConfirmation
+			verifyStateInitToAwaitConfirmation(t, attestService, config, latestCommitment, txid)
+		} else {
+			// failure - re init attestation service with restart
+			attestService = NewAttestService(nil, nil, server, NewAttestSignerFake([]*confpkg.Config{config}), config)
+			attestService.attester.Fees.ResetFee(true)
+			// Test AStateInit -> AStateAwaitConfirmation
+			verifyStateInitToAwaitConfirmation(t, attestService, config, latestCommitment, txid)
+		}
 
-		// failure - re init attestation service from inner state failure
-		attestService.state = AStateInit
-		// Test AStateInit -> AStateAwaitConfirmation
-		verifyStateInitToAwaitConfirmation(t, attestService, config, latestCommitment, txid)
 		// set confirm time back to test what happens in handle unconfirmed case
 		confirmTime = confirmTime.Add(-DefaultATimeHandleUnconfirmed)
 

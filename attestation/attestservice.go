@@ -206,6 +206,7 @@ func (s *AttestService) stateInitUnconfirmed(unconfirmedTxid chainhash.Hash) {
 	//set fee to unconfirmed tx's fee
 	feePerByte := int(walletTx.Fee*float64(Coin)) / s.attestation.Tx.SerializeSize() // fee in satoshis / tx size
 	s.attester.Fees.setCurrentFee(feePerByte)
+	isFeeBumped = false // in case we bumped fees but then attestation creation/signing/sending failed
 }
 
 // part of AStateInit
