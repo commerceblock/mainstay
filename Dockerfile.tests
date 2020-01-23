@@ -20,20 +20,9 @@ RUN set -x \
 
 RUN set -ex \
     && cd $HOME \
-    && mkdir $HOME/.bitcoin \
-    && printf '%s\n' '#!/bin/sh' 'rpcuser=user' \
-        'rpcpassword=pass' \
-        'rpcport=18443' \
-        'keypool=0' \
-        'deprecatedrpc=signrawtransaction' \
-        'server=1' \
-        'regtest=1' \
-        'daemon=1' \
-        'txindex=1' > ~/.bitcoin/bitcoin.conf \
     && wget ${PKG_URL} \
     && tar zxvf ${PKG} \
     && export PATH=$PATH:$HOME/bitcoin-${PKG_VER}/bin \
-    && bitcoind \
     && /go/src/mainstay/scripts/run-tests.sh
 
 COPY docker-entrypoint.sh /
