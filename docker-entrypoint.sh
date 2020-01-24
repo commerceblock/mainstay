@@ -27,7 +27,7 @@ elif [[ "$1" == "ocean_commitment" ]]; then
     go run $GOPATH/src/mainstay/cmd/commitmenttool/commitmenttool.go -ocean -privkey $COMMITMENT_PRIV -position $COMMITMENT_POS -authtoken $COMMITMENT_AUTH -apiHost $MAINSTAY_HOST -delay $COMMITMENT_DELAY
 elif [[ "$1" == "ocean_commitment_nopriv" ]]; then
     echo "Running commitment tool for Ocean without priv key"
-    go run $GOPATH/src/mainstay/cmd/commitmenttool/commitmenttool.go -ocean $COMMITMENT_POS -authtoken $COMMITMENT_AUTH -apiHost $MAINSTAY_HOST -delay $COMMITMENT_DELAY
+    go run $GOPATH/src/mainstay/cmd/commitmenttool/commitmenttool.go -ocean -position $COMMITMENT_POS -authtoken $COMMITMENT_AUTH -apiHost $MAINSTAY_HOST -delay $COMMITMENT_DELAY
 else
   $@
 fi
