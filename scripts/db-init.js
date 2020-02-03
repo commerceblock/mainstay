@@ -25,6 +25,7 @@ db.createCollection("Attestation")
 db.createCollection("AttestationInfo")
 db.createCollection("ClientCommitment")
 db.createCollection("ClientDetails")
+db.createCollection("ClientSignup")
 db.createCollection("MerkleCommitment")
 db.createCollection("MerkleProof")
 print(db.getCollectionNames())
@@ -47,6 +48,8 @@ db.createRole(
         { resource: { db: db_name, collection: "MerkleProof" }, actions: [ "find"] },
         { resource: { db: db_name, collection: "ClientCommitment" }, actions: [ "find", "update", "insert"] },
         { resource: { db: db_name, collection: "ClientDetails" }, actions: [ "find", "update", "insert"] },
+        { resource: { db: db_name, collection: "ClientSignup" }, actions: [ "find", "update", "insert"] },
+
     ],
     roles: []
 }
@@ -54,7 +57,7 @@ db.createRole(
 
 // mainstayService role
 // This allows writing to all collections except
-// ClientCommitment/ClientDetails which only API is allowed to write to
+// ClientCommitment/ClientDetails/ClientSignup which only API is allowed to write to
 db.createRole(
 {
     role: "mainstayService",
@@ -65,6 +68,7 @@ db.createRole(
         { resource: { db: db_name, collection: "MerkleProof" }, actions: ["find", "update", "insert"] },
         { resource: { db: db_name, collection: "ClientCommitment" }, actions: ["find"] },
         { resource: { db: db_name, collection: "ClientDetails" }, actions: ["find"] },
+        { resource: { db: db_name, collection: "ClientSignup" }, actions: ["find"] },
     ],
     roles: []
 }
