@@ -301,9 +301,15 @@ func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) (*btcutil.WIF,
 func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.Hash) (
 	btcutil.Address, string, error) {
 
+	//single attestation transaction for upgrade to single key:
+	var basePub []*btcec.PublicKey
+	basePub = append(basePub, w.pubkeys[0])
+	multisigAddr, multisigScript := crypto.CreateMultisig(basePub, 1, w.MainChainCfg)
+	return multisigAddr, multisigScript, nil
+
 	// In multisig case tweak all initial pubkeys and import
 	// a multisig address to the main client wallet
-	if len(w.pubkeysExtended) > 0 {
+/*	if len(w.pubkeysExtended) > 0 {
 		// empty hash - no tweaking
 		if hash.IsEqual(&chainhash.Hash{}) {
 			multisigAddr, multisigScript := crypto.CreateMultisig(w.pubkeys, w.numOfSigs, w.MainChainCfg)
@@ -340,6 +346,7 @@ func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.H
 		return nil, "", myAddrErr
 	}
 	return myAddr, "", nil
+*/
 }
 
 // Method to import address to client rpc wallet and report import error
