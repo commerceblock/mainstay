@@ -1,4 +1,4 @@
-FROM golang:1.10.3-stretch
+FROM golang:1.15.2-buster
 
 COPY . $GOPATH/src/mainstay
 
