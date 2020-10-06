@@ -367,7 +367,7 @@ func (s *AttestService) doStateNewAttestation() {
 	if s.setFailure(keyErr) {
 		return // will rebound to init
 	}
-	paytoaddr, _, addrErr := s.attester.GetNextAttestationAddr(key, s.attestation.CommitmentHash())
+	paytoaddr, _, addrErr := s.attester.GetSingleKeyAddr(key, s.attestation.CommitmentHash())
 	if s.setFailure(addrErr) {
 		return // will rebound to init
 	}
