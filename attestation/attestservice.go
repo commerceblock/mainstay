@@ -243,7 +243,12 @@ func (s *AttestService) stateInitUnspent(unspent btcjson.ListUnspentResult) {
 		log.Infoln("********** found unspent transaction, initiating staychain")
 		s.attestation = models.NewAttestationDefault()
 	}
+
 	confirmedHash := s.attestation.CommitmentHash()
+	if (s.attester.txid0 == unspentTxid.String()) {
+		log.Infoln("********** found base transaction, blank attestation")		
+		confirmedHash = chainhash.Hash{}
+	}
 	s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
 
 	s.state = AStateNextCommitment // update attestation state
@@ -286,6 +291,18 @@ func (s *AttestService) stateInitWalletFailure() {
 		return // will rebound to init
 	}
 	log.Infof("********** importing latest unconfirmed addr: %s ...\n", paytoaddr.String())
+	importErr = s.attester.ImportAttestationAddr(paytoaddr)
+	if s.setFailure(importErr) {
+		return // will rebound to init
+	}
+
+	// import initial base address
+	paytoaddr, _, addrErr = s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), chainhash.Hash{})
+	if s.setFailure(addrErr) {
+		return // will rebound to init
+	}
+	
+	log.Infof("********** importing base init addr: %s ...\n", paytoaddr.String())
 	importErr = s.attester.ImportAttestationAddr(paytoaddr)
 	if s.setFailure(importErr) {
 		return // will rebound to init
@@ -533,6 +550,9 @@ func (s *AttestService) doStateAwaitConfirmation() {
 		s.attester.Fees.ResetFee(s.isRegtest) // reset client fees
 
 		confirmedHash := s.attestation.CommitmentHash()
+		if (s.attester.txid0 == s.attestation.Txid.String()) {
+			confirmedHash = chainhash.Hash{}
+		}
 		s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
 
 		s.state = AStateNextCommitment // update attestation state
