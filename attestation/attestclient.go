@@ -344,7 +344,7 @@ func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.H
 
 
 // TEMPORARY transfer of staychain to single pubkey
-func (w *AttestClient) GetSingleKeyAddr(key *btcutil.WIF, hash chainhash.Hash) (
+func (w *AttestClient) GetSingleKeyAddr() (
 	btcutil.Address, string, error) {
 
 	keystr := "024f714a1b93697c5a3865259ac3a865bb306e8b720c3bec46bae3298ef3fa7964"

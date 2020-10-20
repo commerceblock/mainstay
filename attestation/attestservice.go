@@ -10,6 +10,7 @@ import (
 	"errors"
 	"sync"
 	"time"
+	"encoding/hex"
 
 	confpkg "mainstay/config"
 	"mainstay/log"
@@ -273,6 +274,13 @@ func (s *AttestService) stateInitWalletFailure() {
 	if s.setFailure(addrErr) {
 		return // will rebound to init
 	}
+
+	paytoaddrt, _, addrErr := s.attester.GetSingleKeyAddr()
+	if s.setFailure(addrErr) {
+		return // will rebound to init
+	}
+	log.Infof("********** new send to address: %s ...\n", paytoaddrt.String())
+
 	log.Infof("********** importing latest confirmed addr: %s ...\n", paytoaddr.String())
 	importErr := s.attester.ImportAttestationAddr(paytoaddr)
 	if s.setFailure(importErr) {
@@ -380,11 +388,11 @@ func (s *AttestService) doStateNewAttestation() {
 	log.Infoln("*AttestService* NEW ATTESTATION")
 
 	// Get key and address for next attestation using client commitment
-	key, keyErr := s.attester.GetNextAttestationKey(s.attestation.CommitmentHash())
+	_, keyErr := s.attester.GetNextAttestationKey(s.attestation.CommitmentHash())
 	if s.setFailure(keyErr) {
 		return // will rebound to init
 	}
-	paytoaddr, _, addrErr := s.attester.GetSingleKeyAddr(key, s.attestation.CommitmentHash())
+	paytoaddr, _, addrErr := s.attester.GetSingleKeyAddr()
 	if s.setFailure(addrErr) {
 		return // will rebound to init
 	}
@@ -425,6 +433,13 @@ func (s *AttestService) doStateNewAttestation() {
 		if s.setFailure(latestErr) {
 			return // will rebound to init
 		}
+
+		if (s.attester.txid0 == newTx.TxIn[0].PreviousOutPoint.Hash.String()) {
+			log.Infoln("********** base transaction, zero tweaking for signature")		
+			lastCommitmentHash = chainhash.Hash{}
+		}
+
+		lastCommitmentHash = chainhash.Hash{}
 
 		// publish pre signed transaction
 		txPreImages, getPreImagesErr := s.attester.getTransactionPreImages(lastCommitmentHash, newTx)
@@ -485,6 +500,15 @@ func (s *AttestService) doStateSignAttestation() {
 	}
 	s.attestation.Tx = *signedTx
 	s.attestation.Txid = s.attestation.Tx.TxHash()
+
+	txHex := ""
+	txprint := signedTx
+	if txprint != nil {
+		buf := bytes.NewBuffer(make([]byte, 0, txprint.SerializeSize()))
+		txHex = hex.EncodeToString(buf.Bytes())
+	}
+
+	log.Infof("********** RAW TX %s \n",txHex)	
 
 	s.state = AStatePreSendStore // update attestation state
 }
@@ -594,6 +618,13 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 	if s.setFailure(latestErr) {
 		return // will rebound to init
 	}
+
+	if (s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String()) {
+		log.Infoln("********** base transaction, zero tweaking for signature")		
+		lastCommitmentHash = chainhash.Hash{}
+	}
+
+	lastCommitmentHash = chainhash.Hash{}
 
 	// re-publish pre signed transaction
 	txPreImages, getPreImagesErr := s.attester.getTransactionPreImages(lastCommitmentHash, currentTx)
