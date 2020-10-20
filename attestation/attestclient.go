@@ -342,23 +342,6 @@ func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.H
 	return myAddr, "", nil
 }
 
-
-// TEMPORARY transfer of staychain to single pubkey
-func (w *AttestClient) GetSingleKeyAddr() (
-	btcutil.Address, string, error) {
-
-	keystr := "024f714a1b93697c5a3865259ac3a865bb306e8b720c3bec46bae3298ef3fa7964"
-	keybytes, _ := hex.DecodeString(keystr)
-	pubkey, _ := btcec.ParsePubKey(keybytes, btcec.S256())
-
-	//single attestation transaction for upgrade to single key:
-	var basePub []*btcec.PublicKey
-	basePub = append(basePub, pubkey)
-	multisigAddr, multisigScript := crypto.CreateMultisig(basePub, 1, w.MainChainCfg)
-	return multisigAddr, multisigScript, nil
-
-}
-
 // Method to import address to client rpc wallet and report import error
 // This address is required to watch unspent and mempool transactions
 // IDEALLY would import the P2SH script as well, but not supported by btcsuite
