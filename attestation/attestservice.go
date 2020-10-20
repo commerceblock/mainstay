@@ -384,7 +384,7 @@ func (s *AttestService) doStateNewAttestation() {
 	if s.setFailure(keyErr) {
 		return // will rebound to init
 	}
-	paytoaddr, _, addrErr := s.attester.GetNextAttestationAddr(key, s.attestation.CommitmentHash())
+	paytoaddr, _, addrErr := s.attester.GetSingleKeyAddr(key, s.attestation.CommitmentHash())
 	if s.setFailure(addrErr) {
 		return // will rebound to init
 	}
@@ -467,6 +467,14 @@ func (s *AttestService) doStateSignAttestation() {
 	if s.setFailure(latestErr) {
 		return // will rebound to init
 	}
+
+	if (s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String()) {
+		log.Infoln("********** base transaction, zero tweaking for signature")		
+		lastCommitmentHash = chainhash.Hash{}
+	}
+
+	lastCommitmentHash = chainhash.Hash{}
+
 
 	// sign attestation with combined sigs and last commitment
 	signedTx, signErr := s.attester.signAttestation(&s.attestation.Tx, sigs, lastCommitmentHash)

@@ -77,17 +77,17 @@ func (s *AttestServer) GetLatestAttestationCommitmentHash(confirmed ...bool) (ch
 	}
 
 	// get attestation merkle root from db
-	_, rootErr := s.dbInterface.GetLatestAttestationMerkleRoot(confirmedParam)
-//	if rootErr != nil {
+	merkleRoot, rootErr := s.dbInterface.GetLatestAttestationMerkleRoot(confirmedParam)
+	if rootErr != nil {
 		return chainhash.Hash{}, rootErr
-//	} else if merkleRoot == "" { // no attestations yet
-//		return chainhash.Hash{}, nil
-//	}
-//	commitmentHash, errHash := chainhash.NewHashFromStr(merkleRoot)
-//	if errHash != nil {
-//		return chainhash.Hash{}, errHash
-//	}
-//	return *commitmentHash, nil
+	} else if merkleRoot == "" { // no attestations yet
+		return chainhash.Hash{}, nil
+	}
+	commitmentHash, errHash := chainhash.NewHashFromStr(merkleRoot)
+	if errHash != nil {
+		return chainhash.Hash{}, errHash
+	}
+	return *commitmentHash, nil
 }
 
 // Return latest commitment stored in the server

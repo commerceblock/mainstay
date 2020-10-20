@@ -301,18 +301,6 @@ func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) (*btcutil.WIF,
 func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.Hash) (
 	btcutil.Address, string, error) {
 
-	keystr := "024f714a1b93697c5a3865259ac3a865bb306e8b720c3bec46bae3298ef3fa7964"
-	keybytes, _ := hex.DecodeString(keystr)
-	pubkey, _ := btcec.ParsePubKey(keybytes, btcec.S256())
-
-	//single attestation transaction for upgrade to single key:
-	var basePub []*btcec.PublicKey
-	basePub = append(basePub, pubkey)
-	multisigAddr, multisigScript := crypto.CreateMultisig(basePub, 1, w.MainChainCfg)
-	return multisigAddr, multisigScript, nil
-
-/*
-
 	// In multisig case tweak all initial pubkeys and import
 	// a multisig address to the main client wallet
 	if len(w.pubkeysExtended) > 0 {
@@ -352,8 +340,23 @@ func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.H
 		return nil, "", myAddrErr
 	}
 	return myAddr, "", nil
+}
 
-*/
+
+// TEMPORARY transfer of staychain to single pubkey
+func (w *AttestClient) GetSingleKeyAddr(key *btcutil.WIF, hash chainhash.Hash) (
+	btcutil.Address, string, error) {
+
+	keystr := "024f714a1b93697c5a3865259ac3a865bb306e8b720c3bec46bae3298ef3fa7964"
+	keybytes, _ := hex.DecodeString(keystr)
+	pubkey, _ := btcec.ParsePubKey(keybytes, btcec.S256())
+
+	//single attestation transaction for upgrade to single key:
+	var basePub []*btcec.PublicKey
+	basePub = append(basePub, pubkey)
+	multisigAddr, multisigScript := crypto.CreateMultisig(basePub, 1, w.MainChainCfg)
+	return multisigAddr, multisigScript, nil
+
 }
 
 // Method to import address to client rpc wallet and report import error
