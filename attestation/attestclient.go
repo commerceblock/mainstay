@@ -303,7 +303,7 @@ func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.H
 
 	keystr := "024f714a1b93697c5a3865259ac3a865bb306e8b720c3bec46bae3298ef3fa7964"
 	keybytes, _ := hex.DecodeString(keystr)
-	pubkey, err := btcec.ParsePubKey(keybytes, btcec.S256())
+	pubkey, _ := btcec.ParsePubKey(keybytes, btcec.S256())
 
 	//single attestation transaction for upgrade to single key:
 	var basePub []*btcec.PublicKey

@@ -77,7 +77,7 @@ func (s *AttestServer) GetLatestAttestationCommitmentHash(confirmed ...bool) (ch
 	}
 
 	// get attestation merkle root from db
-	merkleRoot, rootErr := s.dbInterface.GetLatestAttestationMerkleRoot(confirmedParam)
+	_, rootErr := s.dbInterface.GetLatestAttestationMerkleRoot(confirmedParam)
 //	if rootErr != nil {
 		return chainhash.Hash{}, rootErr
 //	} else if merkleRoot == "" { // no attestations yet
