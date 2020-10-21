@@ -273,6 +273,7 @@ func (s *AttestService) stateInitWalletFailure() {
 	if s.setFailure(addrErr) {
 		return // will rebound to init
 	}
+
 	log.Infof("********** importing latest confirmed addr: %s ...\n", paytoaddr.String())
 	importErr := s.attester.ImportAttestationAddr(paytoaddr)
 	if s.setFailure(importErr) {
@@ -426,6 +427,12 @@ func (s *AttestService) doStateNewAttestation() {
 			return // will rebound to init
 		}
 
+		//if spending from base transaction, zero last commitment
+		if (s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String()) {
+			log.Infoln("********** base transaction, zero tweaking for signature")		
+			lastCommitmentHash = chainhash.Hash{}
+		}
+
 		// publish pre signed transaction
 		txPreImages, getPreImagesErr := s.attester.getTransactionPreImages(lastCommitmentHash, newTx)
 		if s.setFailure(getPreImagesErr) {
@@ -466,6 +473,11 @@ func (s *AttestService) doStateSignAttestation() {
 	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()
 	if s.setFailure(latestErr) {
 		return // will rebound to init
+	}
+
+	if (s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String()) {
+		log.Infoln("********** base transaction, zero tweaking for signature")		
+		lastCommitmentHash = chainhash.Hash{}
 	}
 
 	// sign attestation with combined sigs and last commitment
@@ -585,6 +597,11 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()
 	if s.setFailure(latestErr) {
 		return // will rebound to init
+	}
+
+	if (s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String()) {
+		log.Infoln("********** base transaction, zero tweaking for signature")		
+		lastCommitmentHash = chainhash.Hash{}
 	}
 
 	// re-publish pre signed transaction
