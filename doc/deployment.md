@@ -12,7 +12,8 @@ The Mainstay service requires a regular cloud compute instance with > 2 GB memor
 
 ### Clone mainstay-mvc:
 
-`git clone https://github.com/commerceblock/mainstay.git`
+`git clone https://github.com/commerceblock/mainstay-mvc.git`
+`git checkout develop`
 
 ### Install mongodb:
 
@@ -110,4 +111,13 @@ Run command in Lastpass: Mainstay MVC
 `s3cmd get s3://mercury-db/mainstay/cert.pem`
 `s3cmd get s3://mercury-db/mainstay/key.pem`
 
-`HOST_API="127.0.0.1" PORT_API="4000" PORT="80"  webpack-dev-server --https --cert ./cert.pem --key ./key.pem`
+`HOST_API="127.0.0.1" PORT_API="4000" PORT="80"  webpack-dev-server > logs2.log`
+`disown`
+
+This launches the HTTP frontend on port 80. 
+
+### Nginx proxy for HTTPS
+
+Install nginx:
+
+`sudo apt install nginx`
