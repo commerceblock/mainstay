@@ -8,22 +8,25 @@ The Mainstay service requires a regular cloud compute instance with > 2 GB memor
 
 ### Clone mainstay server:
 
-`git clone https://github.com/commerceblock/mainstay.git`
+```
+git clone https://github.com/commerceblock/mainstay.git
+```
 
 ### Clone mainstay-mvc:
 
-`git clone https://github.com/commerceblock/mainstay-mvc.git`
-`git checkout develop`
+```
+git clone https://github.com/commerceblock/mainstay-mvc.git
+git checkout develop
+```
 
 ### Install mongodb:
 
-`sudo apt update`
-
-`sudo apt install mongodb-org`
-
-`sudo systemctl start mongod.service`
-
-`sudo systemctl enable mongod`
+```
+sudo apt update
+sudo apt install mongodb-org
+sudo systemctl start mongod.service
+sudo systemctl enable mongod
+```
 
 ### Install s3cmd
 
@@ -90,8 +93,10 @@ with mainstay config on Lastpass.
 
 ### Launch mainstay
 
-`./mainstay > mainstay.log &`
-`disown`
+```
+./mainstay > mainstay.log &
+disown
+```
 
 Run signer - enter command in 'Mainstay keys' in Lastpass. 
 
@@ -108,11 +113,15 @@ Run command in Lastpass: Mainstay MVC
 
 ### Run frontend
 
-`s3cmd get s3://mercury-db/mainstay/cert.pem`
-`s3cmd get s3://mercury-db/mainstay/key.pem`
+```
+s3cmd get s3://mercury-db/mainstay/cert.pem
+s3cmd get s3://mercury-db/mainstay/key.pem
+```
 
-`HOST_API="127.0.0.1" PORT_API="4000" PORT="80"  webpack-dev-server > logs2.log`
-`disown`
+```
+HOST_API="127.0.0.1" PORT_API="4000" PORT="80"  webpack-dev-server > logs2.log
+disown
+```
 
 This launches the HTTP frontend on port 80. 
 
