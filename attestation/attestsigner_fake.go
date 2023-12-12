@@ -22,8 +22,8 @@ type AttestSignerFake struct {
 }
 
 // store latest hash and transaction
-var signerTxPreImageBytes []byte
-var signerConfirmedHashBytes []byte
+var signerTxPreImageBytesFake []byte
+var signerConfirmedHashBytesFake []byte
 
 // Return new AttestSignerFake instance
 func NewAttestSignerFake(configs []*confpkg.Config) AttestSignerFake {
@@ -44,25 +44,25 @@ func (f AttestSignerFake) ReSubscribe() {
 
 // Store received confirmed hash
 func (f AttestSignerFake) SendConfirmedHash(hash []byte) {
-	signerConfirmedHashBytes = hash
+	signerConfirmedHashBytesFake = hash
 }
 
 // Store received new tx
 func (f AttestSignerFake) SendTxPreImages(txs [][]byte) {
-	signerTxPreImageBytes = SerializeBytes(txs)
+	signerTxPreImageBytesFake = SerializeBytes(txs)
 }
 
 // Return signatures for received tx and hashes
 func (f AttestSignerFake) GetSigs() [][]crypto.Sig {
 	// get confirmed hash from received confirmed hash bytes
-	hash, hashErr := chainhash.NewHash(signerConfirmedHashBytes)
+	hash, hashErr := chainhash.NewHash(signerConfirmedHashBytesFake)
 	if hashErr != nil {
 		log.Infof("%v\n", hashErr)
 		return nil
 	}
 
 	// get unserialized tx pre images
-	txPreImages := UnserializeBytes(signerTxPreImageBytes)
+	txPreImages := UnserializeBytes(signerTxPreImageBytesFake)
 
 	sigs := make([][]crypto.Sig, len(txPreImages)) // init sigs
 
