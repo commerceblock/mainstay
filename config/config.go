@@ -462,6 +462,11 @@ type SignerConfig struct {
 
 // Return SignerConfig from conf options
 func GetSignerConfig(conf []byte) (SignerConfig, error) {
+	_, signersErr := GetParamFromConf(Signer, Url, conf)
+	if signersErr != nil {
+		return SignerConfig{}, signersErr
+	}
+
 	url := TryGetParamFromConf(Signer, Url, conf)
 
 	return SignerConfig{

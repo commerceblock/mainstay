@@ -53,7 +53,7 @@ func (f AttestSignerFake) SendTxPreImages(txs [][]byte) {
 }
 
 // Return signatures for received tx and hashes
-func (f AttestSignerFake) GetSigs() [][]crypto.Sig {
+func (f AttestSignerFake) GetSigs(txHash string, redeem_script string, merkle_root string) [][]crypto.Sig {
 	// get confirmed hash from received confirmed hash bytes
 	hash, hashErr := chainhash.NewHash(signerConfirmedHashBytesFake)
 	if hashErr != nil {
