@@ -84,7 +84,7 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 
 	var cmd *exec.Cmd
 	if os.Getenv("GITHUB_ACTIONS") == "true" {
-		cmd = exec.Command("/test/test-init.sh")
+		cmd = exec.Command("./test/test-init.sh")
 	} else {
 		cmd = exec.Command("/bin/sh", initPath)
 	}
