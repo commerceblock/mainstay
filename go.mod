@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/btcsuite/btcd v0.20.0-beta
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
+
 	go.mongodb.org/mongo-driver v1.3.1
 )
 
