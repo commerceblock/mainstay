@@ -6,10 +6,10 @@ ENV PKG_URL https://bitcoincore.org/bin/bitcoin-core-${PKG_VER}/${PKG}
 
 COPY . $GOPATH/src/mainstay
 
-RUN set -x \
-    && apt update \
-    && apt install -y libzmq3-dev \
-    && rm -rf /var/lib/apt/lists/*
+# RUN set -x \
+#     && apt update \
+#     && apt install -y libzmq3-dev \
+#     && rm -rf /var/lib/apt/lists/*
 
 RUN set -x \
     && cd $GOPATH/src/mainstay \
