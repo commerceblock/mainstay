@@ -14,7 +14,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Build Docker image
-      run: docker build -t tests -f Dockerfile.tests
+      run: docker buildx build -t tests -f Dockerfile.tests .
 
     - name: Run tests
       run: docker run tests
