@@ -1,0 +1,20 @@
+name: Integration tests
+
+on:
+  push:
+  pull_request:
+    branches: [ master, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Build Docker image
+      run: docker build -t tests -f Dockerfile.tests
+
+    - name: Run tests
+      run: docker run tests
