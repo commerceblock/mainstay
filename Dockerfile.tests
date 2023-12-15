@@ -1,4 +1,4 @@
-FROM golang:1.15.2-buster
+FROM golang:1.20.2-buster
 
 ENV PKG_VER 0.17.1
 ENV PKG bitcoin-${PKG_VER}-x86_64-linux-gnu.tar.gz
@@ -14,7 +14,7 @@ COPY . $GOPATH/src/mainstay
 RUN set -x \
     && cd $GOPATH/src/mainstay \
     && go get ./... \
-    && go get github.com/stretchr/testify/assert \
+    && go get github.com/stretchr/testify \
     && go build \
     && go install
 
