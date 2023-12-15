@@ -7,8 +7,9 @@ package main
 // Token generator
 
 import (
-	"github.com/satori/go.uuid"
 	"mainstay/log"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 // main
@@ -16,10 +17,7 @@ func main() {
 	// New auth token ID for client
 	log.Infoln()
 	log.Infoln("***** Client Auth Token identification ******")
-	uuid, err := uuid.NewV4()
-	if err != nil {
-		log.Error(err)
-	}
+	uuid := uuid.NewV4()
 	log.Infof("new-uuid: %s\n", uuid.String())
 	log.Infoln()
 }

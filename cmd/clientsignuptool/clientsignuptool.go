@@ -19,7 +19,7 @@ import (
 	"mainstay/models"
 
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 const ConfPath = "/src/mainstay/cmd/clientsignuptool/conf.json"
@@ -126,10 +126,7 @@ func main() {
 	log.Infoln("***** Client Auth Token identification ******")
 	log.Infoln("*********************************************")
 	log.Infoln()
-	uuid, err := uuid.NewV4()
-	if err != nil {
-		log.Error(err)
-	}
+	uuid := uuid.NewV4()
 	log.Infof("new-uuid: %s\n", uuid.String())
 	log.Infoln()
 
