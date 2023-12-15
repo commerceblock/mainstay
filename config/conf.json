@@ -14,10 +14,8 @@
         "rpcpass": "MAINSTAY_MAIN_PASS",
         "chain": "MAINSTAY_MAIN_CHAIN"
     },
-    "signer":
-    {
-        "publisher": "MAINSTAY_SIGNER_PUBLISHER",
-        "signers": "MAINSTAY_SIGNER_SIGNERS"
+    "signer": {
+        "url": "MAINSTAY_SIGNER_URL"
     },
     "db":
     {

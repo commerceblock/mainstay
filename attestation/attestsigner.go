@@ -23,6 +23,6 @@ import (
 type AttestSigner interface {
 	SendConfirmedHash([]byte)
 	SendTxPreImages([][]byte)
-	GetSigs() [][]crypto.Sig
+	GetSigs(string, string, string) [][]crypto.Sig
 	ReSubscribe()
 }
