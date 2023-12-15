@@ -78,16 +78,13 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	var initPath string
 	if isRegtest { // for running the demon in regtest mode along with ocean demo
 		initPath = os.Getenv("GOPATH") + DemoInitPath
+	} else if os.Getenv("GITHUB_ACTIONS") == "true" {
+		initPath = "./test-init.sh"
 	} else { // for running unit tests
 		initPath = os.Getenv("GOPATH") + TestInitPath
 	}
 
-	var cmd *exec.Cmd
-	if os.Getenv("GITHUB_ACTIONS") == "true" {
-		cmd = exec.Command("./test/test-init.sh")
-	} else {
-		cmd = exec.Command("/bin/sh", initPath)
-	}
+	cmd := exec.Command("/bin/sh", initPath)
 
 	output, err := cmd.Output()
 	if err != nil {
