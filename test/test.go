@@ -34,7 +34,7 @@ var testConf = []byte(`
         "chain": "regtest"
     },
     "signer": {
-        "signers": "127.0.0.1:5001,127.0.0.1:5002,127.0.0.1:5003"
+        "url": "127.0.0.1:8000"
     },
     "db": {
         "user":"serviceUser",
