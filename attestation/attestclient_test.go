@@ -536,10 +536,8 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 
 		newFee := client.Fees.GetFee()
 		newValue := tx2.TxOut[0].Value
-		newTxFee := calcSignedTxFee(newFee, tx2.SerializeSize(),
-			len(client.script0)/2, client.numOfSigs, len(tx2.TxIn))
-		currentTxFee := calcSignedTxFee(currentFee, tx.SerializeSize(),
-			len(client.script0)/2, client.numOfSigs, len(tx.TxIn))
+		newTxFee := calcSignedTxFee(newFee)
+		currentTxFee := calcSignedTxFee(currentFee)
 		assert.Equal(t, newTxFee-currentTxFee, currentValue+topupValue-newValue)
 		assert.Equal(t, client.Fees.minFee+client.Fees.feeIncrement, newFee)
 
@@ -578,27 +576,21 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 
 // Test fee calculation for an unsigned transaction
 func TestAttestClient_feeCalculation(t *testing.T) {
-	unsignedTxSize := 83
 	feePerByte := 10
 
-	scriptSize := len(testpkg.Script) / 2
-	_, numOfSigs := crypto.ParseRedeemScript(testpkg.Script)
-	assert.Equal(t, 229, calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs, 1))
-	assert.Equal(t, int64(2290), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize, numOfSigs, 1))
-	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize, numOfSigs, 1))/calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs, 1))
+	assert.Equal(t, 229, signedTxSize)
+	assert.Equal(t, int64(2290), calcSignedTxFee(feePerByte))
+	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte))/signedTxSize)
 
-	assert.Equal(t, 375, calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs, 2))
-	assert.Equal(t, int64(3750), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize, numOfSigs, 2))
-	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize, numOfSigs, 2))/calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs, 2))
+	assert.Equal(t, 375, signedTxSize)
+	assert.Equal(t, int64(3750), calcSignedTxFee(feePerByte))
+	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte))/signedTxSize)
 
-	script2 := "52210325bf82856a8fdcc7a2c08a933343d2c6332c4c252974d6b09b6232ea4080462621028ed149d77203c79d7524048689a80cc98f27e3427f2edaec52eae1f630978e08210254a548b59741ba35bfb085744373a8e10b1cf96e71f53356d7d97f807258d38c53ae"
-	scriptSize2 := len(script2) / 2
-	_, numOfSigs2 := crypto.ParseRedeemScript(script2)
-	assert.Equal(t, 339, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 1))
-	assert.Equal(t, int64(3390), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 1))
-	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 1))/calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 1))
+	assert.Equal(t, 339, signedTxSize)
+	assert.Equal(t, int64(3390), calcSignedTxFee(feePerByte))
+	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte))/signedTxSize)
 
-	assert.Equal(t, 851, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 3))
-	assert.Equal(t, int64(8510), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 3))
-	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 3))/calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 3))
+	assert.Equal(t, 851, signedTxSize)
+	assert.Equal(t, int64(8510), calcSignedTxFee(feePerByte))
+	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte))/signedTxSize)
 }
