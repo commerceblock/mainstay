@@ -436,18 +436,6 @@ func (s *AttestService) doStateNewAttestation() {
 			lastCommitmentHash = chainhash.Hash{}
 		}
 
-		txId := newTx.TxIn[0].PreviousOutPoint.Hash
-		rawTx, _ := s.config.MainClient().GetRawTransactionVerbose(&txId)
-		txHash := rawTx.Hash
-		asmList := strings.Split(rawTx.Vin[0].ScriptSig.Asm, " ")
-		redeemScript := asmList[len(asmList)-1]
-		merkle_root := lastCommitmentHash.String()
-		sigs = s.signer.GetSigs(txHash, redeemScript, merkle_root)
-		for sigForInput, _ := range sigs {
-			log.Infof("********** received %d signatures for input %d \n",
-				len(sigs[sigForInput]), sigForInput)
-		}
-
 		// publish pre signed transaction
 		txPreImages, getPreImagesErr := s.attester.getTransactionPreImages(lastCommitmentHash, newTx)
 		if s.setFailure(getPreImagesErr) {
@@ -462,6 +450,18 @@ func (s *AttestService) doStateNewAttestation() {
 		}
 		s.signer.ReSubscribe()
 		s.signer.SendTxPreImages(txPreImageBytes)
+
+		txId := newTx.TxIn[0].PreviousOutPoint.Hash
+		rawTx, _ := s.config.MainClient().GetRawTransactionVerbose(&txId)
+		txHash := rawTx.Hash
+		asmList := strings.Split(rawTx.Vin[0].ScriptSig.Asm, " ")
+		redeemScript := asmList[len(asmList)-1]
+		merkle_root := lastCommitmentHash.String()
+		sigs = s.signer.GetSigs(txHash, redeemScript, merkle_root)
+		for sigForInput, _ := range sigs {
+			log.Infof("********** received %d signatures for input %d \n",
+				len(sigs[sigForInput]), sigForInput)
+		}
 
 		s.state = AStateSignAttestation // update attestation state
 		attestDelay = ATimeSigs         // add sigs waiting time
