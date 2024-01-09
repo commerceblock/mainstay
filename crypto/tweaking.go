@@ -5,14 +5,14 @@
 package crypto
 
 import (
-	"crypto/ecdsa"
 	"encoding/binary"
+	"encoding/hex"
 	"math/big"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcutil"
+	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcutil/hdkeychain"
 )
 
 // Various utility functionalities concerning key tweaking under BIP-175
@@ -94,7 +94,7 @@ func TweakPrivKey(walletPrivKey *btcutil.WIF, tweak []byte, chainCfg *chaincfg.P
 	}
 
 	// Conver the result back to bytes - new private key
-	resPrivKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), resVal.Bytes())
+	resPrivKey, _ := btcec.PrivKeyFromBytes(resVal.Bytes())
 
 	// Return priv key in wallet readable format
 	resWalletPrivKey, err := btcutil.NewWIF(resPrivKey, chainCfg, walletPrivKey.CompressPubKey)
@@ -116,7 +116,7 @@ func tweakPubWithPathChild(child derivationPathChild, x *big.Int, y *big.Int) (*
 	copy(childBytes, child[:])
 
 	// Get elliptic curve point for child path bytes
-	_, twkPubKey := btcec.PrivKeyFromBytes(btcec.S256(), childBytes)
+	_, twkPubKey := btcec.PrivKeyFromBytes(childBytes)
 
 	// Add the two pub keys using addition on the elliptic curve
 	return btcec.S256().Add(x, y, twkPubKey.ToECDSA().X, twkPubKey.ToECDSA().Y)
@@ -140,7 +140,7 @@ func TweakExtendedKey(extndPubKey *hdkeychain.ExtendedKey, tweak []byte) (*hdkey
 		childInt := binary.BigEndian.Uint32(childBytes)
 
 		// get tweaked pubkey
-		extndPubKey, childErr = extndPubKey.Child(childInt)
+		extndPubKey, childErr = extndPubKey.Derive(childInt)
 		if childErr != nil {
 			return nil, childErr
 		}
@@ -164,7 +164,12 @@ func TweakPubKey(pubKey *btcec.PublicKey, tweak []byte) *btcec.PublicKey {
 		resX, resY = tweakPubWithPathChild(pathChild, resX, resY)
 	}
 
-	return (*btcec.PublicKey)(&ecdsa.PublicKey{btcec.S256(), resX, resY})
+	x := new(btcec.FieldVal)
+	y := new(btcec.FieldVal)
+	x.SetInt(uint16(resX.Uint64()))
+	y.SetInt(uint16(resY.Uint64()))
+
+	return btcec.NewPublicKey(x, y)
 }
 
 // Get pay to pub key hash address from a pub key
@@ -183,4 +188,16 @@ func IsAddrTweakedFromHash(address string, hash []byte, walletPrivKey *btcutil.W
 	tweakedAddr, _ := GetAddressFromPrivKey(tweakedPriv, chainCfg)
 
 	return address == tweakedAddr.String()
+}
+
+func HexToFieldVal(s string) *btcec.FieldVal {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		panic("invalid hex in source file: " + s)
+	}
+	var f btcec.FieldVal
+	if overflow := f.SetByteSlice(b); overflow {
+		panic("hex in source file overflows mod P: " + s)
+	}
+	return &f
 }

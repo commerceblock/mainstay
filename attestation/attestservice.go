@@ -18,9 +18,8 @@ import (
 	"mainstay/models"
 
 	"github.com/btcsuite/btcd/btcjson"
+	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	_ "github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
 )
 
 // Attestation Service is the main processes that handles generating

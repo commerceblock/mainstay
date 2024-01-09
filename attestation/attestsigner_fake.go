@@ -9,7 +9,7 @@ import (
 	"mainstay/crypto"
 	"mainstay/log"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
@@ -76,17 +76,12 @@ func (f AttestSignerFake) GetSigs(txHash string, redeem_script string, merkle_ro
 
 			// sign first tx with tweaked priv key and
 			// any remaining txs with topup key
-			var sig *btcec.Signature
-			var signErr error
+			var sig *ecdsa.Signature
 			if i_tx == 0 {
 				priv := client.GetKeyFromHash(*hash).PrivKey
-				sig, signErr = priv.Sign(txPreImageHash.CloneBytes())
+				sig = ecdsa.Sign(priv, txPreImageHash.CloneBytes())
 			} else {
-				sig, signErr = client.WalletPrivTopup.PrivKey.Sign(txPreImageHash.CloneBytes())
-			}
-			if signErr != nil {
-				log.Infof("%v\n", signErr)
-				return nil
+				sig = ecdsa.Sign(client.WalletPrivTopup.PrivKey, txPreImageHash.CloneBytes())
 			}
 
 			// add hash type to signature as well
