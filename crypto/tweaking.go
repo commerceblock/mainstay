@@ -166,8 +166,8 @@ func TweakPubKey(pubKey *btcec.PublicKey, tweak []byte) *btcec.PublicKey {
 
 	x := new(btcec.FieldVal)
 	y := new(btcec.FieldVal)
-	x.SetInt(uint16(resX.Uint64()))
-	y.SetInt(uint16(resY.Uint64()))
+	x.SetByteSlice(resX.Bytes())
+	y.SetByteSlice(resY.Bytes())
 
 	return btcec.NewPublicKey(x, y)
 }

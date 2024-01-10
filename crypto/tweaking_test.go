@@ -122,8 +122,8 @@ func TestTweaking_childPathTweaking(t *testing.T) {
 	_, tweakedPrivPub := btcec.PrivKeyFromBytes(tweakedVal.Bytes())
 	x := new(btcec.FieldVal)
 	y := new(btcec.FieldVal)
-	x.SetInt(uint16(tweakedPubX.Uint64()))
-	y.SetInt(uint16(tweakedPubY.Uint64()))
+	x.SetByteSlice(tweakedPubX.Bytes())
+	y.SetByteSlice(tweakedPubY.Bytes())
 
 	tweakedPub := btcec.NewPublicKey(x, y)
 	assert.Equal(t, tweakedPrivPub, tweakedPub)
@@ -137,8 +137,8 @@ func TestTweaking_childPathTweaking(t *testing.T) {
 		_, tweakedPrivPub := btcec.PrivKeyFromBytes(tweakedVal.Bytes())
 		x := new(btcec.FieldVal)
 		y := new(btcec.FieldVal)
-		x.SetInt(uint16(tweakedPubX.Uint64()))
-		y.SetInt(uint16(tweakedPubY.Uint64()))
+		x.SetByteSlice(tweakedPubX.Bytes())
+		y.SetByteSlice(tweakedPubY.Bytes())
 
 		tweakedPub := btcec.NewPublicKey(x, y)
 		assert.Equal(t, tweakedPrivPub, tweakedPub)
