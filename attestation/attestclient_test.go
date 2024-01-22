@@ -70,7 +70,7 @@ func verifyFirstUnspent(t *testing.T, client *AttestClient) btcjson.ListUnspentR
 }
 
 // verify key derivation and return address
-func verifyKeysAndAddr(t *testing.T, client *AttestClient, hash chainhash.Hash) (btcutil.Address, string) {
+func verifyKeysAndAddr(t *testing.T, client *AttestClient, hash chainhash.Hash) (*btcutil.AddressWitnessPubKeyHash, string) {
 	// test getting next attestation key
 	key, errKey := client.GetNextAttestationKey(hash)
 	assert.Equal(t, nil, errKey)
