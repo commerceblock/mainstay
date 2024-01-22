@@ -223,8 +223,7 @@ func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) (*btcutil.WIF,
 // In case of single key - attest client signer case the privkey is used
 // TODO: error handling
 func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.Hash) (
-	btcutil.Address, string, error) {
-
+	*btcutil.AddressWitnessPubKeyHash, string, error) {
 	// no multisig - signer case - use client key
 	myAddr, myAddrErr := crypto.GetAddressFromPrivKey(key, w.MainChainCfg)
 	if myAddrErr != nil {
@@ -261,25 +260,31 @@ func (w *AttestClient) ImportAttestationAddr(addr btcutil.Address, rescan ...boo
 func (w *AttestClient) createAttestation(paytoaddr btcutil.Address, unspent []btcjson.ListUnspentResult) (
 	*wire.MsgTx, error) {
 
-	// add inputs and amount for each unspent tx
-	var inputs []btcjson.TransactionInput
-	amounts := map[btcutil.Address]btcutil.Amount{
-		paytoaddr: btcutil.Amount(0)}
+	// Create the msgTx using wire.NewMsgTx
+    msgTx := wire.NewMsgTx(wire.TxVersion)
 
-	// pay all funds to single address
-	for i := 0; i < len(unspent); i++ {
-		inputs = append(inputs, btcjson.TransactionInput{
-			Txid: unspent[i].TxID,
-			Vout: unspent[i].Vout,
-		})
-		amounts[paytoaddr] += btcutil.Amount(unspent[i].Amount * Coin)
-	}
+    // Add transaction inputs
+    for i := 0; i < len(unspent); i++ {
+		hash, err := chainhash.NewHashFromStr(unspent[i].TxID)
+		if err != nil {
+			panic("invalid txid: "+ unspent[i].TxID)
+		}
+		outpoint := wire.NewOutPoint(hash, unspent[i].Vout)
+        in := wire.NewTxIn(outpoint, nil, nil)
+        msgTx.AddTxIn(in)
+    }
 
-	// attempt to create raw transaction
-	msgTx, errCreate := w.MainClient.CreateRawTransaction(inputs, amounts, nil)
-	if errCreate != nil {
-		return nil, errCreate
+    // Add transaction output
+    totalAmount := btcutil.Amount(0)
+    for _, utxo := range unspent {
+        totalAmount += btcutil.Amount(utxo.Amount * Coin)
+    }
+	paytoaddrScript, err := txscript.PayToAddrScript(paytoaddr)
+	if err != nil {
+		panic("invalid paytoaddr: " + paytoaddr.String())
 	}
+    out := wire.NewTxOut(int64(totalAmount), paytoaddrScript)
+    msgTx.AddTxOut(out)
 
 	// set replace-by-fee flag
 	// TODO: ? - currently only set RBF flag for attestation vin
@@ -422,56 +427,47 @@ func (w *AttestClient) getTransactionPreImages(hash chainhash.Hash, msgTx *wire.
 // Any excess transaction inputs are signed using the topup private key
 // and the topup script, assuming they are used to topup the attestation service
 func (w *AttestClient) SignTransaction(hash chainhash.Hash, msgTx wire.MsgTx) (
-	*wire.MsgTx, string, error) {
+    *wire.MsgTx, error) {
+    // Calculate private key
+    key := w.GetKeyFromHash(hash)
+    // check tx in size first
+    if len(msgTx.TxIn) <= 0 {
+        return nil, errors.New(ErrorInputMissingForTx)
+    }
+    // get prev outpoint hash in order to generate tx inputs for signing
+    prevTxId := msgTx.TxIn[0].PreviousOutPoint.Hash
+    prevTx, prevTxErr := w.MainClient.GetRawTransaction(&prevTxId)
+    if prevTxErr != nil {
+        log.Infof("Error: %v", prevTxErr)
+    }
+	txOut := wire.NewTxOut(prevTx.MsgTx().TxOut[0].Value, prevTx.MsgTx().TxOut[0].PkScript)
 
-	// Calculate private key and redeemScript from hash
-	key := w.GetKeyFromHash(hash)
-	redeemScript, redeemScriptErr := w.GetScriptFromHash(hash)
-	if redeemScriptErr != nil {
-		return nil, "", redeemScriptErr
-	}
+    a := txscript.NewCannedPrevOutputFetcher(txOut.PkScript, txOut.Value)
+    sigHashes := txscript.NewTxSigHashes(&msgTx, a)
+    signature, err := txscript.WitnessSignature(&msgTx, sigHashes, 0, txOut.Value, txOut.PkScript, txscript.SigHashAll, key.PrivKey, true)
+    if err != nil {
+        log.Infof("WitnessSignature err %v", err)
+    }
+    msgTx.TxIn[0].Witness = signature
 
-	// check tx in size first
-	if len(msgTx.TxIn) <= 0 {
-		return nil, "", errors.New(ErrorInputMissingForTx)
-	}
-
-	// get prev outpoint hash in order to generate tx inputs for signing
-	prevTxId := msgTx.TxIn[0].PreviousOutPoint.Hash
-	prevTx, prevTxErr := w.MainClient.GetRawTransaction(&prevTxId)
-	if prevTxErr != nil {
-		return nil, "", prevTxErr
-	}
-
-	var inputs []btcjson.RawTxInput // new tx inputs
-	var keys []string               // keys to sign inputs
-
-	// add prev attestation tx input info and priv key
-	inputs = append(inputs, btcjson.RawTxInput{prevTxId.String(), 0,
-		hex.EncodeToString(prevTx.MsgTx().TxOut[0].PkScript), redeemScript})
-	keys = append(keys, key.String())
-
-	// for any remaining vins - sign with topup privkey
-	// this should be a very rare occasion
-	for i := 1; i < len(msgTx.TxIn); i++ {
-		// fetch previous attestation transaction
-		prevTxId = msgTx.TxIn[i].PreviousOutPoint.Hash
-		prevTx, prevTxErr = w.MainClient.GetRawTransaction(&prevTxId)
-		if prevTxErr != nil {
-			return nil, "", prevTxErr
+    if len(msgTx.TxIn) > 1 {
+		topupTxId := msgTx.TxIn[1].PreviousOutPoint.Hash
+		topupTxIndex := msgTx.TxIn[1].PreviousOutPoint.Index
+		topupTx, topupTxErr := w.MainClient.GetRawTransaction(&topupTxId)
+		if topupTxErr != nil {
+			log.Infof("Error: %v", topupTxErr)
 		}
-		inputs = append(inputs, btcjson.RawTxInput{prevTxId.String(), 0,
-			hex.EncodeToString(prevTx.MsgTx().TxOut[0].PkScript), w.scriptTopup})
-		keys = append(keys, w.WalletPrivTopup.String())
-	}
+		topupTxOut := wire.NewTxOut(topupTx.MsgTx().TxOut[topupTxIndex].Value, topupTx.MsgTx().TxOut[topupTxIndex].PkScript)
+        a = txscript.NewCannedPrevOutputFetcher(topupTxOut.PkScript, topupTxOut.Value)
+        sigHashes = txscript.NewTxSigHashes(&msgTx, a)
+        signature, err = txscript.WitnessSignature(&msgTx, sigHashes, 1, topupTxOut.Value, topupTxOut.PkScript, txscript.SigHashAll, w.WalletPrivTopup.PrivKey, true)
+        if err != nil {
+            log.Infof("WitnessSignature err %v", err)
+        }
+        msgTx.TxIn[1].Witness = signature
+    }
 
-	// attempt to sign transcation with provided inputs - keys
-	signedMsgTx, _, errSign := w.MainClient.SignRawTransaction3(
-		&msgTx, inputs, keys)
-	if errSign != nil {
-		return nil, "", errSign
-	}
-	return signedMsgTx, redeemScript, nil
+    return &msgTx, nil
 }
 
 // Sign the attestation transaction provided with the received signatures
