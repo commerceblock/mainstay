@@ -7,7 +7,6 @@ package attestation
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math"
 
 	confpkg "mainstay/config"
@@ -16,6 +15,9 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
+	"github.com/btcsuite/btcd/btcutil"
+	"github.com/btcsuite/btcd/btcutil/hdkeychain"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
@@ -82,13 +84,11 @@ type AttestClient struct {
 	// store information on initial keys and txid
 	// required to set chain start and do key tweaking
 	txid0           string
-	script0         string
 	pubkeysExtended []*hdkeychain.ExtendedKey
-	pubkeys         []*btcec.PublicKey
+	pubkey        	*btcec.PublicKey
 	chaincodes      [][]byte
 	numOfSigs       int
 	addrTopup       string
-	scriptTopup     string
 
 	// states whether Attest Client struct is used for transaction
 	// signing or simply for address tweaking and transaction creation
@@ -133,18 +133,21 @@ func parseMainKeys(config *confpkg.Config, isSigner bool) *btcutil.WIF {
 // Return new AttestClient instance for the non multisig case
 // Any multisig related parameters are irrelevant and set to nil
 func newNonMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcutil.WIF, wifTopup *btcutil.WIF) *AttestClient {
+	pubkeyBytes, _ := hex.DecodeString(config.InitPublicKey())
+	publickey, err := btcec.ParsePubKey(pubkeyBytes)
+	if err != nil {
+		log.Errorf("Invalid public key %v", err)
+	}
 	return &AttestClient{
 		MainClient:      config.MainClient(),
 		MainChainCfg:    config.MainChainCfg(),
 		Fees:            NewAttestFees(config.FeesConfig()),
 		txid0:           config.InitTx(),
-		script0:         "",
 		pubkeysExtended: nil,
-		pubkeys:         nil,
+		pubkey:          publickey,
 		chaincodes:      nil,
 		numOfSigs:       1,
 		addrTopup:       config.TopupAddress(),
-		scriptTopup:     config.TopupScript(),
 		WalletPriv:      wif,
 		WalletPrivTopup: wifTopup,
 		WalletChainCode: []byte{}}
@@ -162,9 +165,8 @@ func NewAttestClient(config *confpkg.Config, signerFlag ...bool) *AttestClient {
 
 	// top up config
 	topupAddrStr := config.TopupAddress()
-	topupScriptStr := config.TopupScript()
 	var pkWifTopup *btcutil.WIF
-	if topupAddrStr != "" && topupScriptStr != "" {
+	if topupAddrStr != "" {
 		log.Infof("*Client* importing top-up addr: %s ...\n", topupAddrStr)
 		importErr := config.MainClient().ImportAddressRescan(topupAddrStr, "", false)
 		if importErr != nil {
@@ -223,13 +225,16 @@ func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) (*btcutil.WIF,
 // In case of single key - attest client signer case the privkey is used
 // TODO: error handling
 func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.Hash) (
-	*btcutil.AddressWitnessPubKeyHash, string, error) {
+	*btcutil.AddressWitnessPubKeyHash, error) {
+	if key == nil {
+		return crypto.GetAddressFromPubKey(w.pubkey, w.MainChainCfg)
+	}
 	// no multisig - signer case - use client key
 	myAddr, myAddrErr := crypto.GetAddressFromPrivKey(key, w.MainChainCfg)
 	if myAddrErr != nil {
-		return nil, "", myAddrErr
+		return nil, myAddrErr
 	}
-	return myAddr, "", nil
+	return myAddr, nil
 }
 
 // Method to import address to client rpc wallet and report import error
@@ -362,18 +367,6 @@ func (w *AttestClient) GetKeyFromHash(hash chainhash.Hash) btcutil.WIF {
 	return *w.WalletPriv
 }
 
-// Given a commitment hash return the corresponding redeemscript for the particular tweak
-func (w *AttestClient) GetScriptFromHash(hash chainhash.Hash) (string, error) {
-	if !hash.IsEqual(&chainhash.Hash{}) {
-		_, redeemScript, scriptErr := w.GetNextAttestationAddr(w.WalletPriv, hash)
-		if scriptErr != nil {
-			return "", scriptErr
-		}
-		return redeemScript, nil
-	}
-	return w.script0, nil
-}
-
 // Given a bitcoin transaction generate and return the transaction pre-image for
 // each of the inputs in the transaction. For each pre-image set the signature script
 // of the corresponding transaction input to the redeem script for this input
@@ -389,32 +382,15 @@ func (w *AttestClient) getTransactionPreImages(hash chainhash.Hash, msgTx *wire.
 	// pre-image txs
 	var preImageTxs []wire.MsgTx
 
-	// If init script set, add to transaction pre-image
-	script, scriptErr := w.GetScriptFromHash(hash)
-	if scriptErr != nil {
-		return nil, scriptErr
-	}
-	scriptSer, decodeErr := hex.DecodeString(script)
-	if decodeErr != nil {
-		return []wire.MsgTx{},
-			errors.New(fmt.Sprintf("%s for init script:%s\n", ErrorFailedDecodingInitMultisig, script))
-	}
 	// add init script bytes to txin script
 	preImageTx0 := msgTx.Copy()
-	preImageTx0.TxIn[0].SignatureScript = scriptSer
 	preImageTxs = append(preImageTxs, *preImageTx0)
 
 	// Add topup script to tx pre-image
 	if len(msgTx.TxIn) > 1 {
-		topupScriptSer, topupDecodeErr := hex.DecodeString(w.scriptTopup)
-		if topupDecodeErr != nil {
-			log.Warnf("%s %s\n", WarningFailedDecodingTopupMultisig, w.scriptTopup)
-			return preImageTxs, nil
-		}
 		for i := 1; i < len(msgTx.TxIn); i++ {
 			// add topup script bytes to txin script
 			preImageTxi := msgTx.Copy()
-			preImageTxi.TxIn[i].SignatureScript = topupScriptSer
 			preImageTxs = append(preImageTxs, *preImageTxi)
 		}
 	}
@@ -480,7 +456,7 @@ func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]crypto.Sig, h
 	if w.WalletPriv != nil { // sign transaction - signer case only
 		// sign generated transaction
 		var errSign error
-		signedMsgTx, _, errSign = w.SignTransaction(hash, *msgtx)
+		signedMsgTx, errSign = w.SignTransaction(hash, *msgtx)
 		if errSign != nil {
 			return nil, errSign
 		}

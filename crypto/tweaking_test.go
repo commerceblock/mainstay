@@ -27,18 +27,18 @@ func TestTweaking(t *testing.T) {
 	// test GetWalletPrivKey
 	privKey, errPrivKey := GetWalletPrivKey(testConfig.InitPK())
 	assert.Equal(t, nil, errPrivKey)
-	assert.Equal(t, "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz", privKey.String())
+	assert.Equal(t, "cRb1ZU6gsHeifDnBRyRMfbMayWpnNtpKcNs7Z9XzqE87ZwW6Vqx8", privKey.String())
 
 	// test TweakprivKey
 	tweakedPrivKey, errTweak := TweakPrivKey(privKey, tweak.CloneBytes(), mainChainCfg)
 	assert.Equal(t, nil, errTweak)
-	assert.Equal(t, "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo2XQUs8qChQu", tweakedPrivKey.String())
+	assert.Equal(t, "cRb1ZU6gsHeifDnBRyRMfbMayWpnNtpKcNs7Z9XzqFCxJX1d6G95", tweakedPrivKey.String())
 
 	// test GetAddressFromPrivKey and IsAddrTweakedFromHash
 	addr, errAddr := GetAddressFromPrivKey(tweakedPrivKey, mainChainCfg)
 	assert.Equal(t, nil, errAddr)
 	assert.Equal(t, true, IsAddrTweakedFromHash(addr.String(), tweak.CloneBytes(), privKey, mainChainCfg))
-	assert.Equal(t, "mhUEBanz8ytATniaVvVNyERkHP9Vc9rpHj", addr.String())
+	assert.Equal(t, "bcrt1qsthruz2meenyeqf57x80gyyx6x096xu3j3s4ep", addr.String())
 
 	// Test TweakPubKey and GetAddressFromPubKey
 	pubkey := privKey.PrivKey.PubKey()
@@ -158,7 +158,7 @@ func TestTweaking_extendedKey(t *testing.T) {
 	// get wif from config
 	wif, errWif := GetWalletPrivKey(testConfig.InitPK())
 	assert.Equal(t, nil, errWif)
-	assert.Equal(t, "cQca2KvrBnJJUCYa2tD4RXhiQshWLNMSK2A96ZKWo1SZkHhh3YLz", wif.String())
+	assert.Equal(t, "cRb1ZU6gsHeifDnBRyRMfbMayWpnNtpKcNs7Z9XzqE87ZwW6Vqx8", wif.String())
 
 	// get extended key from priv and pub keys
 	privExtended := hdkeychain.NewExtendedKey([]byte{}, wif.PrivKey.Serialize(), chainCodeBytes, []byte{}, 0, 0, true)
@@ -181,8 +181,8 @@ func TestTweaking_extendedKey(t *testing.T) {
 
 	// cover future changes by hard-coding expected returned keys
 	assert.Equal(t, privTweakedECPub, pubTweakedECPub)
-	assert.Equal(t, "YZ7jREvsw9bHjkqVtQJDgKJCvthBSXbvXDmB6wSxDhm8xxWKmX94MmTDHtjRekEJBTuKwvKZhDXxUZpWV2DA5C7L7mSerASe1KtLjsnNgR",
+	assert.Equal(t, "XPeyGpe3WFeNTwJYdhDL31PTq2iEra914HqQ1sKa66YDbcLJ3GDbeJEjtwxEY4N2My1PFBJQmqs715i2nZVfbky9kC31JBYh84cwYckDWk",
 		privTweaked.String())
-	assert.Equal(t, "YZ7jREvsw9bHjkqVtQJDgKJCvthBSXbvXDmB6wSxDhm8xxWKmX94MmTDNSHMcSTojdiHtQ1UnhEvW5sUf4xuL4SCPirMeJdVwEJ3BZ74CS",
+	assert.Equal(t, "XPeyGpe3WFeNTwJYdhDL31PTq2iEra914HqQ1sKa66YDbcLJ3GDbeJEjyMCsxHTzkBpziyHsXe7EuWtjV22ionDF19j7hDzxdpdYzuS2ZK",
 		pubTweaked.String())
 }
