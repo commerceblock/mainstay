@@ -271,7 +271,7 @@ func (s *AttestService) stateInitWalletFailure() {
 	}
 
 	// Get latest confirmed attestation address and re-import to wallet
-	paytoaddr, _, addrErr := s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), lastCommitmentHash)
+	paytoaddr, addrErr := s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), lastCommitmentHash)
 	if s.setFailure(addrErr) {
 		return // will rebound to init
 	}
@@ -289,7 +289,7 @@ func (s *AttestService) stateInitWalletFailure() {
 	}
 
 	// Get latest unconfirmed attestation address and re-import to wallet
-	paytoaddr, _, addrErr = s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), lastCommitmentHash)
+	paytoaddr, addrErr = s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), lastCommitmentHash)
 	if s.setFailure(addrErr) {
 		return // will rebound to init
 	}
@@ -300,7 +300,7 @@ func (s *AttestService) stateInitWalletFailure() {
 	}
 
 	// import initial base address
-	paytoaddr, _, addrErr = s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), chainhash.Hash{})
+	paytoaddr, addrErr = s.attester.GetNextAttestationAddr((*btcutil.WIF)(nil), chainhash.Hash{})
 	if s.setFailure(addrErr) {
 		return // will rebound to init
 	}
@@ -387,7 +387,7 @@ func (s *AttestService) doStateNewAttestation() {
 	if s.setFailure(keyErr) {
 		return // will rebound to init
 	}
-	paytoaddr, _, addrErr := s.attester.GetNextAttestationAddr(key, s.attestation.CommitmentHash())
+	paytoaddr, addrErr := s.attester.GetNextAttestationAddr(key, s.attestation.CommitmentHash())
 	if s.setFailure(addrErr) {
 		return // will rebound to init
 	}
