@@ -6,11 +6,12 @@ package attestation
 
 import (
 	confpkg "mainstay/config"
-	"mainstay/crypto"
 	"mainstay/log"
+	"encoding/hex"
 
 	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 )
 
 // AttestSignerFake struct
@@ -53,42 +54,44 @@ func (f AttestSignerFake) SendTxPreImages(txs [][]byte) {
 }
 
 // Return signatures for received tx and hashes
-func (f AttestSignerFake) GetSigs(txHash string, redeem_script string, merkle_root string) [][]crypto.Sig {
-	// get confirmed hash from received confirmed hash bytes
-	hash, hashErr := chainhash.NewHash(signerConfirmedHashBytesFake)
+func (f AttestSignerFake) GetSigs(sigHashes [][]byte, merkle_root string) []wire.TxWitness {
+
+	merkle_root_bytes, _ := hex.DecodeString(merkle_root)
+	reversed_merkle_root := make([]byte, len(merkle_root_bytes))
+
+	// Copy the reversed bytes
+	for i, _ := range merkle_root_bytes {
+		reversed_merkle_root[len(merkle_root_bytes)-1-i] = merkle_root_bytes[i]
+	}
+	hash, hashErr := chainhash.NewHash(reversed_merkle_root)
 	if hashErr != nil {
 		log.Infof("%v\n", hashErr)
 		return nil
 	}
 
-	// get unserialized tx pre images
-	txPreImages := UnserializeBytes(signerTxPreImageBytesFake)
-
-	sigs := make([][]crypto.Sig, len(txPreImages)) // init sigs
+	witness := make([]wire.TxWitness, len(sigHashes))
 
 	// get sigs from each client
 	for _, client := range f.clients {
-		// process each pre image transaction and sign
-		for i_tx, txPreImage := range txPreImages {
-			// add hash type to tx serialization
-			txPreImage = append(txPreImage, []byte{1, 0, 0, 0}...)
-			txPreImageHash := chainhash.DoubleHashH(txPreImage)
+		// process each sighash and sign
+		for i_tx, sigHash := range sigHashes {
 
 			// sign first tx with tweaked priv key and
 			// any remaining txs with topup key
 			var sig *ecdsa.Signature
+			var sigBytes []byte
 			if i_tx == 0 {
-				priv := client.GetKeyFromHash(*hash).PrivKey
-				sig = ecdsa.Sign(priv, txPreImageHash.CloneBytes())
+				priv := client.GetKeyFromHash(*hash)
+				sig = ecdsa.Sign(priv.PrivKey, sigHash)
+				sigBytes = append(sig.Serialize(), []byte{byte(1)}...)
+				witness[i_tx] = wire.TxWitness{sigBytes, priv.PrivKey.PubKey().SerializeCompressed()}
 			} else {
-				sig = ecdsa.Sign(client.WalletPrivTopup.PrivKey, txPreImageHash.CloneBytes())
+				sig = ecdsa.Sign(client.WalletPrivTopup.PrivKey, sigHash)
+				sigBytes = append(sig.Serialize(), []byte{byte(1)}...)
+				witness[i_tx] = wire.TxWitness{sigBytes, client.WalletPrivTopup.PrivKey.PubKey().SerializeCompressed()}
 			}
-
-			// add hash type to signature as well
-			sigBytes := append(sig.Serialize(), []byte{byte(1)}...)
-			sigs[i_tx] = append(sigs[i_tx], sigBytes)
 		}
 	}
 
-	return sigs
+	return witness
 }

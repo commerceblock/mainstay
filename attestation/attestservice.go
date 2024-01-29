@@ -8,18 +8,17 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"strings"
 	"sync"
 	"time"
 
 	confpkg "mainstay/config"
-	"mainstay/crypto"
 	"mainstay/log"
 	"mainstay/models"
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 )
 
 // Attestation Service is the main processes that handles generating
@@ -108,7 +107,7 @@ var (
 	confirmTime time.Time     // handle confirmation timing
 
 	isFeeBumped bool // flag to keep track if the fee has already been bumped
-	sigs        [][]crypto.Sig
+	sigs        []wire.TxWitness
 )
 
 // NewAttestService returns a pointer to an AttestService instance
@@ -450,13 +449,12 @@ func (s *AttestService) doStateNewAttestation() {
 		s.signer.ReSubscribe()
 		s.signer.SendTxPreImages(txPreImageBytes)
 
-		txId := newTx.TxIn[0].PreviousOutPoint.Hash
-		rawTx, _ := s.config.MainClient().GetRawTransactionVerbose(&txId)
-		txHash := rawTx.Hash
-		asmList := strings.Split(rawTx.Vin[0].ScriptSig.Asm, " ")
-		redeemScript := asmList[len(asmList)-1]
 		merkle_root := lastCommitmentHash.String()
-		sigs = s.signer.GetSigs(txHash, redeemScript, merkle_root)
+		sigHashes, err := s.attester.calculateSighashes(newTx)
+		if err != nil {
+			log.Infof("Error in calculating sighash %v", err)
+		}
+		sigs = s.signer.GetSigs(sigHashes, merkle_root)
 		for sigForInput, _ := range sigs {
 			log.Infof("********** received %d signatures for input %d \n",
 				len(sigs[sigForInput]), sigForInput)
@@ -626,13 +624,12 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 	s.signer.ReSubscribe()
 	s.signer.SendTxPreImages(txPreImageBytes)
 
-	txId := currentTx.TxIn[0].PreviousOutPoint.Hash
-	rawTx, _ := s.config.MainClient().GetRawTransactionVerbose(&txId)
-	txHash := rawTx.Hash
-	asmList := strings.Split(rawTx.Vin[0].ScriptSig.Asm, " ")
-	redeemScript := asmList[len(asmList)-1]
 	merkle_root := lastCommitmentHash.String()
-	sigs = s.signer.GetSigs(txHash, redeemScript, merkle_root)
+	sigHashes, err := s.attester.calculateSighashes(currentTx)
+	if err != nil {
+		log.Infof("Error in calculating sighash %v", err)
+	}
+	sigs = s.signer.GetSigs(sigHashes, merkle_root)
 	for sigForInput, _ := range sigs {
 		log.Infof("********** received %d signatures for input %d \n",
 			len(sigs[sigForInput]), sigForInput)

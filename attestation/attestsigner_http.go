@@ -8,11 +8,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"mainstay/log"
 	"io/ioutil"
 	confpkg "mainstay/config"
-	"mainstay/crypto"
 	"net/http"
+	"github.com/btcsuite/btcd/wire"
 )
 
 // AttestSignerFake struct
@@ -25,10 +25,8 @@ type AttestSignerHttp struct {
 }
 
 type RequestBody struct {
-	TxHex           string `json:"tx_hex"`
-	Value           int    `json:"value"`
+	SighashString   []string `json:"sighash_string"`
 	MerkleRoot      string `json:"merkle_root"`
-	RedeemScriptHex string `json:"redeem_script_hex"`
 }
 
 // store latest hash and transaction
@@ -59,30 +57,30 @@ func (f AttestSignerHttp) SendTxPreImages(txs [][]byte) {
 }
 
 // Return signatures for received tx and hashes
-func (f AttestSignerHttp) GetSigs(txHash string, redeem_script string, merkle_root string) [][]crypto.Sig {
-	// get unserialized tx pre images
-	txPreImages := UnserializeBytes(signerTxPreImageBytes)
+func (f AttestSignerHttp) GetSigs(sigHashes [][]byte, merkle_root string) []wire.TxWitness {
 
-	sigs := make([][]crypto.Sig, len(txPreImages)) // init sigs
+	witness := make([]wire.TxWitness, len(sigHashes)) // init witness
 
-	// value hardcoded for now, needs a fix
+	sigHashesStr := make([]string, len(sigHashes))
+	for i := 0; i <= len(sigHashes); i++ {
+		sigHashesStr[i] = hex.EncodeToString(sigHashes[i])
+	} 
+
 	requestBody := &RequestBody{
-		TxHex:           txHash,
-		Value:           10000,
+		SighashString:  sigHashesStr,
 		MerkleRoot:      merkle_root,
-		RedeemScriptHex: redeem_script,
 	}
 
 	// Encode the request body to JSON
 	requestBodyJSON, err := json.Marshal(requestBody)
 	if err != nil {
-		fmt.Println("Error marshalling request body:", err)
+		log.Info("Error marshalling request body: ", err)
 	}
 
 	// Create the HTTP request
 	req, err := http.NewRequest(http.MethodPost, f.url, bytes.NewReader(requestBodyJSON))
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		log.Info("Error creating request: ", err)
 	}
 
 	// Set the request headers
@@ -90,7 +88,7 @@ func (f AttestSignerHttp) GetSigs(txHash string, redeem_script string, merkle_ro
 
 	resp, err := f.client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
+		log.Info("Error sending request: ", err)
 	}
 
 	// Close the response body
@@ -99,14 +97,14 @@ func (f AttestSignerHttp) GetSigs(txHash string, redeem_script string, merkle_ro
 	// Read the response body
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading response body:", err)
+		log.Info("Error reading response body: ", err)
 	}
 
 	// Print the response
-	fmt.Println(string(body))
-	sig, _ := hex.DecodeString(string(body))
-	sigs[0][0] = sig
-	return sigs
+	log.Infof("response %v", string(body))
+	// sig, _ := hex.DecodeString(string(body))
+	// sigs[0][0] = sig
+	return witness
 }
 
 // Transform received list of bytes into a single byte
