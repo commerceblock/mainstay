@@ -17,8 +17,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	_ "github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcd/wire"
 )
 
 // Attestation Service is the main processes that handles generating
@@ -107,6 +106,7 @@ var (
 	confirmTime time.Time     // handle confirmation timing
 
 	isFeeBumped bool // flag to keep track if the fee has already been bumped
+	sigs        []wire.TxWitness
 )
 
 // NewAttestService returns a pointer to an AttestService instance
@@ -448,6 +448,17 @@ func (s *AttestService) doStateNewAttestation() {
 		s.signer.ReSubscribe()
 		s.signer.SendTxPreImages(txPreImageBytes)
 
+		merkle_root := lastCommitmentHash.String()
+		sigHashes, err := s.attester.calculateSighashes(newTx)
+		if err != nil {
+			log.Infof("Error in calculating sighash %v", err)
+		}
+		sigs = s.signer.GetSigs(sigHashes, merkle_root)
+		for sigForInput, _ := range sigs {
+			log.Infof("********** received %d signatures for input %d \n",
+				len(sigs[sigForInput]), sigForInput)
+		}
+
 		s.state = AStateSignAttestation // update attestation state
 		attestDelay = ATimeSigs         // add sigs waiting time
 	} else {
@@ -618,6 +629,17 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 	}
 	s.signer.ReSubscribe()
 	s.signer.SendTxPreImages(txPreImageBytes)
+
+	merkle_root := lastCommitmentHash.String()
+	sigHashes, err := s.attester.calculateSighashes(currentTx)
+	if err != nil {
+		log.Infof("Error in calculating sighash %v", err)
+	}
+	sigs = s.signer.GetSigs(sigHashes, merkle_root)
+	for sigForInput, _ := range sigs {
+		log.Infof("********** received %d signatures for input %d \n",
+			len(sigs[sigForInput]), sigForInput)
+	}
 
 	s.state = AStateSignAttestation // update attestation state
 	attestDelay = ATimeSigs         // add sigs waiting time

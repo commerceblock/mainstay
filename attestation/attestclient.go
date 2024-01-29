@@ -22,8 +22,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 )
 
 // error - warning consts
@@ -86,7 +85,7 @@ type AttestClient struct {
 	txid0           string
 	pubkeysExtended []*hdkeychain.ExtendedKey
 	pubkey        	*btcec.PublicKey
-	chaincodes      [][]byte
+	chaincode      []byte
 	numOfSigs       int
 	addrTopup       string
 
@@ -138,6 +137,7 @@ func newNonMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcu
 	if err != nil {
 		log.Errorf("Invalid public key %v", err)
 	}
+	chaincode, _ := hex.DecodeString(config.InitChaincodes()[0])
 	return &AttestClient{
 		MainClient:      config.MainClient(),
 		MainChainCfg:    config.MainChainCfg(),
@@ -145,7 +145,7 @@ func newNonMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcu
 		txid0:           config.InitTx(),
 		pubkeysExtended: nil,
 		pubkey:          publickey,
-		chaincodes:      nil,
+		chaincode:       chaincode,
 		numOfSigs:       1,
 		addrTopup:       config.TopupAddress(),
 		WalletPriv:      wif,
@@ -227,7 +227,16 @@ func (w *AttestClient) GetNextAttestationKey(hash chainhash.Hash) (*btcutil.WIF,
 func (w *AttestClient) GetNextAttestationAddr(key *btcutil.WIF, hash chainhash.Hash) (
 	*btcutil.AddressWitnessPubKeyHash, error) {
 	if key == nil {
-		return crypto.GetAddressFromPubKey(w.pubkey, w.MainChainCfg)
+		pubkeyExtended := hdkeychain.NewExtendedKey([]byte{}, w.pubkey.SerializeCompressed(), w.WalletChainCode, []byte{}, 0, 0, false)
+		tweakedKey, tweakErr := crypto.TweakExtendedKey(pubkeyExtended, hash.CloneBytes())
+		if tweakErr != nil {
+			return nil, tweakErr
+		}
+		tweakedPub, tweakPubErr := tweakedKey.ECPubKey()
+		if tweakPubErr != nil {
+			return nil, tweakPubErr
+		}
+		return crypto.GetAddressFromPubKey(tweakedPub, w.MainChainCfg)
 	}
 	// no multisig - signer case - use client key
 	myAddr, myAddrErr := crypto.GetAddressFromPrivKey(key, w.MainChainCfg)
@@ -351,7 +360,7 @@ func calcSignedTxFee(feePerByte int) int64 {
 // Given a commitment hash return the corresponding client private key tweaked
 // This method should only be used in the attestation client signer case
 // Error handling excluded here as method is only for testing purposes
-func (w *AttestClient) GetKeyFromHash(hash chainhash.Hash) btcutil.WIF {
+func (w *AttestClient) GetKeyFromHash(hash chainhash.Hash) *btcutil.WIF {
 	if !hash.IsEqual(&chainhash.Hash{}) {
 		// get extended key from wallet priv to do tweaking
 		// pseudo bip-32 child derivation to do priv key tweaking
@@ -362,9 +371,9 @@ func (w *AttestClient) GetKeyFromHash(hash chainhash.Hash) btcutil.WIF {
 
 		// Return priv key in wallet readable format
 		tweakedKey, _ := btcutil.NewWIF(tweakedExtndPriv, w.MainChainCfg, w.WalletPriv.CompressPubKey)
-		return *tweakedKey
+		return tweakedKey
 	}
-	return *w.WalletPriv
+	return w.WalletPriv
 }
 
 // Given a bitcoin transaction generate and return the transaction pre-image for
@@ -406,41 +415,23 @@ func (w *AttestClient) SignTransaction(hash chainhash.Hash, msgTx wire.MsgTx) (
     *wire.MsgTx, error) {
     // Calculate private key
     key := w.GetKeyFromHash(hash)
-    // check tx in size first
+	// check tx in size first
     if len(msgTx.TxIn) <= 0 {
         return nil, errors.New(ErrorInputMissingForTx)
     }
-    // get prev outpoint hash in order to generate tx inputs for signing
-    prevTxId := msgTx.TxIn[0].PreviousOutPoint.Hash
-    prevTx, prevTxErr := w.MainClient.GetRawTransaction(&prevTxId)
-    if prevTxErr != nil {
-        log.Infof("Error: %v", prevTxErr)
-    }
-	txOut := wire.NewTxOut(prevTx.MsgTx().TxOut[0].Value, prevTx.MsgTx().TxOut[0].PkScript)
 
-    a := txscript.NewCannedPrevOutputFetcher(txOut.PkScript, txOut.Value)
-    sigHashes := txscript.NewTxSigHashes(&msgTx, a)
-    signature, err := txscript.WitnessSignature(&msgTx, sigHashes, 0, txOut.Value, txOut.PkScript, txscript.SigHashAll, key.PrivKey, true)
-    if err != nil {
-        log.Infof("WitnessSignature err %v", err)
-    }
-    msgTx.TxIn[0].Witness = signature
+	sigHashes, err := w.calculateSighashes(&msgTx)
+	if err != nil {
+		log.Infof("Sighash err %v", err)
+	}
+	sig := ecdsa.Sign(key.PrivKey, sigHashes[0])
+	sigBytes := append(sig.Serialize(), []byte{byte(1)}...)
+	msgTx.TxIn[0].Witness = wire.TxWitness{sigBytes, key.PrivKey.PubKey().SerializeCompressed()}
 
     if len(msgTx.TxIn) > 1 {
-		topupTxId := msgTx.TxIn[1].PreviousOutPoint.Hash
-		topupTxIndex := msgTx.TxIn[1].PreviousOutPoint.Index
-		topupTx, topupTxErr := w.MainClient.GetRawTransaction(&topupTxId)
-		if topupTxErr != nil {
-			log.Infof("Error: %v", topupTxErr)
-		}
-		topupTxOut := wire.NewTxOut(topupTx.MsgTx().TxOut[topupTxIndex].Value, topupTx.MsgTx().TxOut[topupTxIndex].PkScript)
-        a = txscript.NewCannedPrevOutputFetcher(topupTxOut.PkScript, topupTxOut.Value)
-        sigHashes = txscript.NewTxSigHashes(&msgTx, a)
-        signature, err = txscript.WitnessSignature(&msgTx, sigHashes, 1, topupTxOut.Value, topupTxOut.PkScript, txscript.SigHashAll, w.WalletPrivTopup.PrivKey, true)
-        if err != nil {
-            log.Infof("WitnessSignature err %v", err)
-        }
-        msgTx.TxIn[1].Witness = signature
+		sig = ecdsa.Sign(w.WalletPrivTopup.PrivKey, sigHashes[1])
+		sigBytes = append(sig.Serialize(), []byte{byte(1)}...)
+		msgTx.TxIn[1].Witness = wire.TxWitness{sigBytes, w.WalletPrivTopup.PrivKey.PubKey().SerializeCompressed()}
     }
 
     return &msgTx, nil
@@ -449,7 +440,7 @@ func (w *AttestClient) SignTransaction(hash chainhash.Hash, msgTx wire.MsgTx) (
 // Sign the attestation transaction provided with the received signatures
 // In the client signer case, client additionally adds sigs as well to the transaction
 // Sigs are then combined and added to the attestation transaction inputs
-func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]crypto.Sig, hash chainhash.Hash) (
+func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, witness []wire.TxWitness, hash chainhash.Hash) (
 	*wire.MsgTx, error) {
 	// set tx pointer and redeem script
 	signedMsgTx := msgtx
@@ -460,13 +451,59 @@ func (w *AttestClient) signAttestation(msgtx *wire.MsgTx, sigs [][]crypto.Sig, h
 		if errSign != nil {
 			return nil, errSign
 		}
+	} else {
+		for i := 0; i < len(msgtx.TxIn) && i < len(witness); i++ {
+			signedMsgTx.TxIn[i].Witness = witness[i]
+		}
+	}
+	return signedMsgTx, nil
+}
+
+func (w *AttestClient) calculateSighashes(msgTx *wire.MsgTx) ([][]byte, error) {
+
+	var sigHashesBytes [][]byte
+	prevTxId := msgTx.TxIn[0].PreviousOutPoint.Hash
+    prevTx, prevTxErr := w.MainClient.GetRawTransaction(&prevTxId)
+    if prevTxErr != nil {
+		return nil, prevTxErr
+    }
+	txOut := wire.NewTxOut(prevTx.MsgTx().TxOut[0].Value, prevTx.MsgTx().TxOut[0].PkScript)
+    a := txscript.NewCannedPrevOutputFetcher(txOut.PkScript, txOut.Value)
+    sigHashes := txscript.NewTxSigHashes(msgTx, a)
+	sigHashBytes, err := txscript.CalcWitnessSigHash(txOut.PkScript, sigHashes, txscript.SigHashAll, msgTx, 0, txOut.Value)
+	if err != nil {
+		return nil, err
+	}
+	sigHashesBytes = append(sigHashesBytes, sigHashBytes)
+
+	if len(msgTx.TxIn) > 1 {
+		topupTxId := msgTx.TxIn[1].PreviousOutPoint.Hash
+		topupTxIndex := msgTx.TxIn[1].PreviousOutPoint.Index
+		topupTx, topupTxErr := w.MainClient.GetRawTransaction(&topupTxId)
+		if topupTxErr != nil {
+			return nil, topupTxErr
+		}
+		topupTxOut := wire.NewTxOut(topupTx.MsgTx().TxOut[topupTxIndex].Value, topupTx.MsgTx().TxOut[topupTxIndex].PkScript)
+        a = txscript.NewCannedPrevOutputFetcher(topupTxOut.PkScript, topupTxOut.Value)
+		sigHashes = txscript.NewTxSigHashes(msgTx, a)
+		sigHashBytes, err = txscript.CalcWitnessSigHash(topupTxOut.PkScript, sigHashes, txscript.SigHashAll, msgTx, 1, topupTxOut.Value)
+		if err != nil {
+			return nil, err
+		}
+		sigHashesBytes = append(sigHashesBytes, sigHashBytes)
 	}
 
-	return signedMsgTx, nil
+	return sigHashesBytes, nil
 }
 
 // Send the latest attestation transaction through rpc bitcoin client connection
 func (w *AttestClient) sendAttestation(msgtx *wire.MsgTx) (chainhash.Hash, error) {
+	// buf := bytes.NewBuffer(make([]byte, 0, msgtx.SerializeSize()))
+	// if err := msgtx.Serialize(buf); err != nil {
+	// 	log.Infof("hex Err %v", err)
+	// }
+	// txHex := hex.EncodeToString(buf.Bytes())
+	// log.Infof("TX HEX %v", txHex)
 
 	// send signed attestation
 	txhash, errSend := w.MainClient.SendRawTransaction(msgtx, false)

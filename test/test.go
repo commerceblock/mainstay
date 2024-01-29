@@ -69,6 +69,7 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 	// Run init test script that sets up bitcoin and ocean
 	initPath := os.Getenv("GOPATH") + TestInitPath
 
+	cmd := exec.Command("/bin/sh", initPath)
 	output, err := cmd.Output()
 	if err != nil {
 		log.Error(err)
