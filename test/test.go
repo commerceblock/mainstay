@@ -6,6 +6,7 @@ package test
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
