@@ -6,7 +6,6 @@ package test
 
 import (
 	"context"
-	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -31,7 +30,7 @@ var testConf = []byte(`
         "chain": "regtest"
     },
     "signer": {
-        "url": "127.0.0.1:8000"
+        "url": "http://127.0.0.1:8000/sign"
     },
     "db": {
         "user":"serviceUser",
