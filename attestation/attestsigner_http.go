@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	confpkg "mainstay/config"
 	"net/http"
+	"strings"
 	"github.com/btcsuite/btcd/wire"
 )
 
@@ -62,7 +63,7 @@ func (f AttestSignerHttp) GetSigs(sigHashes [][]byte, merkle_root string) []wire
 	witness := make([]wire.TxWitness, len(sigHashes)) // init witness
 
 	sigHashesStr := make([]string, len(sigHashes))
-	for i := 0; i <= len(sigHashes); i++ {
+	for i := 0; i < len(sigHashes); i++ {
 		sigHashesStr[i] = hex.EncodeToString(sigHashes[i])
 	} 
 
@@ -100,10 +101,21 @@ func (f AttestSignerHttp) GetSigs(sigHashes [][]byte, merkle_root string) []wire
 		log.Info("Error reading response body: ", err)
 	}
 
-	// Print the response
-	log.Infof("response %v", string(body))
-	// sig, _ := hex.DecodeString(string(body))
-	// sigs[0][0] = sig
+	var data map[string]interface{}
+	jsonErr := json.Unmarshal([]byte(body), &data)
+	if jsonErr != nil {
+		log.Info("Error unmarshaling JSON:", err)
+	}
+
+	for i := 0; i < len(sigHashesStr); i++ {
+		witnessStr := data["witness"].([]interface{})[i].(string)
+		witnessData := strings.Split(witnessStr, " ")
+		sig, _ := hex.DecodeString(witnessData[0])
+		sigBytes := append(sig, []byte{byte(1)}...)
+		pubkey, _ := hex.DecodeString(witnessData[1])
+		witness[i] = wire.TxWitness{sigBytes, pubkey}
+	}
+
 	return witness
 }
 

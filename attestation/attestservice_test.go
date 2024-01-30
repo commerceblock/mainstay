@@ -1126,3 +1126,82 @@ func TestAttestService_FailureHandleUnconfirmed(t *testing.T) {
 		prevAttestation = attestService.attestation
 	}
 }
+
+func TestAttestService_Regular_With_Signer(t *testing.T) {
+
+	// Test INIT
+	test := test.NewTest(false, false)
+	config := test.Config
+
+	// randomly test with invalid config here
+	// timing config no effect on server
+	timingConfig := confpkg.TimingConfig{-1, -1}
+	config.SetTimingConfig(timingConfig)
+
+	dbFake := db.NewDbFake()
+	server := NewAttestServer(dbFake)
+	attestService := NewAttestService(nil, nil, server, NewAttestSignerHttp(config.SignerConfig()), config)
+
+	// Test initial state of attest service
+	verifyStateInit(t, attestService)
+	// Test AStateInit -> AStateNextCommitment
+	verifyStateInitToNextCommitment(t, attestService)
+
+	// Test AStateInit -> AStateError
+	// error case when server latest commitment not set
+	// need to re-initiate attestation and set latest commitment in server
+	attestService.doAttestation()
+	assert.Equal(t, AStateError, attestService.state)
+	assert.Equal(t, errors.New(models.ErrorCommitmentListEmpty), attestService.errorState)
+	assert.Equal(t, ATimeFixed, attestDelay)
+
+	// Test AStateError -> AStateInit -> AStateNextCommitment again
+	attestService.doAttestation()
+	verifyStateInit(t, attestService)
+	verifyStateInitToNextCommitment(t, attestService)
+
+	// Test AStateNextCommitment -> AStateNewAttestation
+	// set server commitment before creating new attestation
+	hashX, _ := chainhash.NewHashFromStr("aaaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	latestCommitment := verifyStateNextCommitmentToNewAttestation(t, attestService, dbFake, hashX)
+
+	// Test AStateNewAttestation -> AStateSignAttestation
+	verifyStateNewAttestationToSignAttestation(t, attestService)
+	// Test AStateSignAttestation -> AStatePreSendStore
+	verifyStateSignAttestationToPreSendStore(t, attestService)
+	// Test AStatePreSendStore -> AStateSendAttestation
+	verifyStatePreSendStoreToSendAttestation(t, attestService)
+	// Test AStateSendAttestation -> AStateAwaitConfirmation
+	txid := verifyStateSendAttestationToAwaitConfirmation(t, attestService)
+	// Test AStateAwaitConfirmation -> AStateAwaitConfirmation
+	verifyStateAwaitConfirmationToAwaitConfirmation(t, attestService)
+	// Test AStateAwaitConfirmation -> AStateAwaitConfirmation
+	verifyStateAwaitConfirmationToAwaitConfirmation(t, attestService)
+	// Test AStateAwaitConfirmation -> AStateNextCommitment
+	config.MainClient().Generate(1)
+	verifyStateAwaitConfirmationToNextCommitment(t, attestService, config, txid, DefaultATimeNewAttestation)
+
+	// Test AStateNextCommitment -> AStateNextCommitment
+	attestService.doAttestation()
+	assert.Equal(t, AStateNextCommitment, attestService.state)
+	assert.Equal(t, latestCommitment.GetCommitmentHash(), attestService.attestation.CommitmentHash())
+	assert.Equal(t, ATimeSkip, attestDelay)
+
+	// Test AStateNextCommitment -> AStateNewAttestation
+	// stuck in next commitment
+	// need to update server latest commitment
+	hashY, _ := chainhash.NewHashFromStr("baaaaaa1111d9a1e6cdc3418b54aa57747106bc75e9e84426661f27f98ada3b7")
+	latestCommitment = verifyStateNextCommitmentToNewAttestation(t, attestService, dbFake, hashY)
+
+	// Test AStateNewAttestation -> AStateSignAttestation
+	verifyStateNewAttestationToSignAttestation(t, attestService)
+	// Test AStateSignAttestation -> AStatePreSendStore
+	verifyStateSignAttestationToPreSendStore(t, attestService)
+	// Test AStatePreSendStore -> AStateSendAttestation
+	verifyStatePreSendStoreToSendAttestation(t, attestService)
+	// Test AStateSendAttestation -> AStateAwaitConfirmation
+	txid = verifyStateSendAttestationToAwaitConfirmation(t, attestService)
+	// Test AStateAwaitConfirmation -> AStateNextCommitment
+	config.MainClient().Generate(1)
+	verifyStateAwaitConfirmationToNextCommitment(t, attestService, config, txid, DefaultATimeNewAttestation)
+}
