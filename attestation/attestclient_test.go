@@ -5,14 +5,12 @@
 package attestation
 
 import (
-	"encoding/hex"
 	"errors"
 	"math"
 	"testing"
 
 	"mainstay/clients"
 	confpkg "mainstay/config"
-	"mainstay/crypto"
 	"mainstay/models"
 	testpkg "mainstay/test"
 
@@ -70,31 +68,24 @@ func verifyFirstUnspent(t *testing.T, client *AttestClient) btcjson.ListUnspentR
 }
 
 // verify key derivation and return address
-func verifyKeysAndAddr(t *testing.T, client *AttestClient, hash chainhash.Hash) (btcutil.Address, string) {
+func verifyKeysAndAddr(t *testing.T, client *AttestClient, hash chainhash.Hash) (*btcutil.AddressWitnessPubKeyHash) {
 	// test getting next attestation key
 	key, errKey := client.GetNextAttestationKey(hash)
 	assert.Equal(t, nil, errKey)
 
 	// test getting next attestation address
-	addr, script, nextAddrErr := client.GetNextAttestationAddr(key, hash)
+	addr, nextAddrErr := client.GetNextAttestationAddr(key, hash)
 	assert.Equal(t, nil, nextAddrErr)
-
-	// test GetKeyAndScriptFromHash returns the same results
-	keyTest := client.GetKeyFromHash(hash)
-	scriptTest, scriptErr := client.GetScriptFromHash(hash)
-	assert.Equal(t, nil, scriptErr)
-	assert.Equal(t, *key, keyTest)
-	assert.Equal(t, script, scriptTest)
 
 	// test importing address
 	importErr := client.ImportAttestationAddr(addr)
 	assert.Equal(t, nil, importErr)
 
-	return addr, script
+	return addr
 }
 
 // verify transaction pre image generation
-func verifyTransactionPreImages(t *testing.T, client *AttestClient, tx *wire.MsgTx, script string, hash chainhash.Hash, i int) {
+func verifyTransactionPreImages(t *testing.T, client *AttestClient, tx *wire.MsgTx, hash chainhash.Hash, i int) {
 
 	// getTransactionPreImages with empty transaction
 	_, emptyPreImageErr := client.getTransactionPreImages(hash, &(wire.MsgTx{}))
@@ -106,16 +97,9 @@ func verifyTransactionPreImages(t *testing.T, client *AttestClient, tx *wire.Msg
 	assert.Equal(t, 1-1*int(math.Min(0, float64((i%(topupLevel+1)-1)))), len(txPreImages))
 	assert.Equal(t, 1-1*int(math.Min(0, float64((i%(topupLevel+1)-1)))), len(txPreImages[0].TxIn))
 
-	// get tweaked script and topup script serialisation
-	scriptSer, _ := hex.DecodeString(script)
-	topupScriptSer, _ := hex.DecodeString(client.scriptTopup)
-
-	// test signature script set correctly
-	assert.Equal(t, scriptSer, txPreImages[0].TxIn[0].SignatureScript)
 	if i == topupLevel+1 {
 		assert.Equal(t, []byte(nil), txPreImages[0].TxIn[1].SignatureScript)
 		assert.Equal(t, []byte(nil), txPreImages[1].TxIn[0].SignatureScript)
-		assert.Equal(t, topupScriptSer, txPreImages[1].TxIn[1].SignatureScript)
 	}
 }
 
@@ -205,7 +189,7 @@ func TestAttestClient_Signer(t *testing.T) {
 		oceanCommitmentHash := oceanCommitment.GetCommitmentHash()
 
 		// get addr
-		addr, script := verifyKeysAndAddr(t, client, oceanCommitmentHash)
+		addr := verifyKeysAndAddr(t, client, oceanCommitmentHash)
 
 		var unspentList []btcjson.ListUnspentResult
 		unspentList = append(unspentList, unspent)
@@ -225,14 +209,14 @@ func TestAttestClient_Signer(t *testing.T) {
 		assert.Equal(t, false, (unspentAmount-(float64(tx.TxOut[0].Value)/Coin)) <= 0)
 
 		// verify transaction pre-image generation
-		verifyTransactionPreImages(t, client, tx, script, oceanCommitmentHash, i)
+		verifyTransactionPreImages(t, client, tx, oceanCommitmentHash, i)
 
 		// check fee value and bump
 		assert.Equal(t, client.Fees.minFee+(i-1)*client.Fees.feeIncrement, client.Fees.GetFee())
 		client.Fees.BumpFee()
 
 		// test signing and sending attestation
-		signedTx, signErr := client.signAttestation(tx, [][]crypto.Sig{}, lastHash)
+		signedTx, signErr := client.signAttestation(tx, []wire.TxWitness{}, lastHash)
 		assert.Equal(t, nil, signErr)
 		txid, sendErr := client.sendAttestation(signedTx)
 		assert.Equal(t, nil, sendErr)
@@ -284,21 +268,13 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 
 	// test that when attempting to generate a new address with
 	// an empty hash, the intial address/script are returned
-	addrNoHash, scriptNoHash, nextAddrErr := client.GetNextAttestationAddr(nil, lastHash)
+	_, nextAddrErr := client.GetNextAttestationAddr(nil, lastHash)
 	assert.Equal(t, nil, nextAddrErr)
-	assert.Equal(t, testpkg.Address, addrNoHash.String())
-	assert.Equal(t, testpkg.Script, scriptNoHash)
-	assert.Equal(t, client.script0, scriptNoHash)
-	assert.Equal(t, unspent.Address, addrNoHash.String())
-	addrNoHash, scriptNoHash, nextAddrErr = clientSigner.GetNextAttestationAddr(nil, lastHash)
+	_, nextAddrErr = clientSigner.GetNextAttestationAddr(nil, lastHash)
 	assert.Equal(t, nil, nextAddrErr)
-	assert.Equal(t, testpkg.Address, addrNoHash.String())
-	assert.Equal(t, testpkg.Script, scriptNoHash)
-	assert.Equal(t, clientSigner.script0, scriptNoHash)
-	assert.Equal(t, unspent.Address, addrNoHash.String())
 
 	// test invalid tx signing
-	_, _, errSign := clientSigner.SignTransaction(chainhash.Hash{}, wire.MsgTx{})
+	_, errSign := clientSigner.SignTransaction(chainhash.Hash{}, wire.MsgTx{})
 	assert.Equal(t, errSign, errors.New(ErrorInputMissingForTx))
 
 	client.Fees.ResetFee(true) // reset fee to minimum
@@ -315,15 +291,8 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 		assert.Equal(t, true, key == nil)
 
 		// test getting next attestation address
-		addr, script, nextAddrErr := client.GetNextAttestationAddr(key, oceanCommitmentHash)
+		addr, nextAddrErr := client.GetNextAttestationAddr(key, oceanCommitmentHash)
 		assert.Equal(t, nil, nextAddrErr)
-
-		// test GetKeyAndScriptFromHash returns the same results
-		// skip testing this - not applicable in no signer case
-		//keyTest := clientSigner.GetKeyFromHash(oceanCommitmentHash)
-		scriptTest, scriptErr := client.GetScriptFromHash(oceanCommitmentHash)
-		assert.Equal(t, nil, scriptErr)
-		assert.Equal(t, script, scriptTest)
 
 		// test importing address
 		importErr := client.ImportAttestationAddr(addr, false)
@@ -347,67 +316,43 @@ func TestAttestClient_SignerAndNoSigner(t *testing.T) {
 		assert.Equal(t, false, (unspentAmount-(float64(tx.TxOut[0].Value)/Coin)) <= 0)
 
 		// verify transaction pre-image generation
-		verifyTransactionPreImages(t, client, tx, script, oceanCommitmentHash, i)
+		verifyTransactionPreImages(t, client, tx, oceanCommitmentHash, i)
 
 		// check fee value and bump
 		assert.Equal(t, client.Fees.minFee+(i-1)*client.Fees.feeIncrement, client.Fees.GetFee())
 		client.Fees.BumpFee()
 
 		// test signing and sending attestation
-		signedTx, signErr := client.signAttestation(tx, [][]crypto.Sig{}, lastHash)
-		assert.Equal(t, errors.New(ErrorSigsMissingForTx), signErr)
+		signedTx, signErr := client.signAttestation(tx, []wire.TxWitness{}, lastHash)
+		assert.Equal(t, nil, signErr)
 
 		txid, sendErr := client.sendAttestation(signedTx)
 		assert.Equal(t, true, sendErr != nil)
 
 		// client can't sign - we need to sign using clientSigner
-		signedTxSigner, signedScriptSigner, signErrSigner := clientSigner.SignTransaction(lastHash, *tx)
+		signedTxSigner, signErrSigner := clientSigner.SignTransaction(lastHash, *tx)
 		assert.Equal(t, nil, signErrSigner)
-		assert.Equal(t, true, len(signedTxSigner.TxIn[0].SignatureScript) > 0)
-		// extract sig
-		sigs, sigScript := crypto.ParseScriptSig(signedTxSigner.TxIn[0].SignatureScript)
-		assert.Equal(t, signedScriptSigner, hex.EncodeToString(sigScript))
-		assert.Equal(t, 1, len(sigs))
+		assert.Equal(t, false, len(signedTxSigner.TxIn[0].SignatureScript) > 0)
+		assert.Equal(t, true, len(signedTxSigner.TxIn[0].Witness) > 0)
 
+		sig := signedTxSigner.TxIn[0].Witness
 		// test signing and sending attestation again
-		signedTx, signErr = client.signAttestation(tx, [][]crypto.Sig{[]crypto.Sig{sigs[0]}}, lastHash)
+		signedTx, signErr = client.signAttestation(tx, []wire.TxWitness{}, lastHash)
 		// exceptional top-up case - need to include additional unspent + signatures
 		if i == topupLevel+1 {
-			// test error for not enough sigs
-			assert.Equal(t, errors.New(ErrorSigsMissingForTx), signErr)
-			sigsTopup, sigScriptTopup := crypto.ParseScriptSig(signedTxSigner.TxIn[1].SignatureScript)
-			assert.Equal(t, client.scriptTopup, hex.EncodeToString(sigScriptTopup))
-			assert.Equal(t, 1, len(sigsTopup))
+			sigTopup := signedTxSigner.TxIn[1].Witness
+			assert.Equal(t, true, len(sigTopup) > 0)
 
-			// test error for not enough sigs
-			signedTx, signErr = client.signAttestation(tx,
-				[][]crypto.Sig{[]crypto.Sig{sigs[0]}, []crypto.Sig{}}, lastHash)
-			assert.Equal(t, errors.New(ErrorSigsMissingForVin), signErr)
-
-			signedTx, signErr = client.signAttestation(tx,
-				[][]crypto.Sig{[]crypto.Sig{sigs[0]}}, lastHash)
-			assert.Equal(t, errors.New(ErrorSigsMissingForTx), signErr)
-
-			signedTx, signErr = client.signAttestation(tx,
-				[][]crypto.Sig{}, lastHash)
-			assert.Equal(t, errors.New(ErrorSigsMissingForTx), signErr)
-
-			// actually sign attestation transaction
-			signedTx, signErr = client.signAttestation(tx,
-				[][]crypto.Sig{[]crypto.Sig{sigs[0]}, []crypto.Sig{sigsTopup[0]}}, lastHash)
+			// sign attestation transaction
+			signedTx, signErr = client.signAttestation(tx, []wire.TxWitness{sig, sigTopup}, lastHash)
 			assert.Equal(t, nil, signErr)
-			assert.Equal(t, true, len(signedTx.TxIn[1].SignatureScript) > 0)
-
-			// adding more signatures than required has the same result
-			signedTx, signErr = client.signAttestation(tx,
-				[][]crypto.Sig{[]crypto.Sig{sigs[0], sigs[0]}, []crypto.Sig{sigsTopup[0], sigs[0], sigs[0]}}, lastHash)
-			assert.Equal(t, nil, signErr)
-			assert.Equal(t, true, len(signedTx.TxIn[1].SignatureScript) > 0)
-
+			assert.Equal(t, false, len(signedTx.TxIn[1].SignatureScript) > 0)
+			assert.Equal(t, true, len(signedTx.TxIn[1].Witness) > 0)
 		} else {
 			assert.Equal(t, nil, signErr)
 		}
-		assert.Equal(t, true, len(signedTx.TxIn[0].SignatureScript) > 0)
+		assert.Equal(t, false, len(signedTx.TxIn[0].SignatureScript) > 0)
+		assert.Equal(t, true, len(signedTx.TxIn[0].Witness) > 0)
 
 		txid, sendErr = client.sendAttestation(signedTx)
 		assert.Equal(t, nil, sendErr)
@@ -468,7 +413,7 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		oceanCommitmentHash := oceanCommitment.GetCommitmentHash()
 
 		// get address
-		addr, script := verifyKeysAndAddr(t, client, oceanCommitmentHash)
+		addr := verifyKeysAndAddr(t, client, oceanCommitmentHash)
 
 		// test creating attestation transaction
 		tx, attestationErr := client.createAttestation(addr, []btcjson.ListUnspentResult{unspent})
@@ -482,7 +427,7 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		currentFee := client.Fees.GetFee()
 
 		// test signing and sending attestation
-		signedTx, signErr := client.signAttestation(tx, [][]crypto.Sig{}, lastHash)
+		signedTx, signErr := client.signAttestation(tx, []wire.TxWitness{}, lastHash)
 		assert.Equal(t, nil, signErr)
 		txid, sendErr := client.sendAttestation(signedTx)
 		assert.Equal(t, nil, sendErr)
@@ -510,7 +455,7 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 		assert.Equal(t, nil, attestationErr2)
 
 		// verify transaction pre-image generation
-		verifyTransactionPreImages(t, client, tx2, script, oceanCommitmentHash, i)
+		verifyTransactionPreImages(t, client, tx2, oceanCommitmentHash, i)
 
 		// test attestation transaction fee bumping
 		if i == topupLevel+1 {
@@ -536,15 +481,13 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 
 		newFee := client.Fees.GetFee()
 		newValue := tx2.TxOut[0].Value
-		newTxFee := calcSignedTxFee(newFee, tx2.SerializeSize(),
-			len(client.script0)/2, client.numOfSigs, len(tx2.TxIn))
-		currentTxFee := calcSignedTxFee(currentFee, tx.SerializeSize(),
-			len(client.script0)/2, client.numOfSigs, len(tx.TxIn))
+		newTxFee := calcSignedTxFee(newFee)
+		currentTxFee := calcSignedTxFee(currentFee)
 		assert.Equal(t, newTxFee-currentTxFee, currentValue+topupValue-newValue)
 		assert.Equal(t, client.Fees.minFee+client.Fees.feeIncrement, newFee)
 
 		// test signing and sending attestation again
-		signedTx, signErr = client.signAttestation(tx2, [][]crypto.Sig{}, lastHash)
+		signedTx, signErr = client.signAttestation(tx2, []wire.TxWitness{}, lastHash)
 		assert.Equal(t, nil, signErr)
 		txid, sendErr = client.sendAttestation(signedTx)
 		assert.Equal(t, nil, sendErr)
@@ -578,27 +521,21 @@ func TestAttestClient_FeeBumping(t *testing.T) {
 
 // Test fee calculation for an unsigned transaction
 func TestAttestClient_feeCalculation(t *testing.T) {
-	unsignedTxSize := 83
 	feePerByte := 10
 
-	scriptSize := len(testpkg.Script) / 2
-	_, numOfSigs := crypto.ParseRedeemScript(testpkg.Script)
-	assert.Equal(t, 229, calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs, 1))
-	assert.Equal(t, int64(2290), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize, numOfSigs, 1))
-	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize, numOfSigs, 1))/calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs, 1))
+	assert.Equal(t, 110, signedTxSize)
+	assert.Equal(t, int64(1100), calcSignedTxFee(feePerByte))
+	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte))/signedTxSize)
 
-	assert.Equal(t, 375, calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs, 2))
-	assert.Equal(t, int64(3750), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize, numOfSigs, 2))
-	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize, numOfSigs, 2))/calcSignedTxSize(unsignedTxSize, scriptSize, numOfSigs, 2))
+	assert.Equal(t, 110, signedTxSize)
+	assert.Equal(t, int64(1100), calcSignedTxFee(feePerByte))
+	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte))/signedTxSize)
 
-	script2 := "52210325bf82856a8fdcc7a2c08a933343d2c6332c4c252974d6b09b6232ea4080462621028ed149d77203c79d7524048689a80cc98f27e3427f2edaec52eae1f630978e08210254a548b59741ba35bfb085744373a8e10b1cf96e71f53356d7d97f807258d38c53ae"
-	scriptSize2 := len(script2) / 2
-	_, numOfSigs2 := crypto.ParseRedeemScript(script2)
-	assert.Equal(t, 339, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 1))
-	assert.Equal(t, int64(3390), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 1))
-	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 1))/calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 1))
+	assert.Equal(t, 110, signedTxSize)
+	assert.Equal(t, int64(1100), calcSignedTxFee(feePerByte))
+	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte))/signedTxSize)
 
-	assert.Equal(t, 851, calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 3))
-	assert.Equal(t, int64(8510), calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 3))
-	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte, unsignedTxSize, scriptSize2, numOfSigs2, 3))/calcSignedTxSize(unsignedTxSize, scriptSize2, numOfSigs2, 3))
+	assert.Equal(t, 110, signedTxSize)
+	assert.Equal(t, int64(1100), calcSignedTxFee(feePerByte))
+	assert.Equal(t, 10, int(calcSignedTxFee(feePerByte))/signedTxSize)
 }

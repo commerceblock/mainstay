@@ -105,7 +105,7 @@ func TweakPrivKey(walletPrivKey *btcutil.WIF, tweak []byte, chainCfg *chaincfg.P
 }
 
 // Get pay to pub key hash address from a private key
-func GetAddressFromPrivKey(walletPrivKey *btcutil.WIF, chainCfg *chaincfg.Params) (btcutil.Address, error) {
+func GetAddressFromPrivKey(walletPrivKey *btcutil.WIF, chainCfg *chaincfg.Params) (*btcutil.AddressWitnessPubKeyHash, error) {
 	return GetAddressFromPubKey(walletPrivKey.PrivKey.PubKey(), chainCfg)
 }
 
@@ -173,9 +173,9 @@ func TweakPubKey(pubKey *btcec.PublicKey, tweak []byte) *btcec.PublicKey {
 }
 
 // Get pay to pub key hash address from a pub key
-func GetAddressFromPubKey(pubkey *btcec.PublicKey, chainCfg *chaincfg.Params) (btcutil.Address, error) {
-	pubKeyHash := btcutil.Hash160(pubkey.SerializeCompressed())     // get pub key hash
-	addr, err := btcutil.NewAddressPubKeyHash(pubKeyHash, chainCfg) // encode to address
+func GetAddressFromPubKey(pubkey *btcec.PublicKey, chainCfg *chaincfg.Params) (*btcutil.AddressWitnessPubKeyHash, error) {
+	pubKeyHash := btcutil.Hash160(pubkey.SerializeCompressed())            // get pub key hash
+	addr, err := btcutil.NewAddressWitnessPubKeyHash(pubKeyHash, chainCfg) // encode to address
 	if err != nil {
 		return nil, err
 	}
