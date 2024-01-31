@@ -9,7 +9,7 @@ import (
 	"mainstay/log"
 	"encoding/hex"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 )
@@ -23,8 +23,8 @@ type AttestSignerFake struct {
 }
 
 // store latest hash and transaction
-var signerTxPreImageBytes []byte
-var signerConfirmedHashBytes []byte
+var signerTxPreImageBytesFake []byte
+var signerConfirmedHashBytesFake []byte
 
 // Return new AttestSignerFake instance
 func NewAttestSignerFake(configs []*confpkg.Config) AttestSignerFake {
@@ -45,12 +45,12 @@ func (f AttestSignerFake) ReSubscribe() {
 
 // Store received confirmed hash
 func (f AttestSignerFake) SendConfirmedHash(hash []byte) {
-	signerConfirmedHashBytes = hash
+	signerConfirmedHashBytesFake = hash
 }
 
 // Store received new tx
 func (f AttestSignerFake) SendTxPreImages(txs [][]byte) {
-	signerTxPreImageBytes = SerializeBytes(txs)
+	signerTxPreImageBytesFake = SerializeBytes(txs)
 }
 
 // Return signatures for received tx and hashes
@@ -64,6 +64,7 @@ func (f AttestSignerFake) GetSigs(sigHashes [][]byte, merkle_root string) []wire
 		reversed_merkle_root[len(merkle_root_bytes)-1-i] = merkle_root_bytes[i]
 	}
 	hash, hashErr := chainhash.NewHash(reversed_merkle_root)
+
 	if hashErr != nil {
 		log.Infof("%v\n", hashErr)
 		return nil

@@ -81,7 +81,7 @@ func main() {
 
 	dbInterface := db.NewDbMongo(ctx, mainConfig.DbConfig())
 	server := attestation.NewAttestServer(dbInterface)
-	signer := attestation.NewAttestSignerZmq(mainConfig.SignerConfig())
+	signer := attestation.NewAttestSignerHttp(mainConfig.SignerConfig())
 	attestService := attestation.NewAttestService(ctx, wg, server, signer, mainConfig)
 
 	c := make(chan os.Signal)

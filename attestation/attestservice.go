@@ -8,14 +8,17 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
 	confpkg "mainstay/config"
+	"mainstay/crypto"
 	"mainstay/log"
 	"mainstay/models"
 
 	"github.com/btcsuite/btcd/btcjson"
+	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 )
@@ -245,8 +248,8 @@ func (s *AttestService) stateInitUnspent(unspent btcjson.ListUnspentResult) {
 	}
 
 	confirmedHash := s.attestation.CommitmentHash()
-	if (s.attester.txid0 == unspentTxid.String()) {
-		log.Infoln("********** found base transaction, blank attestation")		
+	if s.attester.txid0 == unspentTxid.String() {
+		log.Infoln("********** found base transaction, blank attestation")
 		confirmedHash = chainhash.Hash{}
 	}
 	s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
@@ -302,7 +305,7 @@ func (s *AttestService) stateInitWalletFailure() {
 	if s.setFailure(addrErr) {
 		return // will rebound to init
 	}
-	
+
 	log.Infof("********** importing base init addr: %s ...\n", paytoaddr.String())
 	importErr = s.attester.ImportAttestationAddr(paytoaddr)
 	if s.setFailure(importErr) {
@@ -428,8 +431,8 @@ func (s *AttestService) doStateNewAttestation() {
 		}
 
 		//if spending from base transaction, zero last commitment
-		if (s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String()) {
-			log.Infoln("********** base transaction, zero tweaking for signature")		
+		if s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String() {
+			log.Infoln("********** base transaction, zero tweaking for signature")
 			lastCommitmentHash = chainhash.Hash{}
 		}
 
@@ -454,6 +457,7 @@ func (s *AttestService) doStateNewAttestation() {
 			log.Infof("Error in calculating sighash %v", err)
 		}
 		sigs = s.signer.GetSigs(sigHashes, merkle_root)
+
 		for sigForInput, _ := range sigs {
 			log.Infof("********** received %d signatures for input %d \n",
 				len(sigs[sigForInput]), sigForInput)
@@ -473,21 +477,14 @@ func (s *AttestService) doStateNewAttestation() {
 func (s *AttestService) doStateSignAttestation() {
 	log.Infoln("*AttestService* SIGN ATTESTATION")
 
-	// Read sigs using subscribers
-	sigs := s.signer.GetSigs()
-	for sigForInput, _ := range sigs {
-		log.Infof("********** received %d signatures for input %d \n",
-			len(sigs[sigForInput]), sigForInput)
-	}
-
 	// get last confirmed commitment from server
 	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()
 	if s.setFailure(latestErr) {
 		return // will rebound to init
 	}
 
-	if (s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String()) {
-		log.Infoln("********** base transaction, zero tweaking for signature")		
+	if s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String() {
+		log.Infoln("********** base transaction, zero tweaking for signature")
 		lastCommitmentHash = chainhash.Hash{}
 	}
 
@@ -573,7 +570,7 @@ func (s *AttestService) doStateAwaitConfirmation() {
 		s.attester.Fees.ResetFee(s.isRegtest) // reset client fees
 
 		confirmedHash := s.attestation.CommitmentHash()
-		if (s.attester.txid0 == s.attestation.Txid.String()) {
+		if s.attester.txid0 == s.attestation.Txid.String() {
 			confirmedHash = chainhash.Hash{}
 		}
 		s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
@@ -610,8 +607,8 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 		return // will rebound to init
 	}
 
-	if (s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String()) {
-		log.Infoln("********** base transaction, zero tweaking for signature")		
+	if s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String() {
+		log.Infoln("********** base transaction, zero tweaking for signature")
 		lastCommitmentHash = chainhash.Hash{}
 	}
 
@@ -636,6 +633,7 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 		log.Infof("Error in calculating sighash %v", err)
 	}
 	sigs = s.signer.GetSigs(sigHashes, merkle_root)
+
 	for sigForInput, _ := range sigs {
 		log.Infof("********** received %d signatures for input %d \n",
 			len(sigs[sigForInput]), sigForInput)

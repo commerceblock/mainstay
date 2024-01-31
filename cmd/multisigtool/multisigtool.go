@@ -5,19 +5,17 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"mainstay/crypto"
 	"mainstay/log"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcutil"
 )
 
 // Multisig and pay to address generation for Mainstay
@@ -136,18 +134,7 @@ func doMain() {
 
 // Get btcec PublicKey from x/y coordinates
 func pubFromCoordinates(xStr string, yStr string) *btcec.PublicKey {
-	x := new(big.Int)
-	y := new(big.Int)
-	_, errX := fmt.Sscan(xStr, x)
-	if errX != nil {
-		log.Warnln("Get btcec PublicKey fail-x")
-	}
-	_, errY := fmt.Sscan(yStr, y)
-	if errY != nil {
-		log.Warnln("Get btcec PublicKey fail-y")
-	}
-
-	return (*btcec.PublicKey)(&ecdsa.PublicKey{btcec.S256(), x, y})
+	return btcec.NewPublicKey(crypto.HexToFieldVal(xStr), crypto.HexToFieldVal(yStr))
 }
 
 // Generate multisig script and p2sh address for mainstay
