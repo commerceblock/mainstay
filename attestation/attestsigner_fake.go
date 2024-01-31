@@ -9,7 +9,7 @@ import (
 	"mainstay/crypto"
 	"mainstay/log"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
@@ -22,8 +22,8 @@ type AttestSignerFake struct {
 }
 
 // store latest hash and transaction
-var signerTxPreImageBytes []byte
-var signerConfirmedHashBytes []byte
+var signerTxPreImageBytesFake []byte
+var signerConfirmedHashBytesFake []byte
 
 // Return new AttestSignerFake instance
 func NewAttestSignerFake(configs []*confpkg.Config) AttestSignerFake {
@@ -44,25 +44,25 @@ func (f AttestSignerFake) ReSubscribe() {
 
 // Store received confirmed hash
 func (f AttestSignerFake) SendConfirmedHash(hash []byte) {
-	signerConfirmedHashBytes = hash
+	signerConfirmedHashBytesFake = hash
 }
 
 // Store received new tx
 func (f AttestSignerFake) SendTxPreImages(txs [][]byte) {
-	signerTxPreImageBytes = SerializeBytes(txs)
+	signerTxPreImageBytesFake = SerializeBytes(txs)
 }
 
 // Return signatures for received tx and hashes
-func (f AttestSignerFake) GetSigs() [][]crypto.Sig {
+func (f AttestSignerFake) GetSigs(txHash string, redeem_script string, merkle_root string) [][]crypto.Sig {
 	// get confirmed hash from received confirmed hash bytes
-	hash, hashErr := chainhash.NewHash(signerConfirmedHashBytes)
+	hash, hashErr := chainhash.NewHash(signerConfirmedHashBytesFake)
 	if hashErr != nil {
 		log.Infof("%v\n", hashErr)
 		return nil
 	}
 
 	// get unserialized tx pre images
-	txPreImages := UnserializeBytes(signerTxPreImageBytes)
+	txPreImages := UnserializeBytes(signerTxPreImageBytesFake)
 
 	sigs := make([][]crypto.Sig, len(txPreImages)) // init sigs
 
@@ -76,17 +76,12 @@ func (f AttestSignerFake) GetSigs() [][]crypto.Sig {
 
 			// sign first tx with tweaked priv key and
 			// any remaining txs with topup key
-			var sig *btcec.Signature
-			var signErr error
+			var sig *ecdsa.Signature
 			if i_tx == 0 {
 				priv := client.GetKeyFromHash(*hash).PrivKey
-				sig, signErr = priv.Sign(txPreImageHash.CloneBytes())
+				sig = ecdsa.Sign(priv, txPreImageHash.CloneBytes())
 			} else {
-				sig, signErr = client.WalletPrivTopup.PrivKey.Sign(txPreImageHash.CloneBytes())
-			}
-			if signErr != nil {
-				log.Infof("%v\n", signErr)
-				return nil
+				sig = ecdsa.Sign(client.WalletPrivTopup.PrivKey, txPreImageHash.CloneBytes())
 			}
 
 			// add hash type to signature as well

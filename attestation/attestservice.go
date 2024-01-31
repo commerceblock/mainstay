@@ -8,17 +8,18 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
 	confpkg "mainstay/config"
+	"mainstay/crypto"
 	"mainstay/log"
 	"mainstay/models"
 
 	"github.com/btcsuite/btcd/btcjson"
+	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	_ "github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
 )
 
 // Attestation Service is the main processes that handles generating
@@ -107,6 +108,7 @@ var (
 	confirmTime time.Time     // handle confirmation timing
 
 	isFeeBumped bool // flag to keep track if the fee has already been bumped
+	sigs        [][]crypto.Sig
 )
 
 // NewAttestService returns a pointer to an AttestService instance
@@ -245,8 +247,8 @@ func (s *AttestService) stateInitUnspent(unspent btcjson.ListUnspentResult) {
 	}
 
 	confirmedHash := s.attestation.CommitmentHash()
-	if (s.attester.txid0 == unspentTxid.String()) {
-		log.Infoln("********** found base transaction, blank attestation")		
+	if s.attester.txid0 == unspentTxid.String() {
+		log.Infoln("********** found base transaction, blank attestation")
 		confirmedHash = chainhash.Hash{}
 	}
 	s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
@@ -302,7 +304,7 @@ func (s *AttestService) stateInitWalletFailure() {
 	if s.setFailure(addrErr) {
 		return // will rebound to init
 	}
-	
+
 	log.Infof("********** importing base init addr: %s ...\n", paytoaddr.String())
 	importErr = s.attester.ImportAttestationAddr(paytoaddr)
 	if s.setFailure(importErr) {
@@ -428,8 +430,8 @@ func (s *AttestService) doStateNewAttestation() {
 		}
 
 		//if spending from base transaction, zero last commitment
-		if (s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String()) {
-			log.Infoln("********** base transaction, zero tweaking for signature")		
+		if s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String() {
+			log.Infoln("********** base transaction, zero tweaking for signature")
 			lastCommitmentHash = chainhash.Hash{}
 		}
 
@@ -448,6 +450,18 @@ func (s *AttestService) doStateNewAttestation() {
 		s.signer.ReSubscribe()
 		s.signer.SendTxPreImages(txPreImageBytes)
 
+		txId := newTx.TxIn[0].PreviousOutPoint.Hash
+		rawTx, _ := s.config.MainClient().GetRawTransactionVerbose(&txId)
+		txHash := rawTx.Hash
+		asmList := strings.Split(rawTx.Vin[0].ScriptSig.Asm, " ")
+		redeemScript := asmList[len(asmList)-1]
+		merkle_root := lastCommitmentHash.String()
+		sigs = s.signer.GetSigs(txHash, redeemScript, merkle_root)
+		for sigForInput, _ := range sigs {
+			log.Infof("********** received %d signatures for input %d \n",
+				len(sigs[sigForInput]), sigForInput)
+		}
+
 		s.state = AStateSignAttestation // update attestation state
 		attestDelay = ATimeSigs         // add sigs waiting time
 	} else {
@@ -462,21 +476,14 @@ func (s *AttestService) doStateNewAttestation() {
 func (s *AttestService) doStateSignAttestation() {
 	log.Infoln("*AttestService* SIGN ATTESTATION")
 
-	// Read sigs using subscribers
-	sigs := s.signer.GetSigs()
-	for sigForInput, _ := range sigs {
-		log.Infof("********** received %d signatures for input %d \n",
-			len(sigs[sigForInput]), sigForInput)
-	}
-
 	// get last confirmed commitment from server
 	lastCommitmentHash, latestErr := s.server.GetLatestAttestationCommitmentHash()
 	if s.setFailure(latestErr) {
 		return // will rebound to init
 	}
 
-	if (s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String()) {
-		log.Infoln("********** base transaction, zero tweaking for signature")		
+	if s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String() {
+		log.Infoln("********** base transaction, zero tweaking for signature")
 		lastCommitmentHash = chainhash.Hash{}
 	}
 
@@ -562,7 +569,7 @@ func (s *AttestService) doStateAwaitConfirmation() {
 		s.attester.Fees.ResetFee(s.isRegtest) // reset client fees
 
 		confirmedHash := s.attestation.CommitmentHash()
-		if (s.attester.txid0 == s.attestation.Txid.String()) {
+		if s.attester.txid0 == s.attestation.Txid.String() {
 			confirmedHash = chainhash.Hash{}
 		}
 		s.signer.SendConfirmedHash((&confirmedHash).CloneBytes()) // update clients
@@ -599,8 +606,8 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 		return // will rebound to init
 	}
 
-	if (s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String()) {
-		log.Infoln("********** base transaction, zero tweaking for signature")		
+	if s.attester.txid0 == s.attestation.Tx.TxIn[0].PreviousOutPoint.Hash.String() {
+		log.Infoln("********** base transaction, zero tweaking for signature")
 		lastCommitmentHash = chainhash.Hash{}
 	}
 
@@ -618,6 +625,18 @@ func (s *AttestService) doStateHandleUnconfirmed() {
 	}
 	s.signer.ReSubscribe()
 	s.signer.SendTxPreImages(txPreImageBytes)
+
+	txId := currentTx.TxIn[0].PreviousOutPoint.Hash
+	rawTx, _ := s.config.MainClient().GetRawTransactionVerbose(&txId)
+	txHash := rawTx.Hash
+	asmList := strings.Split(rawTx.Vin[0].ScriptSig.Asm, " ")
+	redeemScript := asmList[len(asmList)-1]
+	merkle_root := lastCommitmentHash.String()
+	sigs = s.signer.GetSigs(txHash, redeemScript, merkle_root)
+	for sigForInput, _ := range sigs {
+		log.Infof("********** received %d signatures for input %d \n",
+			len(sigs[sigForInput]), sigForInput)
+	}
 
 	s.state = AStateSignAttestation // update attestation state
 	attestDelay = ATimeSigs         // add sigs waiting time

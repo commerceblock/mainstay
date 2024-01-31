@@ -197,7 +197,7 @@ func TestConfigActual(t *testing.T) {
             "chain": "regtest"
         },
         "signer": {
-            "signers": "127.0.0.1:12345,127.0.0.1:12346"
+            "url": "127.0.0.1:8000"
         },
         "db": {
             "user":"username1",
@@ -213,7 +213,7 @@ func TestConfigActual(t *testing.T) {
 
 	assert.Equal(t, true, config.MainClient() != nil)
 	assert.Equal(t, &chaincfg.RegressionNetParams, config.MainChainCfg())
-	assert.Equal(t, []string{"127.0.0.1:12345", "127.0.0.1:12346"}, config.SignerConfig().Signers)
+	assert.Equal(t, "127.0.0.1:8000", config.SignerConfig().Url)
 	assert.Equal(t, DbConfig{
 		User:     "username1",
 		Password: "password2",
@@ -480,7 +480,7 @@ func TestConfigSigner(t *testing.T) {
     }
     `)
 	config, configErr = NewConfig(testConf)
-	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, SignerSignersName)), configErr)
+	assert.Equal(t, errors.New(fmt.Sprintf("%s: %s", ErrorConfigValueNotFound, Url)), configErr)
 
 	testConf = []byte(`
     {
@@ -491,29 +491,11 @@ func TestConfigSigner(t *testing.T) {
             "chain": ""
         },
         "signer": {
-            "signers": "host"
+            "url": "host"
         }
     }
     `)
 	config, configErr = NewConfig(testConf)
 	assert.Equal(t, nil, configErr)
-	assert.Equal(t, []string{"host"}, config.SignerConfig().Signers)
-
-	testConf = []byte(`
-    {
-        "main": {
-            "rpcurl": "",
-            "rpcuser": "",
-            "rpcpass": "",
-            "chain": ""
-        },
-        "signer": {
-            "signers": "host",
-            "publisher": "*:5000"
-        }
-    }
-    `)
-	config, configErr = NewConfig(testConf)
-	assert.Equal(t, nil, configErr)
-	assert.Equal(t, "*:5000", config.SignerConfig().Publisher)
+	assert.Equal(t, "host", config.SignerConfig().Url)
 }

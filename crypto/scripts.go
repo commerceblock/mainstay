@@ -11,9 +11,9 @@ import (
 
 	"mainstay/log"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcutil"
 )
 
 // Various utility functions concerning multisig and scripts
@@ -48,7 +48,7 @@ func ParseRedeemScript(script string) ([]*btcec.PublicKey, int) {
 		}
 		keystr := script[startIndex+2 : startIndex+2+2*keysize]
 		keybytes, _ := hex.DecodeString(keystr)
-		pubkey, err := btcec.ParsePubKey(keybytes, btcec.S256())
+		pubkey, err := btcec.ParsePubKey(keybytes)
 		if err != nil {
 			log.Error(err)
 		}

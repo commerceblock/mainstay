@@ -15,10 +15,10 @@ import (
 	"mainstay/crypto"
 	"mainstay/models"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcutil/hdkeychain"
 )
 
 // mainstay API url consts

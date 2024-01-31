@@ -5,16 +5,15 @@
 package crypto
 
 import (
-	"crypto/ecdsa"
 	"encoding/hex"
 	"math/big"
 	"testing"
 
 	"mainstay/clients"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -120,8 +119,13 @@ func TestTweaking_childPathTweaking(t *testing.T) {
 	tweakedPubX, tweakedPubY := tweakPubWithPathChild(testPathChild, pubX, pubY)
 
 	// test matching priv - pub
-	_, tweakedPrivPub := btcec.PrivKeyFromBytes(btcec.S256(), tweakedVal.Bytes())
-	tweakedPub := (*btcec.PublicKey)(&ecdsa.PublicKey{btcec.S256(), tweakedPubX, tweakedPubY})
+	_, tweakedPrivPub := btcec.PrivKeyFromBytes(tweakedVal.Bytes())
+	x := new(btcec.FieldVal)
+	y := new(btcec.FieldVal)
+	x.SetByteSlice(tweakedPubX.Bytes())
+	y.SetByteSlice(tweakedPubY.Bytes())
+
+	tweakedPub := btcec.NewPublicKey(x, y)
 	assert.Equal(t, tweakedPrivPub, tweakedPub)
 
 	for it := 1; it < derivationPathSize; it++ {
@@ -130,8 +134,13 @@ func TestTweaking_childPathTweaking(t *testing.T) {
 		tweakedPubX, tweakedPubY = tweakPubWithPathChild(testPathChild, tweakedPubX, tweakedPubY)
 
 		// test matching priv - pub
-		_, tweakedPrivPub := btcec.PrivKeyFromBytes(btcec.S256(), tweakedVal.Bytes())
-		tweakedPub := (*btcec.PublicKey)(&ecdsa.PublicKey{btcec.S256(), tweakedPubX, tweakedPubY})
+		_, tweakedPrivPub := btcec.PrivKeyFromBytes(tweakedVal.Bytes())
+		x := new(btcec.FieldVal)
+		y := new(btcec.FieldVal)
+		x.SetByteSlice(tweakedPubX.Bytes())
+		y.SetByteSlice(tweakedPubY.Bytes())
+
+		tweakedPub := btcec.NewPublicKey(x, y)
 		assert.Equal(t, tweakedPrivPub, tweakedPub)
 	}
 

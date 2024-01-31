@@ -449,39 +449,27 @@ func GetTimingConfig(conf []byte) TimingConfig {
 
 // signer config parameter names
 const (
-	SignerName          = "signer"
-	SignerPublisherName = "publisher"
-	SignerSignersName   = "signers"
+	Signer = "signer"
+	Url    = "url"
 )
 
 // Signer config struct
 // Configuration on communication between service and signers
 // Configure host addresses and zmq TOPIC config
 type SignerConfig struct {
-	// main publisher address
-	Publisher string
-
-	// signer addresses
-	Signers []string
+	Url string
 }
 
 // Return SignerConfig from conf options
-// If SignerName exists in conf, SignerSignersName is compsulsory
-// Every other Signer Config field is optional
 func GetSignerConfig(conf []byte) (SignerConfig, error) {
-	// get signer node addresses
-	signersStr, signersErr := GetParamFromConf(SignerName, SignerSignersName, conf)
+	_, signersErr := GetParamFromConf(Signer, Url, conf)
 	if signersErr != nil {
 		return SignerConfig{}, signersErr
 	}
-	signers := strings.Split(signersStr, ",")
-	for i := range signers {
-		signers[i] = strings.TrimSpace(signers[i])
-	}
-	publisher := TryGetParamFromConf(SignerName, SignerPublisherName, conf)
+
+	url := TryGetParamFromConf(Signer, Url, conf)
 
 	return SignerConfig{
-		Publisher: publisher,
-		Signers:   signers,
+		Url: url,
 	}, nil
 }

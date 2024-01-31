@@ -22,7 +22,8 @@ import (
 	"mainstay/config"
 	"mainstay/log"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
@@ -74,7 +75,7 @@ func doInitMode() {
 	log.Infoln("****************************")
 
 	log.Infof("Generating new key...\n")
-	newPriv, newPrivErr := btcec.NewPrivateKey(btcec.S256())
+	newPriv, newPrivErr := btcec.NewPrivateKey()
 	if newPrivErr != nil {
 		log.Error(newPrivErr)
 	}
@@ -145,13 +146,10 @@ func sign(msg []byte) []byte {
 	if decodeErr != nil {
 		log.Errorf("Key ('%s') decode error: %v\n", privkey, decodeErr)
 	}
-	privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privkeyBytes)
+	privKey, _ := btcec.PrivKeyFromBytes(privkeyBytes)
 
 	// sign message
-	sig, signErr := privKey.Sign(msg)
-	if signErr != nil {
-		log.Errorf("Signing error: %v\n", signErr)
-	}
+	sig := ecdsa.Sign(privKey, msg)
 	return sig.Serialize()
 }
 

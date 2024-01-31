@@ -18,7 +18,7 @@ import (
 	"mainstay/log"
 	"mainstay/models"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -113,7 +113,7 @@ func main() {
 		if pubKeyBytesErr != nil {
 			log.Error(pubKeyBytesErr)
 		}
-		_, errPub := btcec.ParsePubKey(pubKeyBytes, btcec.S256())
+		_, errPub := btcec.ParsePubKey(pubKeyBytes)
 		if errPub != nil {
 			log.Error(errPub)
 		}
