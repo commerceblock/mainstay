@@ -137,7 +137,7 @@ func newNonMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcu
 	if err != nil {
 		log.Errorf("Invalid public key %v", err)
 	}
-	chaincode, _ := hex.DecodeString(config.InitChaincodes()[0])
+	chaincode, _ := hex.DecodeString(config.InitChaincode())
 	return &AttestClient{
 		MainClient:      config.MainClient(),
 		MainChainCfg:    config.MainChainCfg(),
