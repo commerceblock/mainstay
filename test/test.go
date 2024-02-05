@@ -8,7 +8,6 @@ import (
 	"context"
 	"os"
 	"os/exec"
-	"strings"
 	"sync"
 	"time"
 
@@ -45,7 +44,7 @@ var testConf = []byte(`
 
 // test parameters for a 1-2 multisig redeemScript and P2SH address
 const Address = "bcrt1q7h6ue5w39ramd4ux6gtxh6swnrefpcfgt7vl64"
-const InitChaincodes = "14df7ece79e83f0f479a37832d770294014edc6884b0c8bfa2e0aaf51fb00229,14df7ece79e83f0f479a37832d770294014edc6884b0c8bfa2e0aaf51fb00229"
+const InitChaincode = "14df7ece79e83f0f479a37832d770294014edc6884b0c8bfa2e0aaf51fb00229"
 
 const PrivMain = "cRb1ZU6gsHeifDnBRyRMfbMayWpnNtpKcNs7Z9XzqE87ZwW6Vqx8"
 
@@ -100,7 +99,7 @@ func NewTest(logOutput bool, isRegtest bool) *Test {
 
 	config.SetInitTx(txid)
 	config.SetInitPK(PrivMain)
-	config.SetInitChaincodes(strings.Split(InitChaincodes, ","))
+	config.SetInitChaincode(InitChaincode)
 	config.SetInitPublicKey(PublicKey)
 
 	// custom config for top up process

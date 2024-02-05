@@ -22,7 +22,7 @@ import (
 
 var (
 	tx0         string
-	chaincodes  string
+	chaincode  string
 	addrTopup   string
 	isRegtest   bool
 	mainConfig  *config.Config
@@ -31,7 +31,7 @@ var (
 func parseFlags() {
 	flag.BoolVar(&isRegtest, "regtest", false, "Use regtest wallet configuration instead of user wallet")
 	flag.StringVar(&tx0, "tx", "", "Tx id for genesis attestation transaction")
-	flag.StringVar(&chaincodes, "chaincodes", "", "Chaincodes for multisig pubkeys")
+	flag.StringVar(&chaincode, "chaincode", "", "Chaincode for sig pubkey")
 	flag.StringVar(&addrTopup, "addrTopup", "", "Address for topup transaction")
 	flag.Parse()
 }
@@ -51,8 +51,8 @@ func init() {
 		}
 
 		// if either tx or script not set throw error
-		if tx0 == "" || chaincodes == "" {
-			if mainConfig.InitTx() == "" || len(mainConfig.InitChaincodes()) == 0 {
+		if tx0 == "" || chaincode == "" {
+			if mainConfig.InitTx() == "" || mainConfig.InitChaincode() == "" {
 				flag.PrintDefaults()
 				log.Error(`Need to provide all -tx, -script and -chaincode arguments.
                     To use test configuration set the -regtest flag.`)
@@ -60,11 +60,8 @@ func init() {
 		} else {
 			mainConfig.SetInitTx(tx0)
 
-			chaincodesList := strings.Split(chaincodes, ",") // string to string slice
-			for i := range chaincodesList {                  // trim whitespace
-				chaincodesList[i] = strings.TrimSpace(chaincodesList[i])
-			}
-			mainConfig.SetInitChaincodes(chaincodesList)
+			chaincodeStr := strings.TrimSpace(chaincode) // trim whitespace
+			mainConfig.SetInitChaincode(chaincodeStr)
 		}
 		if addrTopup != "" {
 			mainConfig.SetTopupAddress(addrTopup)

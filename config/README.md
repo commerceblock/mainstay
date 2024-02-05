@@ -8,10 +8,8 @@
 {
     "staychain": {
         "initTx": "87e56bda501ba6a022f12e178e9f1ac03fb2c07f04e1dfa62ac9e1d83cd840e1",
-        "initScript": "51210381324c14a482646e9ad7cf82372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae",
-        "initChaincodes": "0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa,0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa",
+        "initChaincode": "0a090f710e47968aee906804f211cf10cde9a11e14908ca0f78cc55dd190ceaa",
         "topupAddress": "2MxBi6eodnuoVCw8McGrf1nuoVhastqoBXB",
-        "topupScript": "51210381324c14a482646e9ad7cf92372021e5ecb9a7e1b67ee168dddf1e97dafe40af210376c091faaeb6bb3b74e0568db5dd499746d99437758a5cb1e60ab38f02e279c352ae",
         "regtest": "1"
     },
     "main": {
@@ -66,10 +64,8 @@ The `staychain` category is compulsory and can be set from either .conf file or 
 
 - `staychain` : configuration options for staychain parameters
     - `initTx` : initial transaction sets the state for the staychain
-    - `initScript` : initial script used to derive subsequent staychain addresses
-    - `initChaincodes`: chaincodes of init script pubkeys used to derive subsequent staychain addresses
+    - `initChaincode`: chaincode of init script pubkeys used to derive staychain address
     - `topupAddress` : address to topup the mainstay service
-    - `topupScript` : script that requires signing for the topup
 
 
 Several other subcategories become compulsory only if the base category exists in the `.conf` file.
@@ -114,10 +110,8 @@ Currently only parameters in the `staychain` category can be parsed through comm
 
 These command line arguments are:
 - `tx` : argument for initTx as above
-- `script` : argument for initScript as above
-- `chaincodes`: argument for initChaincodes as above
+- `chaincode`: argument for initChaincode as above
 - `addrTopup` : argument for topupAddress as above
-- `scriptTopup` : argument for topupScript as above
 
 ### Env Variables
 

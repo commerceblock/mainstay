@@ -23,14 +23,11 @@ const (
 	StaychainName                = "staychain"
 	StaychainRegtestName         = "regtest"
 	StaychainInitTxName          = "initTx"
-	StaychainInitScriptName      = "initScript"
 	StaychainInitPkName          = "initPK"
-	StaychainInitChaincodesName  = "initChaincodes"
+	StaychainInitChaincodeName  = "initChaincode"
 	StaychainInitPublicKeyName   = "initPublicKey"
 	StaychainTopupAddressName    = "topupAddress"
-	StaychainTopupScriptName     = "topupScript"
 	StaychainTopupPkName         = "topupPK"
-	StayChainTopupChaincodesName = "topupChaincodes"
 )
 
 // Config struct
@@ -45,13 +42,10 @@ type Config struct {
 	regtest         bool
 	initTX          string
 	initPK          string
-	initScript      string
 	initPublicKey   string
-	initChaincodes  []string
+	initChaincode  string
 	topupAddress    string
-	topupScript     string
 	topupPK         string
-	topupChaincodes []string
 
 	// additional parameter categories
 	signerConfig SignerConfig
@@ -136,13 +130,13 @@ func (c *Config) SetInitPK(pk string) {
 }
 
 // Get Init Chaincodes
-func (c *Config) InitChaincodes() []string {
-	return c.initChaincodes
+func (c *Config) InitChaincode() string {
+	return c.initChaincode
 }
 
 // Set Init Chaincodes
-func (c *Config) SetInitChaincodes(chaincodes []string) {
-	c.initChaincodes = chaincodes
+func (c *Config) SetInitChaincode(chaincode string) {
+	c.initChaincode = chaincode
 }
 
 // Get init Public key
@@ -153,16 +147,6 @@ func (c *Config) InitPublicKey() string {
 // Set init Public key
 func (c *Config) SetInitPublicKey(publickey string) {
 	c.initPublicKey = publickey
-}
-
-// Get Topup Chaincodes
-func (c *Config) TopupChaincodes() []string {
-	return c.topupChaincodes
-}
-
-// Set Topup Chaincodes
-func (c *Config) SetTopupChaincodes(chaincodes []string) {
-	c.topupChaincodes = chaincodes
 }
 
 // Get topup PK
@@ -223,16 +207,8 @@ func NewConfig(customConf ...[]byte) (*Config, error) {
 	topupPKStr := TryGetParamFromConf(StaychainName, StaychainTopupPkName, conf)
 	initPublicKeyStr := TryGetParamFromConf(StaychainName, StaychainInitPublicKeyName, conf)
 
-	initChaincodesStr := TryGetParamFromConf(StaychainName, StaychainInitChaincodesName, conf)
-	initChaincodes := strings.Split(initChaincodesStr, ",") // string to string slice
-	for i := range initChaincodes {                         // trim whitespace
-		initChaincodes[i] = strings.TrimSpace(initChaincodes[i])
-	}
-	topupChaincodesStr := TryGetParamFromConf(StaychainName, StayChainTopupChaincodesName, conf)
-	topupChaincodes := strings.Split(topupChaincodesStr, ",") // string to string slice
-	for i := range topupChaincodes {                          // trim whitespace
-		topupChaincodes[i] = strings.TrimSpace(topupChaincodes[i])
-	}
+	initChaincodeStr := TryGetParamFromConf(StaychainName, StaychainInitChaincodeName, conf)
+	initChaincode := strings.TrimSpace(initChaincodeStr) // trim whitespace
 
 	return &Config{
 		mainClient:      mainClient,
@@ -241,10 +217,9 @@ func NewConfig(customConf ...[]byte) (*Config, error) {
 		initTX:          initTxStr,
 		initPK:          initPKStr,
 		initPublicKey:   initPublicKeyStr,
-		initChaincodes:  initChaincodes,
+		initChaincode:  initChaincode,
 		topupAddress:    topupAddrStr,
 		topupPK:         topupPKStr,
-		topupChaincodes: topupChaincodes,
 		signerConfig:    signerConfig,
 		dbConfig:        dbConnectivity,
 		feesConfig:      feesConfig,
