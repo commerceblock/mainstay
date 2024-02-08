@@ -150,7 +150,7 @@ func newNonMultisigAttestClient(config *confpkg.Config, isSigner bool, wif *btcu
 		addrTopup:       config.TopupAddress(),
 		WalletPriv:      wif,
 		WalletPrivTopup: wifTopup,
-		WalletChainCode: []byte{}}
+		WalletChainCode: chaincode}
 }
 
 // NewAttestClient returns a pointer to a new AttestClient instance
