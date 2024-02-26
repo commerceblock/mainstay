@@ -1,4 +1,4 @@
-FROM golang:1.15.2-buster
+FROM golang:1.17.13-buster
 
 COPY . $GOPATH/src/mainstay
 
