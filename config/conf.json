@@ -2,7 +2,7 @@
     "staychain":
     {
         "initTx": "MAINSTAY_INIT_TX",
-        "initPK": "MAINSTAY_INIT_PK",
+        "initPublicKey": "MAINSTAY_INIT_PK",
         "initChaincode": "MAINSTAY_INIT_CHAINCODE",
         "topupAddress": "MAINSTAY_TOPUP_ADDRESS",
         "topupPK": "MAINSTAY_TOPUP_PK"
