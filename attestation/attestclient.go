@@ -587,14 +587,22 @@ func (w *AttestClient) getUnconfirmedTxFromCommitments(latestAttestations []mode
     }
     fmt.Printf("mempool %v", mempool)
 	fmt.Printf("latest Attestaions %v", latestAttestations)
-    for _, attest := range latestAttestations {
-        for _, mem := range mempool {
-            if attest.Txid.IsEqual(mem) {
-                if w.verifyTxOnSubchain(*mem) {
-					return true, *mem, nil
+	if (len(latestAttestations) > 0) {
+		for _, attest := range latestAttestations {
+			for _, mem := range mempool {
+				if attest.Txid.IsEqual(mem) {
+					if w.verifyTxOnSubchain(*mem) {
+						return true, *mem, nil
+					}
 				}
-            }
-        }
-    }
+			}
+		}
+	} else {
+		for _, hash := range mempool {
+			if w.verifyTxOnSubchain(*hash) {
+				return true, *hash, nil
+			}
+		}
+	}
     return false, chainhash.Hash{}, nil
 }
