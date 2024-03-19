@@ -26,6 +26,7 @@ type Db interface {
 	getAttestationMerkleRoot(chainhash.Hash) (string, error)
 
 	// get methods required by server
+	GetUnconfirmedAttestations() ([]models.Attestation, error)
 	GetLatestAttestationMerkleRoot(bool) (string, error)
 	GetClientCommitments() ([]models.ClientCommitment, error)
 	GetAttestationMerkleCommitments(chainhash.Hash) ([]models.CommitmentMerkleCommitment, error)

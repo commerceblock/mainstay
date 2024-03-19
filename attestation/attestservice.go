@@ -320,9 +320,12 @@ func (s *AttestService) stateInitWalletFailure() {
 // - If no attestation found, check last unconfirmed from db
 func (s *AttestService) doStateInit() {
 	log.Infoln("*AttestService* INITIATING ATTESTATION PROCESS")
-
+	latestCommitments, err := s.server.dbInterface.GetUnconfirmedAttestations();
+	if err != nil {
+		return
+	}
 	// find the state of the attestation
-	unconfirmed, unconfirmedTxid, unconfirmedErr := s.attester.getUnconfirmedTx()
+	unconfirmed, unconfirmedTxid, unconfirmedErr := s.attester.getUnconfirmedTxFromCommitments(latestCommitments)
 	if s.setFailure(unconfirmedErr) {
 		return // will rebound to init
 	} else if unconfirmed { // check mempool for unconfirmed - added check in case something gets rejected

@@ -12,6 +12,7 @@ import (
 	confpkg "mainstay/config"
 	"mainstay/crypto"
 	"mainstay/log"
+	"mainstay/models"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcjson"
@@ -576,4 +577,22 @@ func (w *AttestClient) getUnconfirmedTx() (bool, chainhash.Hash, error) {
 		}
 	}
 	return false, chainhash.Hash{}, nil
+}
+
+func (w *AttestClient) getUnconfirmedTxFromCommitments(latestAttestations []models.Attestation) (bool, chainhash.Hash, error) {
+    mempool, err := w.MainClient.GetRawMempool()
+    if err != nil {
+        return false, chainhash.Hash{}, err
+    }
+
+    for _, attest := range latestAttestations {
+        for _, mem := range mempool {
+            if attest.Txid.IsEqual(mem) {
+                if w.verifyTxOnSubchain(*mem) {
+					return true, *mem, nil
+				}
+            }
+        }
+    }
+    return false, chainhash.Hash{}, nil
 }
