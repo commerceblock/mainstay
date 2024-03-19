@@ -584,7 +584,8 @@ func (w *AttestClient) getUnconfirmedTxFromCommitments(latestAttestations []mode
     if err != nil {
         return false, chainhash.Hash{}, err
     }
-
+    fmt.Printf("mempool %v", mempool)
+	fmt.Printf("latest Attestaions %v", latestAttestations)
     for _, attest := range latestAttestations {
         for _, mem := range mempool {
             if attest.Txid.IsEqual(mem) {
