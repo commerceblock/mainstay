@@ -398,6 +398,45 @@ func (d *DbMongo) getAttestationMerkleRoot(txid chainhash.Hash) (string, error) 
 	return attestationDoc.Lookup(models.CommitmentMerkleRootName).StringValue(), nil
 }
 
+func (d *DbMongo) GetUnconfirmedAttestations() ([]models.Attestation, error) {
+	// Filter for unconfirmed attestations
+	confirmedFilter := bsonx.Doc{{models.AttestationConfirmedName, bsonx.Boolean(false)}}
+  
+	// Find all unconfirmed attestations
+	cursor, err := d.db.Collection(ColNameAttestation).Find(d.ctx, confirmedFilter)
+	if err != nil {
+	  return nil, errors.New(fmt.Sprintf("%s %v", ErrorAttestationGet, err))
+	}
+	defer func() {
+	  if err := cursor.Close(d.ctx); err != nil {
+		// Log or handle closing error
+	  }
+	}()
+  
+	// Iterate over cursor and collect unconfirmed attestations
+	var attestations []models.Attestation
+	for {
+	  // Call cursor.Next with only context
+	  moreDocs := cursor.Next(d.ctx)
+	  if !moreDocs {
+		// No more documents found, break the loop
+		break
+	  }
+	  if err != nil {
+		return nil, errors.New(fmt.Sprintf("%s %v", ErrorAttestationGet, err))
+	  }
+  
+	  // Decode document into an attestation object (optional if using All)
+	  var attestation models.Attestation
+	  if err := cursor.Decode(d.ctx); err != nil {
+		return nil, errors.New(fmt.Sprintf("%s %v", ErrorAttestationGet, err))
+	  }
+	  attestations = append(attestations, attestation)
+	}
+  
+	return attestations, nil
+}
+
 // Return Commitment from MerkleCommitment commitments for attestation with given txid hash
 func (d *DbMongo) GetAttestationMerkleCommitments(txid chainhash.Hash) ([]models.CommitmentMerkleCommitment, error) {
 	// get merkle root of attestation

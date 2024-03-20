@@ -21,6 +21,7 @@ type DbFake struct {
 	MerkleCommitments []models.CommitmentMerkleCommitment
 	MerkleProofs      []models.CommitmentMerkleProof
 	latestCommitments []models.ClientCommitment
+	latestAttestations []models.Attestation
 }
 
 // Return new DbFake instance
@@ -30,7 +31,8 @@ func NewDbFake() *DbFake {
 		[]models.AttestationInfo{},
 		[]models.CommitmentMerkleCommitment{},
 		[]models.CommitmentMerkleProof{},
-		[]models.ClientCommitment{}}
+		[]models.ClientCommitment{},
+		[]models.Attestation{}}
 }
 
 // Save latest attestation to Attestations
@@ -143,6 +145,10 @@ func (d *DbFake) getAttestationMerkleRoot(txid chainhash.Hash) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+func (d *DbFake) GetUnconfirmedAttestations() ([]models.Attestation, error) {
+	return d.latestAttestations, nil
 }
 
 // Return commitment for attestation with given txid
